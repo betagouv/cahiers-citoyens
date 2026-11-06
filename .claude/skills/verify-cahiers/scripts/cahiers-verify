@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+# Harnais de vérification Cahiers citoyens.
+# Toutes les commandes sont idempotentes et ne tuent que ce qu'elles ont lancé.
+set -uo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+SKILL_DIR="$REPO/.claude/skills/verify-cahiers"
+
+# Même port que `bun dev` lancé à la main dans cet arbre.
+. "$REPO/scripts/dev-port.sh"
+PORT="${CAHIERS_PORT:-$(dev_port "$REPO")}"
+BASE_URL="http://localhost:$PORT"
+RUN_DIR="${CAHIERS_RUN_DIR:-/tmp/cahiers-verify/$PORT}"
+PID_FILE="$RUN_DIR/server.pid"
+MODE_FILE="$RUN_DIR/server.mode"
+LOG_FILE="$RUN_DIR/server.log"
+EVIDENCE_DIR="${CAHIERS_EVIDENCE_DIR:-$SKILL_DIR/evidence}"
+# Session navigateur propre à l'arbre : deux worktrees ne se partagent pas d'onglet.
+export AGENT_BROWSER_SESSION="${AGENT_BROWSER_SESSION:-cahiers-$PORT}"
+
+mkdir -p "$RUN_DIR" "$EVIDENCE_DIR"
+
+die() { echo "✗ $*" >&2; exit 1; }
+healthy() { curl -sf --max-time 3 "$BASE_URL/api/health" 2>/dev/null | grep -q '"status":"ok"'; }
+
+# Dossier d'où tourne le serveur qui écoute sur $PORT (vide si personne).
+port_owner() {
+  local pid; pid="$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | head -1)"
+  [ -n "$pid" ] && lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p'
+}
+ours() { [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; }
+
+cmd_env() {
+  echo "export CAHIERS_PORT=$PORT"
+  echo "export CAHIERS_BASE_URL=$BASE_URL"
+  echo "export AGENT_BROWSER_SESSION=$AGENT_BROWSER_SESSION"
+}
+
+# launch        : `next dev` (Turbopack), pour vérifier le code en cours.
+# launch --prod : build standalone puis `node .next/standalone/server.js`,
+#                 le même binaire que sur Scalingo.
+cmd_launch() {
+  local mode=dev; [ "${1:-}" = "--prod" ] && mode=prod
+  local owner; owner="$(port_owner)"
+  if [ -n "$owner" ] && [ "$owner" != "$REPO" ] && [ "$owner" != "$REPO/.next/standalone" ]; then
+    die "port $PORT occupé par un serveur lancé depuis $owner — relancer avec CAHIERS_PORT=<autre port>"
+  fi
+  if [ -n "$owner" ]; then
+    if ours && [ "$(cat "$MODE_FILE" 2>/dev/null)" = "$mode" ] && healthy; then
+      echo "✓ serveur $mode déjà up sur $BASE_URL (lancé par ce harnais, pid $(cat "$PID_FILE"))"; return 0
+    fi
+    if ! ours; then
+      # Un serveur de cet arbre, lancé à la main : on ne le touche pas.
+      [ "$mode" = dev ] && healthy && { echo "✓ serveur déjà up sur $BASE_URL (non démarré par ce run — le cleanup ne le tuera pas)"; return 0; }
+      die "port $PORT tenu par un serveur de cet arbre non lancé par ce harnais — l'arrêter, ou CAHIERS_PORT=<autre port>"
+    fi
+    cmd_cleanup_server
+  fi
+
+  [ -d "$REPO/node_modules" ] || { echo "· bun install (worktree neuf)"; (cd "$REPO" && bun install >"$RUN_DIR/install.log" 2>&1) || die "bun install échoué — voir $RUN_DIR/install.log"; }
+
+  if [ "$mode" = prod ]; then
+    echo "· bun run build (≈ 10 s)"
+    (cd "$REPO" && bun run build >"$RUN_DIR/build.log" 2>&1) || die "build échoué — voir $RUN_DIR/build.log"
+    ( cd "$REPO" && HOSTNAME=127.0.0.1 PORT="$PORT" node .next/standalone/server.js >"$LOG_FILE" 2>&1 & echo $! >"$PID_FILE" )
+  else
+    (cd "$REPO" && ./node_modules/.bin/react-dsfr update-icons >"$RUN_DIR/icons.log" 2>&1) || die "react-dsfr update-icons échoué — voir $RUN_DIR/icons.log"
+    ( cd "$REPO" && ./node_modules/.bin/next dev --port "$PORT" >"$LOG_FILE" 2>&1 & echo $! >"$PID_FILE" )
+  fi
+  echo "$mode" >"$MODE_FILE"
+
+  for _ in $(seq 1 60); do
+    healthy && { echo "✓ $mode prêt sur $BASE_URL (pid $(cat "$PID_FILE"), log $LOG_FILE)"; return 0; }
+    kill -0 "$(cat "$PID_FILE")" 2>/dev/null || die "le serveur s'est arrêté — voir $LOG_FILE"
+    sleep 2
+  done
+  die "pas prêt après 120 s — voir $LOG_FILE"
+}
+
+cmd_doctor() {
+  local rc=0
+  printf '%-22s' "health"
+  healthy && echo "OK ($BASE_URL)" || { echo "KO — lancer 'cahiers-verify launch'"; rc=1; }
+
+  printf '%-22s' "serveur du port $PORT"
+  local owner; owner="$(port_owner)"
+  case "$owner" in
+    "") echo "aucun" ;;
+    "$REPO"|"$REPO/.next/standalone")
+      if ours; then echo "cet arbre, lancé par ce harnais ($(cat "$MODE_FILE"), pid $(cat "$PID_FILE"))"
+      else echo "cet arbre, lancé à la main (le cleanup ne le tuera pas)"; fi ;;
+    *) echo "⚠  autre arbre : $owner — son code, pas le tien"; rc=1 ;;
+  esac
+
+  printf '%-22s' "agent-browser"
+  command -v agent-browser >/dev/null && echo "OK ($(agent-browser --version 2>/dev/null | head -1))" || { echo "absent"; rc=1; }
+
+  printf '%-22s' "session navigateur"
+  echo "$AGENT_BROWSER_SESSION"
+  return $rc
+}
+
+# shot <nom> [chemin] : ouvre la page, attend les graphiques, enregistre
+# capture + arbre d'accessibilité dans evidence/<date>-<nom>.{png,txt}.
+cmd_shot() {
+  local name="${1:-}" path="${2:-/}"
+  [ -n "$name" ] || die "usage : cahiers-verify shot <nom> [chemin]"
+  local stem; stem="$EVIDENCE_DIR/$(date +%Y%m%d-%H%M%S)-$name"
+  agent-browser open "$BASE_URL$path" >/dev/null || die "ouverture de $BASE_URL$path impossible"
+  agent-browser wait --load networkidle >/dev/null 2>&1
+  agent-browser wait 2500 >/dev/null
+  agent-browser snapshot >"$stem.txt" || die "snapshot impossible"
+  # Pas de `screenshot --full` : il agrandit la fenêtre et capture pendant que
+  # Chart.js se redimensionne, d'où des graphiques miniatures sur l'image alors
+  # que la page est juste. On agrandit nous-mêmes, on attend, puis on capture.
+  local height; height="$(agent-browser eval 'document.documentElement.scrollHeight' | tr -dc 0-9)"
+  agent-browser set viewport 1280 "${height:-3000}" >/dev/null
+  agent-browser wait 2000 >/dev/null
+  agent-browser screenshot "$stem.png" | tail -1
+  agent-browser set viewport 1280 800 >/dev/null
+  echo "✓ $stem.txt"
+}
+
+# charts : état de rendu de chaque web component dsfr-chart.
+# - graphiques Chart.js : le canvas doit occuper toute la largeur du conteneur ;
+#   plus étroit, c'est le bug de dimensionnement de dsfr-chart.
+# - carte : SVG à côté d'un panneau de légende, donc jamais pleine largeur ;
+#   on compte les zones coloriées (18 régions attendues).
+cmd_charts() {
+  agent-browser eval '
+    JSON.stringify([...document.querySelectorAll("bar-chart,line-chart,pie-chart,map-chart")].map(e => {
+      const tag = e.tagName.toLowerCase();
+      if (tag === "map-chart") {
+        const zones = [...e.querySelectorAll("svg path")].filter(p => getComputedStyle(p).fill !== "none").length;
+        return { graphique: tag, zones, ok: zones > 0 };
+      }
+      const c = e.querySelector("canvas");
+      const rendu = c ? Math.round(c.getBoundingClientRect().width) : 0;
+      const conteneur = e.parentElement.clientWidth;
+      return { graphique: tag, conteneur, rendu, ok: rendu >= conteneur - 1 };
+    }), null, 1)' | sed -e 's/^"//' -e 's/"$//' -e 's/\\n/\n/g' -e 's/\\"/"/g'
+}
+
+cmd_cleanup_server() {
+  if ours; then
+    local pid; pid="$(cat "$PID_FILE")"
+    pkill -TERM -P "$pid" 2>/dev/null
+    kill -TERM "$pid" 2>/dev/null
+    for _ in $(seq 1 10); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
+    kill -0 "$pid" 2>/dev/null && kill -KILL "$pid" 2>/dev/null
+    echo "✓ serveur arrêté (pid $pid)"
+  else
+    echo "· aucun serveur lancé par ce harnais"
+  fi
+  rm -f "$PID_FILE" "$MODE_FILE"
+}
+
+cmd_cleanup() {
+  cmd_cleanup_server
+  agent-browser close >/dev/null 2>&1 && echo "✓ session navigateur $AGENT_BROWSER_SESSION fermée"
+  echo "· preuves conservées dans $EVIDENCE_DIR"
+}
+
+case "${1:-}" in
+  env) cmd_env ;;
+  launch) shift; cmd_launch "$@" ;;
+  doctor) cmd_doctor ;;
+  shot) shift; cmd_shot "$@" ;;
+  charts) cmd_charts ;;
+  cleanup) cmd_cleanup ;;
+  *) echo "usage : cahiers-verify {env|launch [--prod]|doctor|shot <nom> [chemin]|charts|cleanup}"; exit 2 ;;
+esac
