@@ -1,0 +1,20 @@
+[install]
+# 7 jours : laisse au registre le temps de retirer une version compromise
+# avant qu'elle n'arrive ici.
+minimumReleaseAge = 604800
+# next 16.4.5 et ses paquets @next/* ont moins de 7 jours à l'initialisation
+# du projet (2026-11-06). Retirer cette exemption une fois la version vieillie.
+minimumReleaseAgeExcludes = [
+  "next",
+  "eslint-config-next",
+  "@next/env",
+  "@next/eslint-plugin-next",
+  "@next/swc-darwin-x64",
+  "@next/swc-darwin-arm64",
+  "@next/swc-linux-x64-gnu",
+  "@next/swc-linux-x64-musl",
+  "@next/swc-win32-x64-msvc",
+  "@next/swc-linux-arm64-gnu",
+  "@next/swc-linux-arm64-musl",
+  "@next/swc-win32-arm64-msvc",
+]
