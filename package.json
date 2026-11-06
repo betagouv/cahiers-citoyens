@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "predev": "react-dsfr update-icons",
-    "dev": "next dev",
+    "dev": "sh scripts/dev.sh",
     "prebuild": "react-dsfr update-icons",
     "build": "next build && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/",
     "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
