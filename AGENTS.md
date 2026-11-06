@@ -7,3 +7,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Gestionnaire de paquets
+
+Utiliser Bun pour tout : `bun install`, `bun add`, `bun run <script>`, `bunx`. Jamais npm, npx, yarn ni pnpm. Ne pas créer de `package-lock.json`.
+
+Les scripts de `package.json` tournent aussi sous npm sur Scalingo : ne pas y appeler `bun`.
