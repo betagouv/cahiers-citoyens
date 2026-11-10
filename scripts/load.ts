@@ -4,11 +4,9 @@ import { parseArgs } from "node:util";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { chunkTranscription } from "./chunk";
-import type { Municipality } from "./fake-data/domain";
 
 interface NotebookMetadata {
   id: string;
-  municipality: Municipality;
   openedOn: string;
 }
 
@@ -20,15 +18,6 @@ function parseManifestLine(text: string, lineNumber: number): NotebookMetadata {
   function failure(reason: string): Error {
     return new Error(`manifest.jsonl ligne ${lineNumber} : ${reason}`);
   }
-  function municipalityText(
-    municipality: Record<string, unknown>,
-    field: keyof Municipality,
-  ): string {
-    const value = municipality[field];
-    if (typeof value !== "string" || value === "")
-      throw failure(`municipality.${field} manquant`);
-    return value;
-  }
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -36,23 +25,13 @@ function parseManifestLine(text: string, lineNumber: number): NotebookMetadata {
     throw failure("JSON invalide");
   }
   if (!isObject(raw)) throw failure("objet attendu");
-  const { id, municipality, openedOn } = raw;
+  const { id, openedOn } = raw;
   if (typeof id !== "string" || !/^notebook-\d+$/.test(id))
     throw failure(`id invalide (${String(id)})`);
   if (typeof openedOn !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(openedOn)) {
     throw failure(`openedOn invalide (${String(openedOn)})`);
   }
-  if (!isObject(municipality)) throw failure("municipality manquante");
-  return {
-    id,
-    openedOn,
-    municipality: {
-      name: municipalityText(municipality, "name"),
-      inseeCode: municipalityText(municipality, "inseeCode"),
-      department: municipalityText(municipality, "department"),
-      region: municipalityText(municipality, "region"),
-    },
-  };
+  return { id, openedOn };
 }
 
 const { values } = parseArgs({ options: { source: { type: "string" } } });
@@ -72,7 +51,7 @@ const notebooks = manifest
 const prisma = new PrismaClient({ adapter: new PrismaPg(databaseUrl) });
 try {
   let totalChunks = 0;
-  for (const { id, municipality, openedOn } of notebooks) {
+  for (const { id, openedOn } of notebooks) {
     const scanKey = `notebooks/${id}/scan.pdf`;
     const transcriptionKey = `notebooks/${id}/transcription.txt`;
     await access(join(source, scanKey));
@@ -88,10 +67,6 @@ try {
     totalChunks += chunks.length;
 
     const fields = {
-      inseeCode: municipality.inseeCode,
-      municipality: municipality.name,
-      department: municipality.department,
-      region: municipality.region,
       openedOn: new Date(`${openedOn}T00:00:00Z`),
       scanKey,
       transcriptionKey,
