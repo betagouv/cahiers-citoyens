@@ -22,6 +22,10 @@ Tout ce qui est poussé est publié et lisible pour des années : code, commits,
 - N'utiliser que des données fictives (fixtures, exemples, captures) : aucune donnée réelle de personne. Les preuves de vérification restent dans `.claude/skills/verify-notebooks/evidence/`, ignoré par git.
 - Dans le doute sur un commit ou une PR, retirer le détail.
 
+## Commits et PR
+
+Messages de commit au format Conventional Commits : `type(scope): description`, description en français (ex. `feat(db): ajoute la table notebooks`). Le hook `.husky/commit-msg` refuse les autres formats. Le titre d'une PR suit le même format, car il devient le message du commit en « Squash and merge ».
+
 ## Selon la tâche
 
 - **Écrire ou relire du code** : `CODING_STANDARDS.md`.
