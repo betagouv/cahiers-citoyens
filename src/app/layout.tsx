@@ -3,7 +3,10 @@ import { Footer } from "@codegouvfr/react-dsfr/Footer";
 import { Header } from "@codegouvfr/react-dsfr/Header";
 import { SkipLinks } from "@codegouvfr/react-dsfr/SkipLinks";
 import { DsfrProvider } from "@/dsfr-bootstrap";
-import { DsfrHead, getHtmlAttributes } from "@/dsfr-bootstrap/server-only-index";
+import {
+  DsfrHead,
+  getHtmlAttributes,
+} from "@/dsfr-bootstrap/server-only-index";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,7 +33,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html {...getHtmlAttributes({ lang })}>
       <head>
         <DsfrHead
-          preloadFonts={["Marianne-Regular", "Marianne-Medium", "Marianne-Bold"]}
+          preloadFonts={[
+            "Marianne-Regular",
+            "Marianne-Medium",
+            "Marianne-Bold",
+          ]}
         />
       </head>
       <body className="flex min-h-screen flex-col">

@@ -1,0 +1,8 @@
+node_modules
+.next
+data
+bun.lock
+public
+scripts/fake-data/fonts
+.claude/skills/verify-notebooks/evidence
+drizzle/meta

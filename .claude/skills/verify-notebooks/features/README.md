@@ -6,12 +6,12 @@ Ce dossier est la source maintenue pour vérifier le comportement visible de Cah
 
 Pendant l'hiver 2018-2019, en réponse au mouvement des Gilets jaunes, des mairies ont ouvert des **cahiers de doléances** (ou cahiers citoyens) où les habitants ont déposé des **témoignages**. Chaque témoignage est rattaché à une **commune**, donc à un département et à une **région**, et exprime une ou plusieurs **revendications** (pouvoir d'achat, fiscalité, services publics, démocratie et RIC, transition écologique…). L'application les recense et les rend consultables par territoire et par revendication.
 
-Aujourd'hui : une page d'accueil publique, sans compte ni base. Ses chiffres sont fictifs (`src/app/_accueil/donnees-illustratives.ts`) et la page le dit.
+Aujourd'hui : une page d'accueil publique, sans compte ni base. Ses chiffres sont fictifs (`src/app/_home/sample-data.ts`) et la page le dit.
 
 ## Préconditions de base
 
-- `eval "$(.claude/skills/verify-cahiers/scripts/cahiers-verify env)"`, puis `cahiers-verify launch` (ou `launch --prod` pour le build standalone).
-- Passer `cahiers-verify doctor`.
+- `eval "$(.claude/skills/verify-notebooks/scripts/notebooks-verify env)"`, puis `notebooks-verify launch` (ou `launch --prod` pour le build standalone).
+- Passer `notebooks-verify doctor`.
 - Ne jamais piloter une instance que ce run n'a pas démarrée ou explicitement reconnue.
 
 ## Conventions de pilotage
@@ -23,8 +23,8 @@ Aujourd'hui : une page d'accueil publique, sans compte ni base. Ses chiffres son
 
 ## Preuves et signalement des impasses
 
-- Une preuve UI comprend un `snapshot` et une capture : `cahiers-verify shot <nom>` produit les deux.
-- Un graphique se prouve par `cahiers-verify charts` **et** par la capture.
+- Une preuve UI comprend un `snapshot` et une capture : `notebooks-verify shot <nom>` produit les deux.
+- Un graphique se prouve par `notebooks-verify charts` **et** par la capture.
 - Consigner l'identifiant de la feature et le point d'entrée utilisé avec chaque artefact (le `<nom>` de `shot`).
 - Rapporter un chemin inatteignable avec la commande tentée et la précondition non remplie ; ne jamais présenter comme vérifié un point d'entrée contourné par un autre chemin.
 
@@ -34,11 +34,13 @@ Un titre H1, un paragraphe de comportement visible, puis exactement quatre H2 : 
 
 ## Features
 
-- [Gabarit DSFR](./gabarit-dsfr.md) — en-tête, pied de page, liens d'évitement, titre de page, communs à toutes les pages.
-- [Accueil : données](./accueil-donnees.md) — chiffres clés, carte par région, trois graphiques, tableau par région, encart mairies.
+- [Gabarit DSFR](./dsfr-layout.md) — en-tête, pied de page, liens d'évitement, titre de page, communs à toutes les pages.
+- [Accueil : données](./home-data.md) — chiffres clés, carte par région, trois graphiques, tableau par région, encart mairies.
 
 ## État de vérification
 
-**Vérifié de bout en bout le 2026-11-06, en dev et en `--prod` :** `accueil-chiffres`, `accueil-carte`, `accueil-graphiques` (mesure `charts` et capture), `accueil-tableau`, `gabarit-entete`, `gabarit-pied`. Preuves dans `../evidence/`.
+**Revérifié en dev le 2026-11-10, après le passage du code en anglais :** `home-figures`, `home-map`, `home-charts` (mesure `charts` et capture), `home-table`.
 
-**Dérivé du code sans exécution :** le comportement de `gabarit-evitement` au clavier (liens présents dans le `snapshot`, navigation par Tab non exercée).
+**Vérifié de bout en bout le 2026-11-06, en dev et en `--prod` :** `home-figures`, `home-map`, `home-charts` (mesure `charts` et capture), `home-table`, `layout-header`, `layout-footer`. Preuves dans `../evidence/`.
+
+**Dérivé du code sans exécution :** le comportement de `layout-skip-links` au clavier (liens présents dans le `snapshot`, navigation par Tab non exercée).

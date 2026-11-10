@@ -4,10 +4,10 @@ Chaque page porte le gabarit de l'État : liens d'évitement, en-tête avec le b
 
 ## Sub-features
 
-- `gabarit-entete` affiche le bloc-marque et le nom du service, qui ramène à `/`.
-- `gabarit-pied` affiche le pied de page DSFR avec les liens institutionnels, la mention d'accessibilité et la licence.
-- `gabarit-evitement` propose « Accéder au contenu » et « Accéder au pied de page ».
-- `gabarit-titre` donne à l'onglet le titre `Cahiers citoyens`.
+- `layout-header` affiche le bloc-marque et le nom du service, qui ramène à `/`.
+- `layout-footer` affiche le pied de page DSFR avec les liens institutionnels, la mention d'accessibilité et la licence.
+- `layout-skip-links` propose « Accéder au contenu » et « Accéder au pied de page ».
+- `layout-title` donne à l'onglet le titre `Cahiers citoyens`.
 
 ## How to get to it (user POV)
 
@@ -18,11 +18,11 @@ Chaque page porte le gabarit de l'État : liens d'évitement, en-tête avec le b
 
 Préconditions : serveur lancé, aucune.
 
-- **En-tête.** `agent-browser open "$CAHIERS_BASE_URL/"`, `wait --load networkidle`, `snapshot`. Le `banner` contient `RÉPUBLIQUE` / `FRANÇAISE` et le lien `Cahiers citoyens`.
+- **En-tête.** `agent-browser open "$NOTEBOOKS_BASE_URL/"`, `wait --load networkidle`, `snapshot`. Le `banner` contient `RÉPUBLIQUE` / `FRANÇAISE` et le lien `Cahiers citoyens`.
 - **Pied de page.** Dans le `snapshot`, le `contentinfo` contient les liens `info.gouv.fr`, `service-public.gouv.fr`, `legifrance.gouv.fr`, `data.gouv.fr`, le texte `Accessibilité : non conforme` et le lien `licence etalab-2.0`.
 - **Évitement.** La `navigation "Accès rapide"` contient `Accéder au contenu` et `Accéder au pied de page`. Leurs cibles existent : `agent-browser eval 'Boolean(document.getElementById("content") && document.getElementById("footer"))'` renvoie `true`.
 - **Titre.** `agent-browser get title` renvoie `Cahiers citoyens`.
-- **Preuve.** `cahiers-verify shot gabarit`.
+- **Preuve.** `notebooks-verify shot layout`.
 
 ## Gotchas
 
