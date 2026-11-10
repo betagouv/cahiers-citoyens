@@ -9,7 +9,7 @@
     "build": "prisma generate && next build && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/",
     "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "lint": "eslint",
-    "check": "tsc --noEmit",
+    "check": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "format": "prettier --write .",
     "prepare": "husky",
