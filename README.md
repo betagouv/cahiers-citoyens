@@ -94,7 +94,7 @@ DATABASE_URL=… ALBERT_API_KEY=… bun scripts/search.ts "Il n'y a plus de méd
 `/search?q=…` répond à une question à partir des cahiers (`src/lib/search/`) :
 
 1. la question est vectorisée par `bge-m3` ;
-2. deux recherches tournent en SQL, chacune limitée à 30 passages : plein texte (`chunks.search`, classée par `ts_rank`) et vectorielle (distance cosinus sur `chunks.embedding`). Leurs classements sont fusionnés par Reciprocal Rank Fusion (k = 60) ;
+2. deux recherches tournent en SQL, chacune limitée à 30 passages : plein texte en OU sur les mots de la question (`chunks.search`, classée par `ts_rank`) et vectorielle (distance cosinus sur `chunks.embedding`). Leurs classements sont fusionnés par Reciprocal Rank Fusion (k = 60) ;
 3. `bge-reranker-v2-m3` reclasse les 30 candidats et garde les 5 meilleurs. Un passage noté sous 0,01 est écarté : une question hors sujet n'affiche alors aucune source ;
 4. le modèle de chat rédige une réponse en français, fondée sur ces seuls passages, avec des renvois [1] à [5] vers les sources affichées dessous.
 
