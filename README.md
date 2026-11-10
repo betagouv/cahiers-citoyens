@@ -43,7 +43,7 @@ createdb cahiers
 DATABASE_URL=postgres://localhost:5432/cahiers bun run db:migrate
 ```
 
-Le chargeur insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Il n'applique pas le schéma : `bun run db:migrate` le fait. Il laisse les embeddings vides : voir « Embeddings ».
+Le chargeur découpe chaque transcription en chunks (`scripts/chunk.ts`) : un par contribution, c'est-à-dire par paragraphe séparé d'une ligne vide, en-tête exclu. Une contribution de plus de 400 mots est coupée entre deux phrases. Le chargeur insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Il n'applique pas le schéma : `bun run db:migrate` le fait. Il laisse les embeddings vides : voir « Embeddings ».
 
 ```bash
 DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/load.ts --source data/fake-data

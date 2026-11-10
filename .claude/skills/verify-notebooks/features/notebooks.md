@@ -29,5 +29,5 @@ Préconditions : une base Postgres migrée et chargée (`scripts/load.ts`), `DAT
 
 - Le stockage répond `X-Frame-Options: SAMEORIGIN` : une redirection vers une URL présignée afficherait une icône de document cassé dans l'iframe. D'où le proxy ; ne pas « optimiser » en redirection.
 - `next dev` ne transmet pas `Content-Length` sur le flux du scan (réponse chunked) : ce n'est pas un défaut du proxy.
-- Le nombre affiché est celui des passages (chunks) servant à la recherche, pas celui des contributions : `notebook-0001` a 13 contributions pour 6 passages.
+- Le nombre affiché est celui des passages (chunks) servant à la recherche : un par contribution, plus un par tranche de 400 mots pour une contribution longue. Avec les faux cahiers, `notebook-0001` a 13 contributions et 13 passages. Une base chargée avant ce découpage montre moins de passages : relancer `scripts/load.ts` puis `scripts/embed.ts`.
 - Sans les variables `S3_*`, la page s'affiche mais l'iframe reçoit `503 Stockage des scans non configuré`.

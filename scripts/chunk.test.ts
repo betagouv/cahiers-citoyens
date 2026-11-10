@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_WORDS, MIN_WORDS, chunkTranscription } from "./chunk";
+import { MAX_WORDS, chunkTranscription } from "./chunk";
 
 const HEADER =
   "Cahier de doléances et de propositions\nCommune de Exemple (00)\nOuvert le 1er janvier 2019";
@@ -23,26 +23,31 @@ describe("chunkTranscription", () => {
     expect(chunks.join(" ")).not.toContain("doléances");
   });
 
-  it("regroupe les contributions sans dépasser MAX_WORDS", () => {
+  it("fait un chunk par contribution, même courte, sans regrouper", () => {
     const contributions = [
       sentence(150, "a"),
-      sentence(150, "b"),
-      sentence(150, "c"),
-      sentence(150, "d"),
+      sentence(12, "b"),
+      `${sentence(30, "c")}\nSignature`,
     ];
-    const chunks = chunkTranscription(transcription(...contributions));
-    expect(chunks).toEqual([
-      `${contributions[0]}\n\n${contributions[1]}`,
-      `${contributions[2]}\n\n${contributions[3]}`,
-    ]);
+    expect(chunkTranscription(transcription(...contributions))).toEqual(
+      contributions,
+    );
   });
 
-  it("coupe une contribution trop longue entre deux sentences", () => {
+  it("ignore les espaces autour des contributions et les lignes vides en trop", () => {
+    expect(
+      chunkTranscription(
+        `${HEADER}\n\n  ${sentence(5, "a")}  \n\n\n\n${sentence(3, "b")}\n`,
+      ),
+    ).toEqual([sentence(5, "a"), sentence(3, "b")]);
+  });
+
+  it("coupe une contribution trop longue entre deux phrases", () => {
     const sentences = Array.from({ length: 9 }, (_, i) =>
       sentence(99, `m${i}`),
     );
     const chunks = chunkTranscription(transcription(sentences.join(" ")));
-    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.map(countWords)).toEqual([396, 396, 99]);
     for (const chunk of chunks) {
       expect(countWords(chunk)).toBeLessThanOrEqual(MAX_WORDS);
       expect(chunk).toMatch(/\.$/);
@@ -50,19 +55,14 @@ describe("chunkTranscription", () => {
     expect(chunks.join(" ")).toBe(sentences.join(" "));
   });
 
-  it("ne laisse pas un petit dernier groupe quand une autre coupure respecte les bornes", () => {
-    const chunks = chunkTranscription(
-      transcription(
-        sentence(150, "a"),
-        sentence(150, "b"),
-        sentence(90, "c"),
-        sentence(30, "d"),
-      ),
-    );
-    expect(chunks.map(countWords)).toEqual([150, 270]);
-    for (const chunk of chunks) {
-      expect(countWords(chunk)).toBeGreaterThanOrEqual(MIN_WORDS);
-      expect(countWords(chunk)).toBeLessThanOrEqual(MAX_WORDS);
-    }
+  it("ne coupe pas une contribution d'exactement MAX_WORDS mots", () => {
+    const contribution = sentence(MAX_WORDS, "a");
+    expect(chunkTranscription(transcription(contribution))).toEqual([
+      contribution,
+    ]);
+  });
+
+  it("ne renvoie rien pour un cahier sans contribution", () => {
+    expect(chunkTranscription(`${HEADER}\n`)).toEqual([]);
   });
 });
