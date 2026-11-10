@@ -11,6 +11,7 @@ import {
   unique,
   vector,
 } from "drizzle-orm/pg-core";
+import { EMBEDDING_DIMENSIONS } from "../lib/albert";
 
 const tsvector = customType<{ data: string }>({
   dataType() {
@@ -43,8 +44,8 @@ export const chunks = pgTable(
     search: tsvector("search").generatedAlwaysAs(
       sql`to_tsvector('french', "content")`,
     ),
-    // 1024 : dimension supposée de bge-m3, le modèle d'embeddings visé chez Albert. À confirmer.
-    embedding: vector("embedding", { dimensions: 1024 }),
+    // Dimension des vecteurs de bge-m3, le modèle d'embeddings servi par Albert.
+    embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }),
   },
   (table) => [
     unique("chunks_notebook_id_position_key").on(
