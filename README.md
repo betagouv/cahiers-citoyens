@@ -43,7 +43,7 @@ createdb cahiers
 DATABASE_URL=postgres://localhost:5432/cahiers bun run db:migrate
 ```
 
-Le chargeur insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Il n'applique pas le schéma : `bun run db:migrate` le fait. Les embeddings restent vides pour l'instant.
+Le chargeur insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Il n'applique pas le schéma : `bun run db:migrate` le fait. Il laisse les embeddings vides : voir « Embeddings ».
 
 ```bash
 DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/load.ts --source data/fake-data
@@ -61,6 +61,19 @@ AWS_REQUEST_CHECKSUM_CALCULATION=when_required AWS_RESPONSE_CHECKSUM_VALIDATION=
 aws --region <region> --endpoint-url <endpoint> \
   s3 sync data/fake-data s3://<bucket>/fake-data/
 ```
+
+## Embeddings
+
+Les chunks sont vectorisés par le modèle `bge-m3` de l'API Albert (`https://albert.api.etalab.gouv.fr/v1`, compatible OpenAI) : 1024 dimensions, la taille de la colonne `chunks.embedding`. Le client vit dans `src/lib/albert.ts`. La clé se passe par la variable `ALBERT_API_KEY` (voir `.env.example`), jamais en dur. `ALBERT_BASE_URL` permet de viser une autre instance.
+
+```bash
+DATABASE_URL=… ALBERT_API_KEY=… bun scripts/embed.ts [--batch 32] [--limit N]
+DATABASE_URL=… ALBERT_API_KEY=… bun scripts/search.ts "Il n'y a plus de médecin au village" [--limit 5]
+```
+
+`embed.ts` ne traite que les chunks dont `embedding` est vide, par lots, et affiche la progression. Le relancer ne refait rien. Après un rechargement par `load.ts`, qui remplace les chunks, il ne vectorise que les nouveaux. Albert refuse plus de 64 textes par requête : le client découpe au-delà. Il retente trois fois au plus sur 429 et 5xx.
+
+`search.ts` est un outil de test manuel : il vectorise la question et affiche les chunks les plus proches en distance cosinus (distance, cahier, début du texte). Pas encore de recherche hybride ni de reclassement.
 
 ## Déploiement sur Scalingo
 
