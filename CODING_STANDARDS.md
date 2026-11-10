@@ -17,6 +17,7 @@ ESLint et `tsconfig.json` imposent déjà `function` plutôt que les fonctions f
 
 - Dossiers en minuscules avec tirets.
 - Les tests sont colocalisés : `decouper.ts` et `decouper.test.ts`.
+- `src/generated/prisma` sort de `prisma generate` : modifier `prisma/schema.prisma` puis régénérer. La recherche plein texte et vectorielle passe par `$queryRaw` typé.
 
 ## Scripts
 

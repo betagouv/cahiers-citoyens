@@ -1,7 +1,8 @@
 import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import postgres from "postgres";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../src/generated/prisma/client";
 import { decouper } from "./decouper";
 import type { Commune } from "./fausses-donnees/domaine";
 
@@ -73,17 +74,8 @@ const cahiers = manifeste
   .filter(({ ligne }) => ligne.trim() !== "")
   .map(({ ligne, numero }) => lireLigneManifeste(ligne, numero));
 
-const sql = postgres(urlBase, { onnotice: () => {} });
+const prisma = new PrismaClient({ adapter: new PrismaPg(urlBase) });
 try {
-  await sql
-    .unsafe(
-      await readFile(
-        join(import.meta.dirname, "..", "db", "schema.sql"),
-        "utf8",
-      ),
-    )
-    .simple();
-
   let totalChunks = 0;
   for (const { id, commune, dateOuverture } of cahiers) {
     const cleScan = `cahiers/${id}/scan.pdf`;
@@ -94,43 +86,35 @@ try {
       "utf8",
     );
     const chunks = decouper(transcription).map((contenu, i) => ({
-      cahier_id: id,
+      cahierId: id,
       ordre: i + 1,
       contenu,
     }));
     totalChunks += chunks.length;
 
-    await sql.begin(async (tx) => {
-      await tx`
-        insert into cahiers ${tx({
-          id,
-          code_insee: commune.codeInsee,
-          commune: commune.nom,
-          departement: commune.departement,
-          region: commune.region,
-          date_ouverture: dateOuverture,
-          cle_scan: cleScan,
-          cle_transcription: cleTranscription,
-          transcription,
-        })}
-        on conflict (id) do update set
-          code_insee = excluded.code_insee,
-          commune = excluded.commune,
-          departement = excluded.departement,
-          region = excluded.region,
-          date_ouverture = excluded.date_ouverture,
-          cle_scan = excluded.cle_scan,
-          cle_transcription = excluded.cle_transcription,
-          transcription = excluded.transcription,
-          importe_le = now()
-      `;
-      await tx`delete from chunks where cahier_id = ${id}`;
-      if (chunks.length > 0) await tx`insert into chunks ${tx(chunks)}`;
-    });
+    const champs = {
+      codeInsee: commune.codeInsee,
+      commune: commune.nom,
+      departement: commune.departement,
+      region: commune.region,
+      dateOuverture: new Date(`${dateOuverture}T00:00:00Z`),
+      cleScan,
+      cleTranscription,
+      transcription,
+    };
+    await prisma.$transaction([
+      prisma.cahier.upsert({
+        where: { id },
+        create: { id, ...champs },
+        update: { ...champs, importeLe: new Date() },
+      }),
+      prisma.chunk.deleteMany({ where: { cahierId: id } }),
+      prisma.chunk.createMany({ data: chunks }),
+    ]);
   }
   console.log(
     `${cahiers.length} cahiers et ${totalChunks} chunks chargés depuis ${source}`,
   );
 } finally {
-  await sql.end();
+  await prisma.$disconnect();
 }

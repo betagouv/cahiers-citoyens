@@ -36,11 +36,20 @@ En attendant les vrais cahiers, `scripts/fausses-donnees/generer.ts` produit des
 bun scripts/fausses-donnees/generer.ts --nombre 200 --sortie data/fausses-donnees --graine 42
 ```
 
-Le chargeur applique `db/schema.sql` (Postgres avec l'extension `vector`), puis insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Les embeddings restent vides pour l'instant.
+Le schéma de la base est décrit dans `prisma/schema.prisma` et s'applique par les migrations de `prisma/migrations/` (Postgres avec l'extension `vector`). Créer une base locale, puis appliquer les migrations :
+
+```bash
+createdb cahiers
+DATABASE_URL=postgres://localhost:5432/cahiers bunx prisma migrate dev
+```
+
+Le chargeur insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Il n'applique pas le schéma : sur une base existante, `prisma migrate deploy` le fait. Les embeddings restent vides pour l'instant.
 
 ```bash
 DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/charger.ts --source data/fausses-donnees
 ```
+
+`bun install` lance `prisma generate`, qui écrit le client dans `src/generated/prisma` (ignoré par git). Après une modification de `prisma/schema.prisma`, `bunx prisma migrate dev --name <nom>` crée et applique la migration, puis `bunx prisma generate` régénère le client.
 
 Les clés S3 enregistrées en base (`cahiers/<id>/scan.pdf`, `cahiers/<id>/transcription.txt`) reprennent l'arborescence locale, sous le préfixe `fausses-donnees/` d'un bucket privé compatible S3. Les clés d'accès ne doivent jamais être commitées.
 
@@ -59,6 +68,7 @@ Déploiement : `git push scalingo main`, avec le remote `scalingo` ajouté depui
 
 - `.buildpacks` fixe le buildpack Node.js officiel de Scalingo.
 - `output: "standalone"` dans `next.config.ts`. Le script `build` lance `next build`, puis copie `public/` et `.next/static/` dans `.next/standalone/`.
+- `prisma generate` tourne à l'installation (`postinstall`) et au début du script `build`. Aucune base n'existe encore sur Scalingo : quand elle existera, ajouter `prisma migrate deploy` au script `build`, après `prisma generate`.
 - `Procfile` : `web: npm start`, qui lance `node .next/standalone/server.js` sur `0.0.0.0:$PORT`.
 
 Le buildpack officiel ne connaît pas Bun. Comme il ne trouve aucun lockfile qu'il sait lire, il installe les dépendances avec `npm install`. C'est pour ça que les scripts de `package.json` n'appellent jamais `bun` directement.
