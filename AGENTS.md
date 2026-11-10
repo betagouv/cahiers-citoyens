@@ -16,11 +16,16 @@ Les scripts de `package.json` tournent aussi sous npm sur Scalingo : ne pas y ap
 
 ## Dépôt public
 
-Tout ce qui est poussé est public : code, commits, `.claude/`, documentation. Aucun secret, nom d'hôte interne ni donnée réelle de personne. Les preuves de vérification restent dans `.claude/skills/verify-cahiers/evidence/`, ignoré par git.
+Tout ce qui est poussé est publié et lisible pour des années : code, commits, titres et descriptions de PR, commentaires, `.claude/`, documentation.
+
+- Aucun secret. Décrire le contrôle effectué, pas la machine : aucun nom d'hôte, de base, de bucket, d'URL interne ni d'identifiant de projet d'hébergement.
+- N'utiliser que des données fictives (fixtures, exemples, captures) : aucune donnée réelle de personne. Les preuves de vérification restent dans `.claude/skills/verify-cahiers/evidence/`, ignoré par git.
+- Dans le doute sur un commit ou une PR, retirer le détail.
 
 ## Selon la tâche
 
-- **Déclarer une tâche finie** : `bun run lint` et `bun run build` verts, puis le parcours exercé dans l'app avec le skill `verify-cahiers` (`.claude/skills/verify-cahiers/SKILL.md`).
+- **Écrire ou relire du code** : `CODING_STANDARDS.md`.
+- **Déclarer une tâche finie** : `bun run check`, `bun run lint`, `bun run test` et `bun run build` verts, puis le parcours exercé dans l'app avec le skill `verify-cahiers` (`.claude/skills/verify-cahiers/SKILL.md`).
 - **Modifier un parcours ou une page** : mettre à jour sa fiche sous `.claude/skills/verify-cahiers/features/` dans le même commit.
 - **Ajouter une dépendance** : vérifier qu'elle passe aussi avec npm (Scalingo installe avec npm), voir les gotchas de `verify-cahiers`.
 - **Rendre la main** : `cahiers-verify cleanup` arrête ce qu'il a lancé. Tout autre serveur ou session navigateur ouverts par toi s'arrête par PID ou par port, jamais par nom de processus.

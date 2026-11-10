@@ -5,7 +5,7 @@ import "@gouvfr/dsfr-chart/css";
 
 type ChartTag = "bar-chart" | "line-chart" | "pie-chart" | "map-chart";
 
-type Props = {
+interface Props {
   tag: ChartTag;
   /** Attributs du web component, en kebab-case, déjà sérialisés. */
   attributes: Record<string, string>;
@@ -13,12 +13,14 @@ type Props = {
   aspectRatio?: number;
   /** Texte annoncé pendant le chargement de la librairie. */
   label: string;
-};
+}
 
 // Les web components touchent `window` et `customElements` à l'import :
 // on ne les charge que côté client, une seule fois.
 let lib: Promise<unknown> | undefined;
-const loadLib = () => (lib ??= import("@gouvfr/dsfr-chart"));
+function loadLib(): Promise<unknown> {
+  return (lib ??= import("@gouvfr/dsfr-chart"));
+}
 
 // dsfr-chart construit parfois son canvas hors de la page (au montage, et le
 // camembert à chaque redimensionnement) : Chart.js retombe alors sur une taille
@@ -27,13 +29,52 @@ const loadLib = () => (lib ??= import("@gouvfr/dsfr-chart"));
 // toute la largeur, on alterne donc entre deux valeurs visuellement identiques.
 const NUDGE = 0.0001;
 
+function keepFullWidth(
+  element: HTMLDivElement,
+  chart: Element,
+  aspectRatio: number,
+): () => void {
+  let nudged = false;
+  function fit(): void {
+    const canvas = chart.querySelector("canvas");
+    if (!canvas) return;
+    const missing = element.clientWidth - canvas.getBoundingClientRect().width;
+    if (missing < 1) return;
+    nudged = !nudged;
+    chart.setAttribute(
+      "aspect-ratio",
+      String(aspectRatio + (nudged ? NUDGE : 0)),
+    );
+  }
+
+  let timeout: ReturnType<typeof setTimeout>;
+  function fitSoon(): void {
+    clearTimeout(timeout);
+    timeout = setTimeout(fit, 100);
+  }
+
+  const mutations = new MutationObserver(fitSoon);
+  mutations.observe(chart, { childList: true, subtree: true });
+  const resizes = new ResizeObserver(fitSoon);
+  resizes.observe(element);
+  fitSoon();
+
+  return () => {
+    mutations.disconnect();
+    resizes.disconnect();
+    clearTimeout(timeout);
+  };
+}
+
 export function DsfrChart({ tag, attributes, aspectRatio, label }: Props) {
   const [ready, setReady] = useState(false);
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
-    loadLib().then(() => active && setReady(true));
+    void loadLib().then(() => {
+      if (active) setReady(true);
+    });
     return () => {
       active = false;
     };
@@ -44,33 +85,7 @@ export function DsfrChart({ tag, attributes, aspectRatio, label }: Props) {
     const chart = element?.firstElementChild;
     if (!ready || aspectRatio === undefined || !element || !chart) return;
 
-    let nudged = false;
-    const fit = () => {
-      const canvas = chart.querySelector("canvas");
-      if (!canvas) return;
-      const missing = element.clientWidth - canvas.getBoundingClientRect().width;
-      if (missing < 1) return;
-      nudged = !nudged;
-      chart.setAttribute("aspect-ratio", String(aspectRatio + (nudged ? NUDGE : 0)));
-    };
-
-    let timeout: ReturnType<typeof setTimeout>;
-    const fitSoon = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(fit, 100);
-    };
-
-    const mutations = new MutationObserver(fitSoon);
-    mutations.observe(chart, { childList: true, subtree: true });
-    const resizes = new ResizeObserver(fitSoon);
-    resizes.observe(element);
-    fitSoon();
-
-    return () => {
-      mutations.disconnect();
-      resizes.disconnect();
-      clearTimeout(timeout);
-    };
+    return keepFullWidth(element, chart, aspectRatio);
   }, [ready, aspectRatio]);
 
   if (!ready) {
@@ -88,7 +103,9 @@ export function DsfrChart({ tag, attributes, aspectRatio, label }: Props) {
     <div ref={container}>
       {createElement(tag, {
         ...attributes,
-        ...(aspectRatio !== undefined && { "aspect-ratio": String(aspectRatio) }),
+        ...(aspectRatio !== undefined && {
+          "aspect-ratio": String(aspectRatio),
+        }),
       })}
     </div>
   );
