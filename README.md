@@ -62,6 +62,20 @@ aws --region <region> --endpoint-url <endpoint> \
   s3 sync data/fake-data s3://<bucket>/fake-data/
 ```
 
+## Consulter les cahiers
+
+`/notebooks` liste les cahiers chargés en base, 20 par page. `/notebooks/<id>` affiche le scan PDF à côté de la transcription (l'un sous l'autre sur mobile). Un id inconnu répond 404.
+
+Le scan est servi par `/notebooks/<id>/scan`, qui lit l'objet dans le bucket privé et le relaie en flux, requêtes `Range` comprises. Une redirection vers une URL présignée ne marche pas : le stockage répond `X-Frame-Options: SAMEORIGIN`, et le navigateur refuse alors d'afficher le PDF dans la page. Le proxy a aussi l'avantage de ne jamais exposer d'URL du bucket.
+
+Variables, à mettre dans `.env.local` en local (ignoré par git, voir `.env.example`) :
+
+- `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` : le stockage compatible S3.
+- `S3_PREFIX` : le dossier du bucket où se trouvent les clés enregistrées en base (`fake-data/` pour les faux cahiers).
+- `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` : une clé en lecture seule suffit.
+
+Le client S3 (`src/lib/scan-storage.ts`) n'envoie de somme de contrôle que si l'opération l'exige (`requestChecksumCalculation` et `responseChecksumValidation` à `WHEN_REQUIRED`), pour la même raison que l'AWS CLI ci-dessus. Sans ces variables, les pages s'affichent mais le scan répond 503.
+
 ## Embeddings
 
 Les chunks sont vectorisés par le modèle `bge-m3` de l'API Albert (`https://albert.api.etalab.gouv.fr/v1`, compatible OpenAI) : 1024 dimensions, la taille de la colonne `chunks.embedding`. Le client vit dans `src/lib/albert.ts`. La clé se passe par la variable `ALBERT_API_KEY` (voir `.env.example`), jamais en dur. `ALBERT_BASE_URL` permet de viser une autre instance.
