@@ -18,11 +18,11 @@ Chaque page porte le gabarit de l'État : liens d'évitement, en-tête avec le b
 
 Préconditions : serveur lancé, aucune.
 
-- **En-tête.** `agent-browser open "$CAHIERS_BASE_URL/"`, `wait --load networkidle`, `snapshot`. Le `banner` contient `RÉPUBLIQUE` / `FRANÇAISE` et le lien `Cahiers citoyens`.
+- **En-tête.** `agent-browser open "$NOTEBOOKS_BASE_URL/"`, `wait --load networkidle`, `snapshot`. Le `banner` contient `RÉPUBLIQUE` / `FRANÇAISE` et le lien `Cahiers citoyens`.
 - **Pied de page.** Dans le `snapshot`, le `contentinfo` contient les liens `info.gouv.fr`, `service-public.gouv.fr`, `legifrance.gouv.fr`, `data.gouv.fr`, le texte `Accessibilité : non conforme` et le lien `licence etalab-2.0`.
 - **Évitement.** La `navigation "Accès rapide"` contient `Accéder au contenu` et `Accéder au pied de page`. Leurs cibles existent : `agent-browser eval 'Boolean(document.getElementById("content") && document.getElementById("footer"))'` renvoie `true`.
 - **Titre.** `agent-browser get title` renvoie `Cahiers citoyens`.
-- **Preuve.** `cahiers-verify shot layout`.
+- **Preuve.** `notebooks-verify shot layout`.
 
 ## Gotchas
 

@@ -4,19 +4,19 @@
 set -uo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
-SKILL_DIR="$REPO/.claude/skills/verify-cahiers"
+SKILL_DIR="$REPO/.claude/skills/verify-notebooks"
 
 # Même port que `bun dev` lancé à la main dans cet arbre.
 . "$REPO/scripts/dev-port.sh"
-PORT="${CAHIERS_PORT:-$(dev_port "$REPO")}"
+PORT="${NOTEBOOKS_PORT:-$(dev_port "$REPO")}"
 BASE_URL="http://localhost:$PORT"
-RUN_DIR="${CAHIERS_RUN_DIR:-/tmp/cahiers-verify/$PORT}"
+RUN_DIR="${NOTEBOOKS_RUN_DIR:-/tmp/notebooks-verify/$PORT}"
 PID_FILE="$RUN_DIR/server.pid"
 MODE_FILE="$RUN_DIR/server.mode"
 LOG_FILE="$RUN_DIR/server.log"
-EVIDENCE_DIR="${CAHIERS_EVIDENCE_DIR:-$SKILL_DIR/evidence}"
+EVIDENCE_DIR="${NOTEBOOKS_EVIDENCE_DIR:-$SKILL_DIR/evidence}"
 # Session navigateur propre à l'arbre : deux worktrees ne se partagent pas d'onglet.
-export AGENT_BROWSER_SESSION="${AGENT_BROWSER_SESSION:-cahiers-$PORT}"
+export AGENT_BROWSER_SESSION="${AGENT_BROWSER_SESSION:-notebooks-$PORT}"
 
 mkdir -p "$RUN_DIR" "$EVIDENCE_DIR"
 
@@ -31,8 +31,8 @@ port_owner() {
 ours() { [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; }
 
 cmd_env() {
-  echo "export CAHIERS_PORT=$PORT"
-  echo "export CAHIERS_BASE_URL=$BASE_URL"
+  echo "export NOTEBOOKS_PORT=$PORT"
+  echo "export NOTEBOOKS_BASE_URL=$BASE_URL"
   echo "export AGENT_BROWSER_SESSION=$AGENT_BROWSER_SESSION"
 }
 
@@ -43,7 +43,7 @@ cmd_launch() {
   local mode=dev; [ "${1:-}" = "--prod" ] && mode=prod
   local owner; owner="$(port_owner)"
   if [ -n "$owner" ] && [ "$owner" != "$REPO" ] && [ "$owner" != "$REPO/.next/standalone" ]; then
-    die "port $PORT occupé par un serveur lancé depuis $owner — relancer avec CAHIERS_PORT=<autre port>"
+    die "port $PORT occupé par un serveur lancé depuis $owner — relancer avec NOTEBOOKS_PORT=<autre port>"
   fi
   if [ -n "$owner" ]; then
     if ours && [ "$(cat "$MODE_FILE" 2>/dev/null)" = "$mode" ] && healthy; then
@@ -52,7 +52,7 @@ cmd_launch() {
     if ! ours; then
       # Un serveur de cet arbre, lancé à la main : on ne le touche pas.
       [ "$mode" = dev ] && healthy && { echo "✓ serveur déjà up sur $BASE_URL (non démarré par ce run — le cleanup ne le tuera pas)"; return 0; }
-      die "port $PORT tenu par un serveur de cet arbre non lancé par ce harnais — l'arrêter, ou CAHIERS_PORT=<autre port>"
+      die "port $PORT tenu par un serveur de cet arbre non lancé par ce harnais — l'arrêter, ou NOTEBOOKS_PORT=<autre port>"
     fi
     cmd_cleanup_server
   fi
@@ -80,7 +80,7 @@ cmd_launch() {
 cmd_doctor() {
   local rc=0
   printf '%-22s' "health"
-  healthy && echo "OK ($BASE_URL)" || { echo "KO — lancer 'cahiers-verify launch'"; rc=1; }
+  healthy && echo "OK ($BASE_URL)" || { echo "KO — lancer 'notebooks-verify launch'"; rc=1; }
 
   printf '%-22s' "serveur du port $PORT"
   local owner; owner="$(port_owner)"
@@ -104,7 +104,7 @@ cmd_doctor() {
 # capture + arbre d'accessibilité dans evidence/<date>-<nom>.{png,txt}.
 cmd_shot() {
   local name="${1:-}" path="${2:-/}"
-  [ -n "$name" ] || die "usage : cahiers-verify shot <nom> [chemin]"
+  [ -n "$name" ] || die "usage : notebooks-verify shot <nom> [chemin]"
   local stem; stem="$EVIDENCE_DIR/$(date +%Y%m%d-%H%M%S)-$name"
   agent-browser open "$BASE_URL$path" >/dev/null || die "ouverture de $BASE_URL$path impossible"
   agent-browser wait --load networkidle >/dev/null 2>&1
@@ -168,5 +168,5 @@ case "${1:-}" in
   shot) shift; cmd_shot "$@" ;;
   charts) cmd_charts ;;
   cleanup) cmd_cleanup ;;
-  *) echo "usage : cahiers-verify {env|launch [--prod]|doctor|shot <nom> [chemin]|charts|cleanup}"; exit 2 ;;
+  *) echo "usage : notebooks-verify {env|launch [--prod]|doctor|shot <nom> [chemin]|charts|cleanup}"; exit 2 ;;
 esac

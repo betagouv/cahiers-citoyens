@@ -4,5 +4,5 @@ data
 bun.lock
 public
 scripts/fake-data/fonts
-.claude/skills/verify-cahiers/evidence
+.claude/skills/verify-notebooks/evidence
 src/generated/prisma

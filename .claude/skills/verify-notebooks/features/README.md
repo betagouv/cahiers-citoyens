@@ -10,8 +10,8 @@ Aujourd'hui : une page d'accueil publique, sans compte ni base. Ses chiffres son
 
 ## Préconditions de base
 
-- `eval "$(.claude/skills/verify-cahiers/scripts/cahiers-verify env)"`, puis `cahiers-verify launch` (ou `launch --prod` pour le build standalone).
-- Passer `cahiers-verify doctor`.
+- `eval "$(.claude/skills/verify-notebooks/scripts/notebooks-verify env)"`, puis `notebooks-verify launch` (ou `launch --prod` pour le build standalone).
+- Passer `notebooks-verify doctor`.
 - Ne jamais piloter une instance que ce run n'a pas démarrée ou explicitement reconnue.
 
 ## Conventions de pilotage
@@ -23,8 +23,8 @@ Aujourd'hui : une page d'accueil publique, sans compte ni base. Ses chiffres son
 
 ## Preuves et signalement des impasses
 
-- Une preuve UI comprend un `snapshot` et une capture : `cahiers-verify shot <nom>` produit les deux.
-- Un graphique se prouve par `cahiers-verify charts` **et** par la capture.
+- Une preuve UI comprend un `snapshot` et une capture : `notebooks-verify shot <nom>` produit les deux.
+- Un graphique se prouve par `notebooks-verify charts` **et** par la capture.
 - Consigner l'identifiant de la feature et le point d'entrée utilisé avec chaque artefact (le `<nom>` de `shot`).
 - Rapporter un chemin inatteignable avec la commande tentée et la précondition non remplie ; ne jamais présenter comme vérifié un point d'entrée contourné par un autre chemin.
 
