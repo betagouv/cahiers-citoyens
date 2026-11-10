@@ -5,4 +5,4 @@ bun.lock
 public
 scripts/fake-data/fonts
 .claude/skills/verify-notebooks/evidence
-src/generated/prisma
+drizzle/meta

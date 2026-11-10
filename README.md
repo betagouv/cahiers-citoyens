@@ -36,20 +36,20 @@ En attendant les vrais cahiers, `scripts/fake-data/generate.ts` produit des cahi
 bun scripts/fake-data/generate.ts --count 200 --out data/fake-data --seed 42
 ```
 
-Le schéma de la base est décrit dans `prisma/schema.prisma` et s'applique par les migrations de `prisma/migrations/` (Postgres avec l'extension `vector`). Créer une base locale, puis appliquer les migrations :
+Le schéma de la base est décrit dans `src/db/schema.ts` (Drizzle) et s'applique par les migrations de `drizzle/` (Postgres avec l'extension `vector`). Créer une base locale, puis appliquer les migrations :
 
 ```bash
 createdb cahiers
-DATABASE_URL=postgres://localhost:5432/cahiers bunx prisma migrate dev
+DATABASE_URL=postgres://localhost:5432/cahiers bun run db:migrate
 ```
 
-Le chargeur insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Il n'applique pas le schéma : sur une base existante, `prisma migrate deploy` le fait. Les embeddings restent vides pour l'instant.
+Le chargeur insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Il n'applique pas le schéma : `bun run db:migrate` le fait. Les embeddings restent vides pour l'instant.
 
 ```bash
 DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/load.ts --source data/fake-data
 ```
 
-`bun install` lance `prisma generate`, qui écrit le client dans `src/generated/prisma` (ignoré par git). Après une modification de `prisma/schema.prisma`, `bunx prisma migrate dev --name <nom>` crée et applique la migration, puis `bunx prisma generate` régénère le client.
+Après une modification de `src/db/schema.ts`, `bun run db:generate` écrit la migration correspondante dans `drizzle/`, puis `bun run db:migrate` l'applique. `drizzle-kit` ne crée pas les extensions Postgres : la migration personnalisée `drizzle/0000_enable-vector.sql` (créée par `bunx drizzle-kit generate --custom`) active `vector` avant toute table.
 
 Les clés S3 enregistrées en base (`notebooks/<id>/scan.pdf`, `notebooks/<id>/transcription.txt`) reprennent l'arborescence locale, sous le préfixe `fake-data/` d'un bucket privé compatible S3. Les clés d'accès ne doivent jamais être commitées.
 
@@ -68,7 +68,7 @@ Déploiement : `git push scalingo main`, avec le remote `scalingo` ajouté depui
 
 - `.buildpacks` fixe le buildpack Node.js officiel de Scalingo.
 - `output: "standalone"` dans `next.config.ts`. Le script `build` lance `next build`, puis copie `public/` et `.next/static/` dans `.next/standalone/`.
-- `prisma generate` tourne à l'installation (`postinstall`) et au début du script `build`. Aucune base n'existe encore sur Scalingo : quand elle existera, ajouter `prisma migrate deploy` au script `build`, après `prisma generate`.
+- Aucune base n'existe encore sur Scalingo : quand elle existera, appliquer les migrations avec `drizzle-kit migrate` avant le démarrage (`drizzle-kit` est alors à passer dans `dependencies`).
 - `Procfile` : `web: npm start`, qui lance `node .next/standalone/server.js` sur `0.0.0.0:$PORT`.
 
 Le buildpack officiel ne connaît pas Bun. Comme il ne trouve aucun lockfile qu'il sait lire, il installe les dépendances avec `npm install`. C'est pour ça que les scripts de `package.json` n'appellent jamais `bun` directement.

@@ -1,8 +1,9 @@
 import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { eq, sql } from "drizzle-orm";
+import { createDatabase } from "../src/db/client";
+import { chunks, notebooks } from "../src/db/schema";
 import { chunkTranscription } from "./chunk";
 
 interface NotebookMetadata {
@@ -42,16 +43,16 @@ if (!source)
 if (!databaseUrl) throw new Error("DATABASE_URL est obligatoire");
 
 const manifest = await readFile(join(source, "manifest.jsonl"), "utf8");
-const notebooks = manifest
+const manifestNotebooks = manifest
   .split("\n")
   .map((line, i) => ({ line, lineNumber: i + 1 }))
   .filter(({ line }) => line.trim() !== "")
   .map(({ line, lineNumber }) => parseManifestLine(line, lineNumber));
 
-const prisma = new PrismaClient({ adapter: new PrismaPg(databaseUrl) });
+const db = createDatabase(databaseUrl);
 try {
   let totalChunks = 0;
-  for (const { id, openedOn } of notebooks) {
+  for (const { id, openedOn } of manifestNotebooks) {
     const scanKey = `notebooks/${id}/scan.pdf`;
     const transcriptionKey = `notebooks/${id}/transcription.txt`;
     await access(join(source, scanKey));
@@ -59,32 +60,29 @@ try {
       join(source, transcriptionKey),
       "utf8",
     );
-    const chunks = chunkTranscription(transcription).map((content, i) => ({
+    const rows = chunkTranscription(transcription).map((content, i) => ({
       notebookId: id,
       position: i + 1,
       content,
     }));
-    totalChunks += chunks.length;
+    totalChunks += rows.length;
 
-    const fields = {
-      openedOn: new Date(`${openedOn}T00:00:00Z`),
-      scanKey,
-      transcriptionKey,
-      transcription,
-    };
-    await prisma.$transaction([
-      prisma.notebook.upsert({
-        where: { id },
-        create: { id, ...fields },
-        update: { ...fields, importedAt: new Date() },
-      }),
-      prisma.chunk.deleteMany({ where: { notebookId: id } }),
-      prisma.chunk.createMany({ data: chunks }),
-    ]);
+    const fields = { openedOn, scanKey, transcriptionKey, transcription };
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(notebooks)
+        .values({ id, ...fields })
+        .onConflictDoUpdate({
+          target: notebooks.id,
+          set: { ...fields, importedAt: sql`now()` },
+        });
+      await tx.delete(chunks).where(eq(chunks.notebookId, id));
+      if (rows.length > 0) await tx.insert(chunks).values(rows);
+    });
   }
   console.log(
-    `${notebooks.length} cahiers et ${totalChunks} chunks chargés depuis ${source}`,
+    `${manifestNotebooks.length} cahiers et ${totalChunks} chunks chargés depuis ${source}`,
   );
 } finally {
-  await prisma.$disconnect();
+  await db.$client.end();
 }

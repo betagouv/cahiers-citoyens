@@ -21,7 +21,7 @@ Tout le nommage du code est en anglais : fichiers, dossiers, identifiants, table
 
 - Dossiers en minuscules avec tirets.
 - Les tests sont colocalisés : `chunk.ts` et `chunk.test.ts`.
-- `src/generated/prisma` sort de `prisma generate` : modifier `prisma/schema.prisma` puis régénérer. La recherche plein texte et vectorielle passe par `$queryRaw` typé.
+- Le schéma de la base vit dans `src/db/schema.ts`. `drizzle-kit generate` en tire les migrations de `drizzle/`, `drizzle-kit migrate` les applique. La recherche plein texte et vectorielle passe par le constructeur de requêtes ou par `sql` typé.
 
 ## Scripts
 
