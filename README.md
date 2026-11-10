@@ -22,7 +22,7 @@ bun run format       # prettier sur tout le dépôt
 
 Le hook pre-commit (Husky) lance le typage, `lint-staged` (Prettier puis ESLint sur les fichiers indexés) et les tests. La CI GitHub (`.github/workflows/ci.yml`) lance `check`, `lint`, `test` et `build` sur chaque pull request et sur `main`. Conventions de code : `CODING_STANDARDS.md`.
 
-Pour vérifier un changement dans un vrai navigateur (serveur, captures, contrôle des graphiques) : voir `.claude/skills/verify-cahiers/SKILL.md`.
+Pour vérifier un changement dans un vrai navigateur (serveur, captures, contrôle des graphiques) : voir `.claude/skills/verify-notebooks/SKILL.md`.
 
 N'utiliser ni npm, ni yarn, ni pnpm en local : le seul lockfile est `bun.lock`.
 
