@@ -36,6 +36,7 @@ Un titre H1, un paragraphe de comportement visible, puis exactement quatre H2 : 
 
 - [Gabarit DSFR](./dsfr-layout.md) — en-tête, pied de page, liens d'évitement, titre de page, communs à toutes les pages.
 - [Cahiers : liste et visionneuse](./notebooks.md) — tableau paginé, scan PDF et transcription côte à côte, 404.
+- [Recherche](./search.md) — question en langage courant, réponse sourcée, replis quand Albert est indisponible.
 - [Accueil : données](./home-data.md) — chiffres clés, carte par région, trois graphiques, tableau par région, encart mairies.
 
 ## État de vérification

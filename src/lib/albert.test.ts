@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { EMBEDDING_DIMENSIONS, createAlbertClient } from "./albert";
+import {
+  AlbertError,
+  EMBEDDING_DIMENSIONS,
+  createAlbertClient,
+  parseChatResponse,
+  parseRerankResponse,
+} from "./albert";
 
 function vector(fill: number, dimensions = EMBEDDING_DIMENSIONS): number[] {
   return Array.from({ length: dimensions }, () => fill);
@@ -174,5 +180,149 @@ describe("createAlbertClient().embed", () => {
 
     await expect(client.embed([])).resolves.toEqual([]);
     expect(requests).toHaveLength(0);
+  });
+});
+
+describe("parseRerankResponse", () => {
+  it("lit le format Cohere v2 et trie par pertinence décroissante", () => {
+    expect(
+      parseRerankResponse(
+        {
+          object: "list",
+          results: [
+            { relevance_score: 0.02, index: 0 },
+            { relevance_score: 0.9, index: 2 },
+          ],
+          model: "bge-reranker-v2-m3",
+        },
+        3,
+      ),
+    ).toEqual([
+      { index: 2, relevanceScore: 0.9 },
+      { index: 0, relevanceScore: 0.02 },
+    ]);
+  });
+
+  it("refuse un index hors des documents envoyés ou en double", () => {
+    expect(() =>
+      parseRerankResponse({ results: [{ index: 3, relevance_score: 1 }] }, 3),
+    ).toThrow("index invalide (3)");
+    expect(() =>
+      parseRerankResponse(
+        {
+          results: [
+            { index: 1, relevance_score: 1 },
+            { index: 1, relevance_score: 0.5 },
+          ],
+        },
+        3,
+      ),
+    ).toThrow("index 1 en double");
+  });
+
+  it("refuse une réponse sans results ou sans score", () => {
+    expect(() => parseRerankResponse({ data: [] }, 1)).toThrow(AlbertError);
+    expect(() => parseRerankResponse({ results: [{ index: 0 }] }, 1)).toThrow(
+      "score de l'index 0 invalide",
+    );
+  });
+});
+
+describe("parseChatResponse", () => {
+  it("renvoie le contenu du premier choix, sans espaces autour", () => {
+    expect(
+      parseChatResponse({
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: " Réponse [1]\n" },
+          },
+        ],
+      }),
+    ).toBe("Réponse [1]");
+  });
+
+  it("refuse une réponse sans choix ou au message vide", () => {
+    expect(() => parseChatResponse({ choices: [] })).toThrow(
+      "aucun message dans choices",
+    );
+    expect(() =>
+      parseChatResponse({ choices: [{ message: { content: "  " } }] }),
+    ).toThrow("message vide");
+    expect(() => parseChatResponse("erreur")).toThrow("champ choices absent");
+  });
+});
+
+describe("createAlbertClient().rerank et .chat", () => {
+  it("envoie la requête de reclassement au format Cohere v2", async () => {
+    const { client, requests } = clientReplying(
+      jsonResponse({
+        results: [
+          { index: 1, relevance_score: 0.8 },
+          { index: 0, relevance_score: 0.1 },
+        ],
+      }),
+    );
+
+    await expect(client.rerank("médecin", ["a", "b"], 5)).resolves.toEqual([
+      { index: 1, relevanceScore: 0.8 },
+      { index: 0, relevanceScore: 0.1 },
+    ]);
+    expect(requests).toEqual([
+      {
+        url: "https://albert.example/v1/rerank",
+        body: {
+          model: "bge-reranker-v2-m3",
+          query: "médecin",
+          documents: ["a", "b"],
+          top_n: 2,
+        },
+      },
+    ]);
+  });
+
+  it("n'appelle pas le reclassement sans document", async () => {
+    const { client, requests } = clientReplying();
+    await expect(client.rerank("q", [], 5)).resolves.toEqual([]);
+    expect(requests).toHaveLength(0);
+  });
+
+  it("envoie les messages au modèle de chat et renvoie le texte", async () => {
+    const { client, requests } = clientReplying(
+      jsonResponse({ choices: [{ message: { content: "Bonjour [1]" } }] }),
+    );
+
+    await expect(
+      client.chat([{ role: "user", content: "Salut" }]),
+    ).resolves.toBe("Bonjour [1]");
+    expect(requests).toEqual([
+      {
+        url: "https://albert.example/v1/chat/completions",
+        body: {
+          model: "mistral-small-3-2-24b-instruct-2506",
+          messages: [{ role: "user", content: "Salut" }],
+          temperature: 0.2,
+          max_tokens: 700,
+        },
+      },
+    ]);
+  });
+
+  it("transforme une panne réseau persistante en AlbertError", async () => {
+    let calls = 0;
+    const client = createAlbertClient({
+      apiKey: "test-key",
+      async fetch() {
+        calls++;
+        throw new TypeError("fetch failed");
+      },
+    });
+
+    await expect(client.chat([{ role: "user", content: "x" }])).rejects.toThrow(
+      new AlbertError(
+        "Albert /chat/completions injoignable après 3 essai(s) : fetch failed",
+      ),
+    );
+    expect(calls).toBe(3);
   });
 });

@@ -3,20 +3,51 @@ export const EMBEDDING_MODEL = "bge-m3";
 export const EMBEDDING_DIMENSIONS = 1024;
 // Au-delà, Albert répond 413 (« maximum allowed batch size 64 »).
 export const MAX_EMBEDDING_BATCH = 64;
+export const RERANK_MODEL = "bge-reranker-v2-m3";
+export const DEFAULT_CHAT_MODEL = "mistral-small-3-2-24b-instruct-2506";
 
 const MAX_ATTEMPTS = 3;
 const BASE_RETRY_DELAY_MS = 500;
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 export interface AlbertClientOptions {
   apiKey: string;
   baseUrl?: string;
   model?: string;
+  rerankModel?: string;
+  chatModel?: string;
+  timeoutMs?: number;
   fetch?: typeof fetch;
+}
+
+export interface RerankResult {
+  index: number;
+  relevanceScore: number;
+}
+
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export interface ChatOptions {
+  temperature?: number;
+  maxTokens?: number;
 }
 
 export interface AlbertClient {
   embed(texts: string[]): Promise<number[][]>;
+  rerank(
+    query: string,
+    documents: string[],
+    topN: number,
+  ): Promise<RerankResult[]>;
+  chat(messages: ChatMessage[], options?: ChatOptions): Promise<string>;
 }
+
+// Toute défaillance d'Albert (réseau, HTTP, réponse illisible) : l'appelant
+// peut la distinguer d'une erreur de base de données et se replier.
+export class AlbertError extends Error {}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -39,7 +70,7 @@ function parseEmbeddingResponse(
   expectedCount: number,
 ): number[][] {
   function failure(reason: string): Error {
-    return new Error(`Réponse d'embeddings Albert invalide : ${reason}`);
+    return new AlbertError(`Réponse d'embeddings Albert invalide : ${reason}`);
   }
   if (!isObject(raw) || !Array.isArray(raw.data))
     throw failure("champ data absent");
@@ -76,37 +107,105 @@ function parseEmbeddingResponse(
   return vectors.filter((vector) => vector !== undefined);
 }
 
+export function parseRerankResponse(
+  raw: unknown,
+  documentCount: number,
+): RerankResult[] {
+  function failure(reason: string): Error {
+    return new AlbertError(
+      `Réponse de reclassement Albert invalide : ${reason}`,
+    );
+  }
+  if (!isObject(raw) || !Array.isArray(raw.results)) {
+    throw failure("champ results absent");
+  }
+  const seen = new Set<number>();
+  const results = raw.results.map((item: unknown) => {
+    if (!isObject(item)) throw failure("élément de results non objet");
+    const { index, relevance_score: relevanceScore } = item;
+    if (
+      typeof index !== "number" ||
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= documentCount
+    ) {
+      throw failure(`index invalide (${String(index)})`);
+    }
+    if (seen.has(index)) throw failure(`index ${index} en double`);
+    seen.add(index);
+    if (typeof relevanceScore !== "number" || Number.isNaN(relevanceScore)) {
+      throw failure(`score de l'index ${index} invalide`);
+    }
+    return { index, relevanceScore };
+  });
+  return results.sort((a, b) => b.relevanceScore - a.relevanceScore);
+}
+
+export function parseChatResponse(raw: unknown): string {
+  function failure(reason: string): Error {
+    return new AlbertError(`Réponse de chat Albert invalide : ${reason}`);
+  }
+  if (!isObject(raw) || !Array.isArray(raw.choices)) {
+    throw failure("champ choices absent");
+  }
+  const choice: unknown = raw.choices.at(0);
+  if (!isObject(choice) || !isObject(choice.message)) {
+    throw failure("aucun message dans choices");
+  }
+  const { content } = choice.message;
+  if (typeof content !== "string" || content.trim() === "") {
+    throw failure("message vide");
+  }
+  return content.trim();
+}
+
 export function createAlbertClient({
   apiKey,
   baseUrl = ALBERT_BASE_URL,
   model = EMBEDDING_MODEL,
+  rerankModel = RERANK_MODEL,
+  chatModel = DEFAULT_CHAT_MODEL,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
   fetch: fetchImpl = fetch,
 }: AlbertClientOptions): AlbertClient {
-  const url = `${baseUrl.replace(/\/+$/, "")}/embeddings`;
+  const root = baseUrl.replace(/\/+$/, "");
 
-  async function embedBatch(texts: string[]): Promise<number[][]> {
+  async function post(path: string, body: unknown): Promise<unknown> {
     for (let attempt = 1; ; attempt++) {
-      const response = await fetchImpl(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ model, input: texts }),
-      });
+      let response: Response;
+      try {
+        response = await fetchImpl(`${root}${path}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      } catch (error) {
+        if (attempt >= MAX_ATTEMPTS) {
+          const reason = error instanceof Error ? error.message : String(error);
+          throw new AlbertError(
+            `Albert ${path} injoignable après ${attempt} essai(s) : ${reason}`,
+          );
+        }
+        await wait(BASE_RETRY_DELAY_MS * 2 ** (attempt - 1));
+        continue;
+      }
       if (response.ok) {
         const raw: unknown = await response.json();
-        return parseEmbeddingResponse(raw, texts.length);
+        return raw;
       }
       if (response.status === 401) {
-        throw new Error(
+        throw new AlbertError(
           "Albert a refusé la clé d'API (401) : vérifier ALBERT_API_KEY",
         );
       }
       if (!isRetryable(response.status) || attempt >= MAX_ATTEMPTS) {
         const detail = (await response.text()).slice(0, 200);
-        throw new Error(
-          `Albert /embeddings a répondu ${response.status} après ${attempt} essai(s) : ${detail}`,
+        throw new AlbertError(
+          `Albert ${path} a répondu ${response.status} après ${attempt} essai(s) : ${detail}`,
         );
       }
       await wait(BASE_RETRY_DELAY_MS * 2 ** (attempt - 1));
@@ -117,10 +216,39 @@ export function createAlbertClient({
     const vectors: number[][] = [];
     for (let start = 0; start < texts.length; start += MAX_EMBEDDING_BATCH) {
       const batch = texts.slice(start, start + MAX_EMBEDDING_BATCH);
-      vectors.push(...(await embedBatch(batch)));
+      const raw = await post("/embeddings", { model, input: batch });
+      vectors.push(...parseEmbeddingResponse(raw, batch.length));
     }
     return vectors;
   }
 
-  return { embed };
+  async function rerank(
+    query: string,
+    documents: string[],
+    topN: number,
+  ): Promise<RerankResult[]> {
+    if (documents.length === 0) return [];
+    const raw = await post("/rerank", {
+      model: rerankModel,
+      query,
+      documents,
+      top_n: Math.min(topN, documents.length),
+    });
+    return parseRerankResponse(raw, documents.length).slice(0, topN);
+  }
+
+  async function chat(
+    messages: ChatMessage[],
+    { temperature = 0.2, maxTokens = 700 }: ChatOptions = {},
+  ): Promise<string> {
+    const raw = await post("/chat/completions", {
+      model: chatModel,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+    });
+    return parseChatResponse(raw);
+  }
+
+  return { embed, rerank, chat };
 }
