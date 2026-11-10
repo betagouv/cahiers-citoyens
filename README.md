@@ -68,7 +68,7 @@ Déploiement : `git push scalingo main`, avec le remote `scalingo` ajouté depui
 
 - `.buildpacks` fixe le buildpack Node.js officiel de Scalingo.
 - `output: "standalone"` dans `next.config.ts`. Le script `build` lance `next build`, puis copie `public/` et `.next/static/` dans `.next/standalone/`.
-- Aucune base n'existe encore sur Scalingo : quand elle existera, appliquer les migrations avec `drizzle-kit migrate` avant le démarrage (`drizzle-kit` est alors à passer dans `dependencies`).
+- `Procfile` : `postdeploy: npm run db:migrate` applique les migrations Drizzle à chaque déploiement, une fois le build fait et avant la bascule du trafic. Si elles échouent, le déploiement est refusé et l'ancienne version reste en ligne. `drizzle-kit` est donc dans `dependencies`, car Scalingo retire les `devDependencies` après le build. L'addon PostgreSQL fournit `DATABASE_URL` : il doit exister avant le premier déploiement qui contient ce hook.
 - `Procfile` : `web: npm start`, qui lance `node .next/standalone/server.js` sur `0.0.0.0:$PORT`.
 
 Le buildpack officiel ne connaît pas Bun. Comme il ne trouve aucun lockfile qu'il sait lire, il installe les dépendances avec `npm install`. C'est pour ça que les scripts de `package.json` n'appellent jamais `bun` directement.
