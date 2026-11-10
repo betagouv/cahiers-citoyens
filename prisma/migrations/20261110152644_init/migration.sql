@@ -4,10 +4,6 @@ CREATE EXTENSION IF NOT EXISTS "vector";
 -- CreateTable
 CREATE TABLE "notebooks" (
     "id" TEXT NOT NULL,
-    "insee_code" TEXT NOT NULL,
-    "municipality" TEXT NOT NULL,
-    "department" TEXT NOT NULL,
-    "region" TEXT NOT NULL,
     "opened_on" DATE NOT NULL,
     "scan_key" TEXT NOT NULL,
     "transcription_key" TEXT NOT NULL,
@@ -28,12 +24,6 @@ CREATE TABLE "chunks" (
 
     CONSTRAINT "chunks_pkey" PRIMARY KEY ("id")
 );
-
--- CreateIndex
-CREATE INDEX "notebooks_department_idx" ON "notebooks"("department");
-
--- CreateIndex
-CREATE INDEX "notebooks_insee_code_idx" ON "notebooks"("insee_code");
 
 -- CreateIndex
 CREATE INDEX "chunks_search_idx" ON "chunks" USING GIN ("search");

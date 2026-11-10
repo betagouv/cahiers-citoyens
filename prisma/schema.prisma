@@ -11,10 +11,6 @@ datasource db {
 
 model Notebook {
   id               String   @id
-  inseeCode        String   @map("insee_code")
-  municipality     String
-  department       String
-  region           String
   openedOn         DateTime @map("opened_on") @db.Date
   scanKey          String   @map("scan_key")
   transcriptionKey String   @map("transcription_key")
@@ -22,8 +18,6 @@ model Notebook {
   importedAt       DateTime @default(now()) @map("imported_at") @db.Timestamptz
   chunks           Chunk[]
 
-  @@index([department])
-  @@index([inseeCode])
   @@map("notebooks")
 }
 
