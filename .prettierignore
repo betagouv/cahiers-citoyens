@@ -5,3 +5,4 @@ bun.lock
 public
 scripts/fausses-donnees/polices
 .claude/skills/verify-cahiers/evidence
+src/generated/prisma

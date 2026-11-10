@@ -11,7 +11,14 @@ const NEXT_DEFAULT_EXPORT_FILES = [
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "data/**"]),
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "data/**",
+    "src/generated/**",
+  ]),
   {
     files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts"],
     languageOptions: {

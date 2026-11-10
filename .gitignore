@@ -42,3 +42,6 @@ next-env.d.ts
 
 # fausses données générées
 /data/
+
+# client Prisma généré
+src/generated/prisma/*
