@@ -14,8 +14,13 @@ bun install
 bun dev              # http://localhost:3000
 bun run build        # build de production (standalone)
 bun run start        # lance le build standalone
+bun run check        # typage (tsc --noEmit)
 bun run lint
+bun run test         # vitest
+bun run format       # prettier sur tout le dépôt
 ```
+
+Le hook pre-commit (Husky) lance le typage, `lint-staged` (Prettier puis ESLint sur les fichiers indexés) et les tests. La CI GitHub (`.github/workflows/ci.yml`) lance `check`, `lint`, `test` et `build` sur chaque pull request et sur `main`. Conventions de code : `CODING_STANDARDS.md`.
 
 Pour vérifier un changement dans un vrai navigateur (serveur, captures, contrôle des graphiques) : voir `.claude/skills/verify-cahiers/SKILL.md`.
 
@@ -23,9 +28,34 @@ N'utiliser ni npm, ni yarn, ni pnpm en local : le seul lockfile est `bun.lock`.
 
 `bunfig.toml` refuse toute version publiée depuis moins de 7 jours (`minimumReleaseAge`). Les exemptions temporaires sont listées dans `minimumReleaseAgeExcludes`.
 
+## Fausses données et base locale
+
+En attendant les vrais cahiers, `scripts/fausses-donnees/generer.ts` produit des cahiers fictifs : un `scan.pdf` (pages image, écriture manuscrite) et une `transcription.txt` par cahier, plus un `manifeste.jsonl` qui donne le thème de chaque contribution, pour évaluer la recherche plus tard. Même graine, même sortie. `data/` est ignoré par git.
+
+```bash
+bun scripts/fausses-donnees/generer.ts --nombre 200 --sortie data/fausses-donnees --graine 42
+```
+
+Le chargeur applique `db/schema.sql` (Postgres avec l'extension `vector`), puis insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Les embeddings restent vides pour l'instant.
+
+```bash
+DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/charger.ts --source data/fausses-donnees
+```
+
+Les clés S3 enregistrées en base (`cahiers/<id>/scan.pdf`, `cahiers/<id>/transcription.txt`) reprennent l'arborescence locale, sous le préfixe `fausses-donnees/` d'un bucket privé compatible S3. Les clés d'accès ne doivent jamais être commitées.
+
+Les versions récentes de l'AWS CLI ajoutent par défaut une somme de contrôle que certains stockages compatibles S3 refusent (`trailing checksum is not supported`). Les deux variables `AWS_*_CHECKSUM_*` la désactivent.
+
+```bash
+AWS_ACCESS_KEY_ID=… AWS_SECRET_ACCESS_KEY=… \
+AWS_REQUEST_CHECKSUM_CALCULATION=when_required AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
+aws --region <region> --endpoint-url <endpoint> \
+  s3 sync data/fausses-donnees s3://<bucket>/fausses-donnees/
+```
+
 ## Déploiement sur Scalingo
 
-Remote : `git@ssh.osc-secnum-fr1.scalingo.com:cahiers-citoyens.git` (`git push scalingo main`).
+Déploiement : `git push scalingo main`, avec le remote `scalingo` ajouté depuis le tableau de bord Scalingo.
 
 - `.buildpacks` fixe le buildpack Node.js officiel de Scalingo.
 - `output: "standalone"` dans `next.config.ts`. Le script `build` lance `next build`, puis copie `public/` et `.next/static/` dans `.next/standalone/`.
