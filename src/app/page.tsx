@@ -50,8 +50,8 @@ export default function Home() {
       <h1 className="fr-mt-2w">Cahier en construction</h1>
       <p className="fr-text--lead fr-mb-4w">
         Cahiers citoyens rassemble les témoignages déposés dans les mairies de
-        France lors des cahiers de doléances de l&apos;hiver 2018-2019, pour
-        les rendre consultables par territoire et par revendication.
+        France lors des cahiers de doléances de l&apos;hiver 2018-2019, pour les
+        rendre consultables par territoire et par revendication.
       </p>
 
       <Notice
@@ -83,7 +83,9 @@ export default function Home() {
               label="carte des témoignages par région"
               attributes={{
                 data: JSON.stringify(
-                  Object.fromEntries(regions.map((r) => [r.code, r.temoignages])),
+                  Object.fromEntries(
+                    regions.map((r) => [r.code, r.temoignages]),
+                  ),
                 ),
                 value: String(totalTemoignages),
                 name: "Témoignages recensés",

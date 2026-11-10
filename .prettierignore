@@ -1,0 +1,7 @@
+node_modules
+.next
+data
+bun.lock
+public
+scripts/fausses-donnees/polices
+.claude/skills/verify-cahiers/evidence
