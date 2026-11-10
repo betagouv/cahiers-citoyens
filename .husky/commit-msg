@@ -1,0 +1,9 @@
+first_line=$(head -n 1 "$1")
+case "$first_line" in
+  Merge\ *|Revert\ *|fixup!\ *|squash!\ *) exit 0 ;;
+esac
+if ! printf '%s\n' "$first_line" | grep -Eq '^(feat|fix|refactor|perf|docs|test|build|ci|chore|style|revert)(\([a-z0-9-]+\))?!?: .+'; then
+  echo "Message refusé : format Conventional Commits attendu, ex. « feat(db): ajoute la table notebooks »." >&2
+  echo "Types : feat, fix, refactor, perf, docs, test, build, ci, chore, style, revert." >&2
+  exit 1
+fi
