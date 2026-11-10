@@ -1,9 +1,9 @@
-import type { Commune } from "./domaine";
+import type { Municipality } from "./domain";
 
-type Ligne = [
-  nom: string,
-  codeInsee: string,
-  departement: string,
+type Row = [
+  name: string,
+  inseeCode: string,
+  department: string,
   region: string,
 ];
 
@@ -21,7 +21,7 @@ const PDL = "Pays de la Loire";
 const PAC = "Provence-Alpes-Côte d'Azur";
 const COR = "Corse";
 
-const LIGNES: Ligne[] = [
+const ROWS: Row[] = [
   ["Paris", "75056", "Paris", IDF],
   ["Marseille", "13055", "Bouches-du-Rhône", PAC],
   ["Lyon", "69123", "Rhône", ARA],
@@ -95,11 +95,11 @@ const LIGNES: Ligne[] = [
   ["Saint-Claude", "39478", "Jura", BFC],
 ];
 
-export const COMMUNES: readonly Commune[] = LIGNES.map(
-  ([nom, codeInsee, departement, region]) => ({
-    nom,
-    codeInsee,
-    departement,
+export const MUNICIPALITIES: readonly Municipality[] = ROWS.map(
+  ([name, inseeCode, department, region]) => ({
+    name,
+    inseeCode,
+    department,
     region,
   }),
 );
@@ -109,12 +109,13 @@ const CONTRACTIONS: Record<string, Record<string, string>> = {
   à: { "Le ": "au ", "Les ": "aux " },
 };
 
-export function precede(preposition: "de" | "à", nom: string): string {
+export function withPreposition(preposition: "de" | "à", name: string): string {
   for (const [article, contraction] of Object.entries(
     CONTRACTIONS[preposition],
   )) {
-    if (nom.startsWith(article)) return contraction + nom.slice(article.length);
+    if (name.startsWith(article))
+      return contraction + name.slice(article.length);
   }
-  if (preposition === "de" && /^[AEIOUYÉÈÊÎÔH]/.test(nom)) return `d'${nom}`;
-  return `${preposition} ${nom}`;
+  if (preposition === "de" && /^[AEIOUYÉÈÊÎÔH]/.test(name)) return `d'${name}`;
+  return `${preposition} ${name}`;
 }

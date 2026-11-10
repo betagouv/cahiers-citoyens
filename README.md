@@ -30,10 +30,10 @@ N'utiliser ni npm, ni yarn, ni pnpm en local : le seul lockfile est `bun.lock`.
 
 ## Fausses données et base locale
 
-En attendant les vrais cahiers, `scripts/fausses-donnees/generer.ts` produit des cahiers fictifs : un `scan.pdf` (pages image, écriture manuscrite) et une `transcription.txt` par cahier, plus un `manifeste.jsonl` qui donne le thème de chaque contribution, pour évaluer la recherche plus tard. Même graine, même sortie. `data/` est ignoré par git.
+En attendant les vrais cahiers, `scripts/fake-data/generate.ts` produit des cahiers fictifs : un `scan.pdf` (pages image, écriture manuscrite) et une `transcription.txt` par cahier, plus un `manifest.jsonl` qui donne le thème de chaque contribution, pour évaluer la recherche plus tard. Même graine, même sortie. `data/` est ignoré par git.
 
 ```bash
-bun scripts/fausses-donnees/generer.ts --nombre 200 --sortie data/fausses-donnees --graine 42
+bun scripts/fake-data/generate.ts --count 200 --out data/fake-data --seed 42
 ```
 
 Le schéma de la base est décrit dans `prisma/schema.prisma` et s'applique par les migrations de `prisma/migrations/` (Postgres avec l'extension `vector`). Créer une base locale, puis appliquer les migrations :
@@ -46,12 +46,12 @@ DATABASE_URL=postgres://localhost:5432/cahiers bunx prisma migrate dev
 Le chargeur insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Il n'applique pas le schéma : sur une base existante, `prisma migrate deploy` le fait. Les embeddings restent vides pour l'instant.
 
 ```bash
-DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/charger.ts --source data/fausses-donnees
+DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/load.ts --source data/fake-data
 ```
 
 `bun install` lance `prisma generate`, qui écrit le client dans `src/generated/prisma` (ignoré par git). Après une modification de `prisma/schema.prisma`, `bunx prisma migrate dev --name <nom>` crée et applique la migration, puis `bunx prisma generate` régénère le client.
 
-Les clés S3 enregistrées en base (`cahiers/<id>/scan.pdf`, `cahiers/<id>/transcription.txt`) reprennent l'arborescence locale, sous le préfixe `fausses-donnees/` d'un bucket privé compatible S3. Les clés d'accès ne doivent jamais être commitées.
+Les clés S3 enregistrées en base (`notebooks/<id>/scan.pdf`, `notebooks/<id>/transcription.txt`) reprennent l'arborescence locale, sous le préfixe `fake-data/` d'un bucket privé compatible S3. Les clés d'accès ne doivent jamais être commitées.
 
 Les versions récentes de l'AWS CLI ajoutent par défaut une somme de contrôle que certains stockages compatibles S3 refusent (`trailing checksum is not supported`). Les deux variables `AWS_*_CHECKSUM_*` la désactivent.
 
@@ -59,7 +59,7 @@ Les versions récentes de l'AWS CLI ajoutent par défaut une somme de contrôle 
 AWS_ACCESS_KEY_ID=… AWS_SECRET_ACCESS_KEY=… \
 AWS_REQUEST_CHECKSUM_CALCULATION=when_required AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
 aws --region <region> --endpoint-url <endpoint> \
-  s3 sync data/fausses-donnees s3://<bucket>/fausses-donnees/
+  s3 sync data/fake-data s3://<bucket>/fake-data/
 ```
 
 ## Déploiement sur Scalingo

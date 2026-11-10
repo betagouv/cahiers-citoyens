@@ -3,6 +3,6 @@ node_modules
 data
 bun.lock
 public
-scripts/fausses-donnees/polices
+scripts/fake-data/fonts
 .claude/skills/verify-cahiers/evidence
 src/generated/prisma
