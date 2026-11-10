@@ -9,38 +9,38 @@ datasource db {
   extensions = [vector]
 }
 
-model Cahier {
+model Notebook {
   id               String   @id
-  codeInsee        String   @map("code_insee")
-  commune          String
-  departement      String
+  inseeCode        String   @map("insee_code")
+  municipality     String
+  department       String
   region           String
-  dateOuverture    DateTime @map("date_ouverture") @db.Date
-  cleScan          String   @map("cle_scan")
-  cleTranscription String   @map("cle_transcription")
+  openedOn         DateTime @map("opened_on") @db.Date
+  scanKey          String   @map("scan_key")
+  transcriptionKey String   @map("transcription_key")
   transcription    String
-  importeLe        DateTime @default(now()) @map("importe_le") @db.Timestamptz
+  importedAt       DateTime @default(now()) @map("imported_at") @db.Timestamptz
   chunks           Chunk[]
 
-  @@index([departement])
-  @@index([codeInsee])
-  @@map("cahiers")
+  @@index([department])
+  @@index([inseeCode])
+  @@map("notebooks")
 }
 
 model Chunk {
-  id        BigInt                       @id @default(autoincrement())
-  cahier    Cahier                       @relation(fields: [cahierId], references: [id], onDelete: Cascade)
-  cahierId  String                       @map("cahier_id")
-  ordre     Int
-  contenu   String
+  id         BigInt                       @id @default(autoincrement())
+  notebook   Notebook                     @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+  notebookId String                       @map("notebook_id")
+  position   Int
+  content    String
   // Colonne générée (GENERATED ALWAYS AS ... STORED), écrite à la main dans la migration init.
   // dbgenerated reprend son expression pour que Prisma n'y voie pas de dérive.
-  recherche Unsupported("tsvector")?     @default(dbgenerated("to_tsvector('french'::regconfig, contenu)"))
+  search     Unsupported("tsvector")?     @default(dbgenerated("to_tsvector('french'::regconfig, content)"))
   // 1024 : dimension supposée de bge-m3, le modèle d'embeddings visé chez Albert. À confirmer.
-  embedding Unsupported("vector(1024)")?
+  embedding  Unsupported("vector(1024)")?
 
-  @@unique([cahierId, ordre])
-  @@index([recherche], type: Gin)
+  @@unique([notebookId, position])
+  @@index([search], type: Gin)
   // hnsw (vector_cosine_ops), créé à la main dans la migration init : Prisma ne connaît pas
   // ce type d'index. Le déclarer ici empêche migrate dev de le supprimer.
   @@index([embedding], map: "chunks_embedding_idx")

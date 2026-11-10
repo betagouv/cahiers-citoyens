@@ -132,12 +132,12 @@ cmd_charts() {
       const tag = e.tagName.toLowerCase();
       if (tag === "map-chart") {
         const zones = [...e.querySelectorAll("svg path")].filter(p => getComputedStyle(p).fill !== "none").length;
-        return { graphique: tag, zones, ok: zones > 0 };
+        return { chart: tag, zones, ok: zones > 0 };
       }
       const c = e.querySelector("canvas");
-      const rendu = c ? Math.round(c.getBoundingClientRect().width) : 0;
-      const conteneur = e.parentElement.clientWidth;
-      return { graphique: tag, conteneur, rendu, ok: rendu >= conteneur - 1 };
+      const rendered = c ? Math.round(c.getBoundingClientRect().width) : 0;
+      const container = e.parentElement.clientWidth;
+      return { chart: tag, container, rendered, ok: rendered >= container - 1 };
     }), null, 1)' | sed -e 's/^"//' -e 's/"$//' -e 's/\\n/\n/g' -e 's/\\"/"/g'
 }
 

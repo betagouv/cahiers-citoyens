@@ -5,7 +5,7 @@ description: Piloter l'application web Cahiers citoyens (Next.js 16 standalone, 
 
 # Vérifier Cahiers citoyens
 
-Cahiers citoyens recense les témoignages déposés dans les mairies de France lors des cahiers de doléances de l'hiver 2018-2019 et les rend consultables par territoire et par revendication. Pour l'instant : une page d'accueil publique, sans authentification ni base de données. Les chiffres viennent de `src/app/_accueil/donnees-illustratives.ts` et sont fictifs.
+Cahiers citoyens recense les témoignages déposés dans les mairies de France lors des cahiers de doléances de l'hiver 2018-2019 et les rend consultables par territoire et par revendication. Pour l'instant : une page d'accueil publique, sans authentification ni base de données. Les chiffres viennent de `src/app/_home/sample-data.ts` et sont fictifs.
 
 La surface est une **application web** servie par Next.js sur `http://localhost:<port>`. **Lis d'abord [`features/README.md`](./features/README.md)**, puis la fiche de la feature concernée.
 
@@ -70,7 +70,7 @@ Standards :
 
 - Exercer le vrai parcours utilisateur dans le navigateur, pas un rendu de composant isolé ni un `curl` du HTML : les graphiques n'existent qu'après hydratation.
 - Capturer l'action **et** l'état résultant. Un graphique se prouve par `charts` (mesure) **et** par la capture (image) : l'une sans l'autre a déjà menti (voir Gotchas).
-- Pour une donnée affichée, confronter la valeur lue dans le `snapshot` à sa source dans `src/app/_accueil/donnees-illustratives.ts`.
+- Pour une donnée affichée, confronter la valeur lue dans le `snapshot` à sa source dans `src/app/_home/sample-data.ts`.
 - Pour un changement de build ou de déploiement, vérifier en `--prod`, puis sur l'app déployée après le push (`curl` de la page en production pour la présence du contenu).
 
 ## Nettoyer
@@ -84,7 +84,7 @@ Arrête **uniquement** le serveur dont ce run a écrit le PID, et ses processus 
 ## Gotchas qui invalident un run
 
 - **`agent-browser screenshot --full` ment sur les graphiques.** Il agrandit la fenêtre et capture pendant que Chart.js se redimensionne : l'image montre des graphiques miniatures alors que la page est juste. `shot` contourne en agrandissant la fenêtre lui-même puis en attendant 2 s. Constaté le 2026-11-06.
-- **dsfr-chart construit parfois son canvas hors de la page**, au montage et, pour le camembert, à chaque redimensionnement. Chart.js retombe alors sur une taille minuscule (20×16 px). `src/app/_accueil/dsfr-chart.tsx` le détecte et force une reconstruction. `charts` est le contrôle de non-régression : tout `ok: false` est un bug réel.
+- **dsfr-chart construit parfois son canvas hors de la page**, au montage et, pour le camembert, à chaque redimensionnement. Chart.js retombe alors sur une taille minuscule (20×16 px). `src/app/_home/dsfr-chart.tsx` le détecte et force une reconstruction. `charts` est le contrôle de non-régression : tout `ok: false` est un bug réel.
 - **`document.querySelector("h1")` renvoie `Paramètres d'affichage`**, le titre de la modale de thème DSFR, placé dans le DOM. Lire les titres dans le `snapshot`.
 - **Un ancien serveur qui tient le port sert l'ancien code.** Si `next start` ou `node server.js` échoue en `EADDRINUSE`, l'ancien processus continue de répondre et la page paraît inchangée. `doctor` dit qui tient le port ; ne jamais conclure à un défaut sans l'avoir lu.
 - **Le pastille « N » en bas de page** est l'indicateur de `next dev` : elle n'apparaît pas en `--prod` ni en production.

@@ -1,11 +1,11 @@
-import type { Theme, ThemeId } from "./domaine";
+import type { Theme, ThemeId } from "./domain";
 
-// Gabarits remplis à la composition : {commune}, {km}, {euros}, {annees}, {mois}.
+// Gabarits remplis à la composition : {municipality}, {km}, {euros}, {years}, {months}.
 export const THEMES: Record<ThemeId, Theme> = {
-  fiscalite: {
-    libelle: "Fiscalité et pouvoir d'achat",
+  taxes: {
+    label: "Fiscalité et pouvoir d'achat",
     fragments: {
-      ouvertures: [
+      openings: [
         "Je voudrais parler des impôts et de ce qui nous reste à la fin du mois.",
         "Bonjour, moi c'est surtout le pouvoir d'achat qui me fait écrire ici.",
         "Je suis salariée à temps partiel et je n'arrive plus à boucler les fins de mois.",
@@ -20,12 +20,12 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Je veux revenir sur la question des taxes, qui revient à chaque discussion au comptoir.",
         "Pour être honnête, je n'y connais pas grand-chose en économie, mais je sais compter.",
         "Je me permets d'écrire quelques lignes sur ce qui me paraît injuste dans les impôts.",
-        "Comme beaucoup de gens ici à {commune}, je trouve que la coupe est pleine.",
+        "Comme beaucoup de gens ici à {municipality}, je trouve que la coupe est pleine.",
       ],
-      constats: [
+      findings: [
         "Le prix du gazole a pris presque vingt centimes en un an et on n'a pas le choix, il faut rouler pour aller travailler.",
         "Les taxes représentent plus de la moitié du prix du carburant, et ce sont toujours les mêmes qui payent.",
-        "Mon salaire n'a pas bougé depuis {annees} ans alors que tout augmente, l'électricité, les courses, l'assurance.",
+        "Mon salaire n'a pas bougé depuis {years} ans alors que tout augmente, l'électricité, les courses, l'assurance.",
         "La TVA, tout le monde la paye pareil, le smicard comme le millionnaire, et ça c'est pas juste.",
         "On a supprimé l'impôt sur la fortune et en même temps on augmente la CSG des retraités, cherchez l'erreur.",
         "Les grandes entreprises arrivent à ne presque pas payer d'impôts en France grâce à des montages que nous on ne peut pas faire.",
@@ -39,7 +39,7 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Les frais bancaires prennent aussi leur part, quand on est à découvert on paye encore plus, c'est la double peine.",
         "Beaucoup de gens autour de moi renoncent aux vacances, au restaurant, même au cinéma.",
       ],
-      revendications: [
+      demands: [
         "Je demande le rétablissement de l'ISF ou d'un impôt équivalent sur les très grandes fortunes.",
         "Il faut baisser la TVA sur les produits de première nécessité, au moins sur l'alimentation et l'énergie.",
         "Je souhaite qu'on annule la hausse des taxes sur les carburants tant qu'il n'y a pas d'autre solution pour se déplacer.",
@@ -56,19 +56,19 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Que les élus montrent l'exemple en réduisant leurs propres avantages.",
         "Je voudrais qu'on taxe davantage les dividendes et un peu moins le travail.",
       ],
-      exemples: [
-        "Chez nous à {commune}, je fais {km} kilomètres aller-retour pour aller au travail, ça fait un plein par semaine.",
+      examples: [
+        "Chez nous à {municipality}, je fais {km} kilomètres aller-retour pour aller au travail, ça fait un plein par semaine.",
         "Le mois dernier il me restait {euros} euros une fois tout payé, pour la nourriture et le reste.",
-        "Mon voisin a fermé sa boulangerie après {annees} ans, il ne s'en sortait plus avec les charges.",
+        "Mon voisin a fermé sa boulangerie après {years} ans, il ne s'en sortait plus avec les charges.",
         "Ma fille fait des ménages le soir en plus de son travail pour payer la cantine des petits.",
         "J'ai reçu un rappel de taxe foncière de {euros} euros que je n'avais pas prévu, j'ai dû étaler le paiement.",
-        "Au marché de {commune} les producteurs disent qu'ils vendent moins, les gens n'ont plus les moyens.",
+        "Au marché de {municipality} les producteurs disent qu'ils vendent moins, les gens n'ont plus les moyens.",
         "J'ai dû choisir cet hiver entre réparer la voiture et payer le fioul.",
         "Mon fils a un CDI mais il dort encore chez nous, il ne peut pas payer un loyer avec ce qu'il gagne.",
         "Ma mère touche une petite pension et la hausse de la CSG lui a pris presque {euros} euros par mois.",
         "Dans le département, beaucoup de gens travaillent à {km} kilomètres de chez eux, sans bus ni train.",
-        "Il y a {mois} mois, ma banque m'a prélevé des frais d'incident alors que j'avais juste quelques euros de découvert.",
-        "Au Secours populaire de {commune}, la file d'attente s'allonge chaque semaine, il y a même des gens qui travaillent.",
+        "Il y a {months} mois, ma banque m'a prélevé des frais d'incident alors que j'avais juste quelques euros de découvert.",
+        "Au Secours populaire de {municipality}, la file d'attente s'allonge chaque semaine, il y a même des gens qui travaillent.",
         "J'ai un petit garage, j'emploie deux personnes, et je ne me verse presque rien à moi.",
         "On a arrêté d'acheter de la viande toutes les semaines, c'est devenu un luxe pour nous.",
         "Mes enfants n'ont pas pu partir en colonie cette année, c'était {euros} euros chacun.",
@@ -93,10 +93,10 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
   },
 
-  "services-publics": {
-    libelle: "Services publics",
+  publicServices: {
+    label: "Services publics",
     fragments: {
-      ouvertures: [
+      openings: [
         "Je veux parler de la disparition des services publics dans nos communes.",
         "Bonjour, j'habite ici depuis toujours et j'ai vu tout fermer petit à petit.",
         "Mon propos concerne la poste, la trésorerie, la gare, enfin tout ce qui part.",
@@ -111,9 +111,9 @@ export const THEMES: Record<ThemeId, Theme> = {
         "En tant que secrétaire de mairie, j'en vois passer tous les jours, des gens perdus.",
         "J'écris pour mes parents qui ne savent pas se servir d'internet.",
         "Mon sujet, c'est la fermeture des guichets.",
-        "À {commune}, on a l'impression d'être des citoyens de seconde zone.",
+        "À {municipality}, on a l'impression d'être des citoyens de seconde zone.",
       ],
-      constats: [
+      findings: [
         "Le bureau de poste n'ouvre plus que deux matinées par semaine, et encore quand il y a du personnel.",
         "Toutes les démarches se font maintenant sur internet, mais la moitié des gens ici n'ont pas de bonne connexion.",
         "La trésorerie a fermé, il faut aller à la sous-préfecture pour la moindre question.",
@@ -130,7 +130,7 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Les maisons de services au public, c'est bien, mais une seule personne pour tout faire ne suffit pas.",
         "Les horaires d'ouverture sont pensés pour des gens qui ne travaillent pas.",
       ],
-      revendications: [
+      demands: [
         "Je demande qu'on garantisse un guichet physique dans chaque canton, avec de vraies personnes.",
         "Il faut arrêter de fermer les bureaux de poste dans les communes rurales.",
         "Qu'on garde toujours une alternative papier ou au guichet pour chaque démarche en ligne.",
@@ -147,22 +147,22 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Il faut que les sites de l'administration soient simples et marchent vraiment.",
         "Redonner des moyens aux mairies, qui sont le dernier service public qui reste.",
       ],
-      exemples: [
-        "Pour refaire mon passeport, j'ai dû aller à {km} kilomètres, il n'y avait pas de rendez-vous avant {mois} mois.",
+      examples: [
+        "Pour refaire mon passeport, j'ai dû aller à {km} kilomètres, il n'y avait pas de rendez-vous avant {months} mois.",
         "Ma voisine de quatre-vingt-cinq ans m'a demandé de l'aider à remplir sa déclaration en ligne, on y a passé l'après-midi.",
-        "À {commune}, la poste a fermé l'an dernier, maintenant c'est un relais dans l'épicerie, qui ferme le lundi.",
+        "À {municipality}, la poste a fermé l'an dernier, maintenant c'est un relais dans l'épicerie, qui ferme le lundi.",
         "J'ai attendu quarante minutes au téléphone avec la CAF pour qu'on me dise de rappeler.",
         "Le car pour aller au lycée passe à six heures quarante, mon fils doit se lever avant le jour.",
-        "Il y a {annees} ans on avait encore un percepteur au village, il connaissait tout le monde.",
+        "Il y a {years} ans on avait encore un percepteur au village, il connaissait tout le monde.",
         "Dans notre coin du département, le portable ne passe pas dans la moitié des maisons.",
         "J'ai perdu un mois de RSA parce qu'un document n'avait pas été téléchargé correctement sur le site.",
         "Mon père a dû payer {euros} euros à un garage pour faire sa carte grise, il ne savait pas faire sur internet.",
         "La secrétaire de mairie fait déjà le travail de trois administrations, elle n'en peut plus.",
-        "Le guichet de la gare de {commune} est fermé, il n'y a plus qu'une machine qui ne prend pas les billets de banque.",
+        "Le guichet de la gare de {municipality} est fermé, il n'y a plus qu'une machine qui ne prend pas les billets de banque.",
         "Pour une simple attestation, j'ai fait trois allers-retours à la sous-préfecture.",
         "La gendarmerie la plus proche est à {km} kilomètres, la nuit il faut attendre une heure qu'ils arrivent.",
         "Notre école a perdu une classe et l'an prochain ce sera peut-être la fermeture.",
-        "Ma déclaration d'impôts a été bloquée {mois} mois à cause d'une erreur de leur côté.",
+        "Ma déclaration d'impôts a été bloquée {months} mois à cause d'une erreur de leur côté.",
       ],
       conclusions: [
         "Le service public, c'est notre bien commun, il faut le défendre.",
@@ -184,10 +184,10 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
   },
 
-  transports: {
-    libelle: "Transports et mobilité",
+  transport: {
+    label: "Transports et mobilité",
     fragments: {
-      ouvertures: [
+      openings: [
         "Je souhaite parler des déplacements, parce qu'ici sans voiture on ne fait rien.",
         "Bonjour, ma contribution porte sur les transports.",
         "Je fais partie de ceux qui roulent beaucoup pour le travail.",
@@ -200,11 +200,11 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Pour moi la question, c'est comment on va au travail demain.",
         "Ma contribution sera courte et concerne la limitation à 80 km/h.",
         "Je me permets d'écrire au sujet des routes et des petites lignes.",
-        "Chauffeur routier depuis {annees} ans, je connais les routes par cœur.",
+        "Chauffeur routier depuis {years} ans, je connais les routes par cœur.",
         "Je voulais écrire sur les transports en commun, ou plutôt leur absence.",
-        "À {commune}, on vit au rythme de la voiture.",
+        "À {municipality}, on vit au rythme de la voiture.",
       ],
-      constats: [
+      findings: [
         "Il n'y a pas de transport en commun digne de ce nom, le car passe le matin et le soir, c'est tout.",
         "Le passage à 80 km/h sur les routes départementales a été décidé sans tenir compte de nos distances.",
         "Les petites lignes de train ferment les unes après les autres, et on nous demande de moins polluer.",
@@ -221,7 +221,7 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Les camions encombrent les routes alors que le fret ferroviaire a été abandonné.",
         "On taxe le carburant au nom de l'écologie mais les avions et les bateaux ne payent rien sur le kérosène.",
       ],
-      revendications: [
+      demands: [
         "Je demande le retour aux 90 km/h sur les routes secondaires, ou au moins que les départements décident.",
         "Il faut rouvrir les petites lignes ferroviaires et augmenter le nombre de trains.",
         "Que l'État aide vraiment à l'achat de véhicules propres, avec une aide qui dépend des revenus.",
@@ -238,19 +238,19 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Baisser le prix du train pour qu'il soit vraiment une alternative.",
         "Que l'argent des radars serve vraiment à la sécurité routière et pas à autre chose.",
       ],
-      exemples: [
+      examples: [
         "Je fais {km} kilomètres par jour pour aller au travail, il n'y a aucun bus à mes horaires.",
-        "Le train de {commune} a été supprimé il y a {annees} ans, la gare est devenue un logement.",
-        "Mon fils a mis {mois} mois à trouver un stage parce qu'il ne pouvait pas se déplacer.",
+        "Le train de {municipality} a été supprimé il y a {years} ans, la gare est devenue un logement.",
+        "Mon fils a mis {months} mois à trouver un stage parce qu'il ne pouvait pas se déplacer.",
         "Ma voiture a dix-huit ans, je ne pourrai pas en racheter une, même avec la prime.",
         "Pour aller à l'hôpital du département, il faut une heure de route, sans compter le parking.",
         "Le plein me coûte maintenant {euros} euros, c'est devenu un vrai budget.",
-        "La route entre {commune} et le chef-lieu est pleine de trous, j'ai crevé deux fois cet hiver.",
+        "La route entre {municipality} et le chef-lieu est pleine de trous, j'ai crevé deux fois cet hiver.",
         "Le bus scolaire est le seul transport, les adultes n'ont pas le droit de le prendre.",
         "Pour un rendez-vous à Paris, le train coûte {euros} euros aller-retour, je prends la voiture.",
         "J'ai pris un PV à 86 km/h sur une ligne droite où il n'y a jamais personne.",
         "Avec ma retraite je ne peux pas me payer un taxi pour aller faire mes courses à {km} kilomètres.",
-        "Il y a {annees} ans il y avait encore trois cars par jour vers la ville, maintenant un seul.",
+        "Il y a {years} ans il y avait encore trois cars par jour vers la ville, maintenant un seul.",
         "Mon permis m'a coûté presque {euros} euros, mes parents ont dû emprunter.",
         "Il n'y a pas une seule borne électrique dans tout le canton.",
         "Je fais du covoiturage avec une collègue, mais quand elle est malade je dois prendre un jour de congé.",
@@ -275,17 +275,17 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
   },
 
-  sante: {
-    libelle: "Santé et déserts médicaux",
+  health: {
+    label: "Santé et déserts médicaux",
     fragments: {
-      ouvertures: [
+      openings: [
         "Je voudrais parler de la santé, et surtout du manque de médecins.",
         "Bonjour, je suis aide-soignante et je veux dire ce qu'on vit à l'hôpital.",
         "Ma contribution porte sur l'accès aux soins dans nos campagnes.",
         "Je m'inquiète pour la santé de mes parents qui vieillissent ici.",
         "Je suis malade chronique et je vois bien que le système craque.",
         "Le sujet qui me tient à cœur, ce sont les déserts médicaux.",
-        "Infirmière depuis {annees} ans, je n'ai jamais vu une situation aussi tendue.",
+        "Infirmière depuis {years} ans, je n'ai jamais vu une situation aussi tendue.",
         "Je viens écrire au sujet des urgences et des maternités.",
         "Jeune maman, je veux parler du suivi des enfants.",
         "Je voudrais dire un mot sur les médicaments et les mutuelles.",
@@ -293,9 +293,9 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Je travaille en EHPAD et il faut que les gens sachent.",
         "La santé, ce n'est pas un coût, c'est un droit, je commence par là.",
         "Je suis kiné et je vois les patients errer sans médecin traitant.",
-        "Ici à {commune}, se soigner devient un luxe.",
+        "Ici à {municipality}, se soigner devient un luxe.",
       ],
-      constats: [
+      findings: [
         "Il faut parfois des mois pour obtenir un rendez-vous chez un spécialiste, ophtalmo ou dermato.",
         "Les médecins généralistes partent à la retraite sans être remplacés et les jeunes ne veulent pas s'installer.",
         "Les urgences sont saturées, on attend des heures sur un brancard dans le couloir.",
@@ -312,7 +312,7 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Les ambulances mettent trop de temps à arriver dans les villages éloignés.",
         "La prévention est oubliée, on soigne quand c'est déjà trop tard.",
       ],
-      revendications: [
+      demands: [
         "Je demande qu'on oblige les jeunes médecins à exercer quelques années dans les zones qui en manquent.",
         "Il faut rouvrir des lits à l'hôpital et embaucher du personnel soignant.",
         "Qu'on augmente les salaires des infirmières et des aides-soignantes.",
@@ -329,20 +329,20 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Revaloriser les visites à domicile pour que les médecins se déplacent encore.",
         "Permettre aux pharmaciens et aux infirmiers de faire plus d'actes simples.",
       ],
-      exemples: [
-        "Je n'ai plus de médecin traitant depuis {mois} mois, aucun cabinet ne prend de nouveaux patients.",
-        "Pour un rendez-vous chez l'ophtalmo, on m'a proposé une date dans {mois} mois, à {km} kilomètres.",
+      examples: [
+        "Je n'ai plus de médecin traitant depuis {months} mois, aucun cabinet ne prend de nouveaux patients.",
+        "Pour un rendez-vous chez l'ophtalmo, on m'a proposé une date dans {months} mois, à {km} kilomètres.",
         "Ma mère a attendu huit heures aux urgences avec une fracture du poignet.",
         "La maternité de notre secteur a fermé, il faut maintenant faire {km} kilomètres pour accoucher.",
         "Mon mari a renoncé à des couronnes dentaires, il restait {euros} euros à notre charge.",
-        "À {commune}, le dernier médecin a pris sa retraite et le cabinet est vide depuis.",
+        "À {municipality}, le dernier médecin a pris sa retraite et le cabinet est vide depuis.",
         "Ma mutuelle a encore augmenté de {euros} euros par mois cette année.",
         "Une amie infirmière enchaîne les heures supplémentaires sans pouvoir les récupérer.",
-        "Mon fils a attendu {mois} mois pour voir un pédopsychiatre.",
+        "Mon fils a attendu {months} mois pour voir un pédopsychiatre.",
         "La nuit, le médecin de garde le plus proche est à presque une heure de route.",
         "Dans l'EHPAD où est mon père, ils ne sont que deux la nuit pour soixante résidents.",
         "J'ai payé {euros} euros de dépassement pour une consultation chez un spécialiste.",
-        "La pharmacie du bourg a fermé il y a {annees} ans, il faut aller en ville pour la moindre boîte.",
+        "La pharmacie du bourg a fermé il y a {years} ans, il faut aller en ville pour la moindre boîte.",
         "Le SAMU a mis quarante minutes à arriver chez ma voisine quand elle a fait son malaise.",
         "Dans le département, on compte de moins en moins de médecins pour de plus en plus de personnes âgées.",
       ],
@@ -366,10 +366,10 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
   },
 
-  ecologie: {
-    libelle: "Écologie et environnement",
+  ecology: {
+    label: "Écologie et environnement",
     fragments: {
-      ouvertures: [
+      openings: [
         "Je souhaite que l'écologie ne soit pas oubliée dans ce grand débat.",
         "Bonjour, je suis jeune et je m'inquiète pour l'avenir de la planète.",
         "Je veux parler de l'environnement, même si je sais que ce n'est pas la priorité de tout le monde ici.",
@@ -384,9 +384,9 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Je travaille dans le bâtiment, je veux parler d'isolation.",
         "Écologiste convaincue, je refuse pourtant qu'on fasse payer les plus modestes.",
         "Je voudrais faire quelques propositions concrètes pour l'environnement.",
-        "Ici à {commune}, la nature est notre richesse, il faut la protéger.",
+        "Ici à {municipality}, la nature est notre richesse, il faut la protéger.",
       ],
-      constats: [
+      findings: [
         "On nous demande de faire des efforts mais les grandes entreprises continuent de polluer.",
         "La taxe carbone touche surtout ceux qui n'ont pas d'alternative à la voiture.",
         "Les étés sont de plus en plus chauds et secs, les nappes phréatiques sont au plus bas.",
@@ -403,7 +403,7 @@ export const THEMES: Record<ThemeId, Theme> = {
         "La forêt souffre, les arbres meurent avec les sécheresses à répétition.",
         "Les dépôts sauvages se multiplient depuis que la déchetterie a changé ses horaires.",
       ],
-      revendications: [
+      demands: [
         "Je demande que l'argent de la taxe carbone serve entièrement à la transition écologique.",
         "Il faut interdire progressivement les pesticides les plus dangereux, avec un accompagnement des agriculteurs.",
         "Taxer les gros pollueurs, les industriels, le transport aérien et maritime.",
@@ -420,12 +420,12 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Éduquer les enfants à l'environnement dès l'école primaire.",
         "Rendre les transports en commun plus accessibles pour moins utiliser la voiture.",
       ],
-      exemples: [
-        "À {commune}, la rivière était presque à sec l'été dernier, du jamais-vu selon les anciens.",
+      examples: [
+        "À {municipality}, la rivière était presque à sec l'été dernier, du jamais-vu selon les anciens.",
         "J'ai fait isoler mes combles avec une aide, l'entreprise a bâclé le travail et disparu.",
         "Les champs autour de l'école sont traités pendant que les enfants sont en récréation.",
         "J'ai perdu un tiers de mes ruches cette année.",
-        "Il y a {annees} ans, on voyait encore des hirondelles partout, maintenant presque plus.",
+        "Il y a {years} ans, on voyait encore des hirondelles partout, maintenant presque plus.",
         "Mon lave-linge a lâché au bout de cinq ans, la réparation coûtait {euros} euros.",
         "À la sortie du bourg, on a goudronné {km} hectares de prés pour un supermarché.",
         "Dans le département, des arrêtés sécheresse ont été pris tout l'été.",
@@ -457,10 +457,10 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
   },
 
-  democratie: {
-    libelle: "Démocratie et institutions",
+  democracy: {
+    label: "Démocratie et institutions",
     fragments: {
-      ouvertures: [
+      openings: [
         "Je veux parler de la démocratie, parce que c'est là que tout commence.",
         "Bonjour, je ne me sens plus représenté par nos élus.",
         "Ma contribution porte sur nos institutions.",
@@ -475,9 +475,9 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Je souhaite parler de la confiance entre les citoyens et les politiques.",
         "Mon propos concerne le Sénat, l'Assemblée et le président.",
         "Je veux écrire sur le rôle des maires, qu'on oublie trop souvent.",
-        "Ici à {commune}, on a l'impression que Paris décide de tout.",
+        "Ici à {municipality}, on a l'impression que Paris décide de tout.",
       ],
-      constats: [
+      findings: [
         "Les élus sont coupés de la réalité, ils ne savent pas ce que coûte un plein ou un caddie.",
         "On vote, et ensuite plus personne ne nous demande notre avis pendant cinq ans.",
         "L'abstention ne cesse d'augmenter, c'est le signe que quelque chose ne va pas.",
@@ -494,7 +494,7 @@ export const THEMES: Record<ThemeId, Theme> = {
         "On a l'impression que l'Europe décide de tout et qu'on ne peut rien y faire.",
         "Le cumul des mandats et les carrières politiques à vie éloignent les élus du terrain.",
       ],
-      revendications: [
+      demands: [
         "Je demande la mise en place du référendum d'initiative citoyenne.",
         "Il faut reconnaître le vote blanc et le compter dans les suffrages exprimés.",
         "Introduire une part de proportionnelle aux élections législatives.",
@@ -511,22 +511,22 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Je propose des assemblées citoyennes régulières dans chaque département.",
         "Faire plus de place aux jeunes dans la vie politique.",
       ],
-      exemples: [
-        "À {commune}, la fusion avec la communauté de communes s'est faite sans aucune réunion publique.",
+      examples: [
+        "À {municipality}, la fusion avec la communauté de communes s'est faite sans aucune réunion publique.",
         "J'ai écrit trois fois à mon député, je n'ai jamais reçu de réponse.",
         "Lors du dernier scrutin, plus de la moitié des inscrits de mon bureau ne sont pas venus voter.",
         "Le maire de notre village se démène, mais il n'a plus de budget pour rien.",
         "Mon fils de vingt ans m'a dit qu'il ne voterait plus, que ça ne servait à rien.",
-        "En {annees} ans, j'ai vu passer beaucoup de promesses, peu de changements.",
+        "En {years} ans, j'ai vu passer beaucoup de promesses, peu de changements.",
         "La réunion du grand débat organisée dans le département était pleine, les gens ont envie de parler.",
         "Notre conseil municipal a voté contre l'éolien, et le projet s'est fait quand même.",
         "J'ai voté blanc deux fois, et mon vote n'apparaît nulle part.",
         "Le référendum de 2005 a été balayé par le Parlement, beaucoup ne l'ont pas oublié.",
         "Ici on n'a vu notre député qu'une fois, pendant la campagne.",
-        "Le projet de carrière près de {commune} a été autorisé malgré une pétition de {euros} signatures.",
+        "Le projet de carrière près de {municipality} a été autorisé malgré une pétition de {euros} signatures.",
         "Les comptes rendus du conseil communautaire sont introuvables.",
         "On a fait une réunion à la salle des fêtes la semaine dernière, il y avait du monde comme jamais.",
-        "Il a fallu {mois} mois de mobilisation pour qu'on nous propose ce cahier.",
+        "Il a fallu {months} mois de mobilisation pour qu'on nous propose ce cahier.",
       ],
       conclusions: [
         "Le pouvoir doit revenir au peuple.",
@@ -549,13 +549,13 @@ export const THEMES: Record<ThemeId, Theme> = {
   },
 
   agriculture: {
-    libelle: "Agriculture et ruralité",
+    label: "Agriculture et ruralité",
     fragments: {
-      ouvertures: [
+      openings: [
         "Je suis agriculteur et je veux parler de notre métier.",
         "Bonjour, fille et petite-fille de paysans, je vois notre monde disparaître.",
         "Ma contribution concerne l'agriculture et la vie rurale.",
-        "Éleveur laitier depuis {annees} ans, je n'ai jamais connu autant de difficultés.",
+        "Éleveur laitier depuis {years} ans, je n'ai jamais connu autant de difficultés.",
         "Je veux dire un mot pour nos campagnes, qu'on oublie souvent.",
         "Je suis maraîchère en bio et je veux témoigner.",
         "On parle de nous à la télé seulement quand il y a une crise, alors j'écris.",
@@ -566,9 +566,9 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Je suis jeune et j'ai voulu m'installer en agriculture, voici mon parcours.",
         "Femme d'exploitant, je travaille sans statut depuis des années.",
         "Le monde rural a des choses à dire, voilà les miennes.",
-        "À {commune}, on vit de la terre depuis des générations.",
+        "À {municipality}, on vit de la terre depuis des générations.",
       ],
-      constats: [
+      findings: [
         "Les prix payés aux producteurs sont souvent en dessous du coût de production.",
         "Un agriculteur se suicide presque chaque jour en France, et on en parle à peine.",
         "Les normes changent tout le temps et les contrôles se multiplient, on passe plus de temps dans les papiers que dans les champs.",
@@ -585,7 +585,7 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Les conjoints qui travaillent sur l'exploitation n'ont souvent aucun statut ni retraite.",
         "La sécheresse et les aléas climatiques mettent en danger les récoltes chaque année.",
       ],
-      revendications: [
+      demands: [
         "Je demande des prix rémunérateurs, garantis par la loi, pour les producteurs.",
         "Il faut revaloriser les retraites agricoles au moins au niveau du minimum vieillesse.",
         "Simplifier les démarches administratives et réduire les contrôles inutiles.",
@@ -602,22 +602,22 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Protéger les terres agricoles contre la spéculation.",
         "Respecter le travail des paysans et arrêter l'agribashing.",
       ],
-      exemples: [
+      examples: [
         "Mon lait est payé {euros} euros les mille litres, ça ne couvre pas mes frais.",
         "Je travaille soixante-dix heures par semaine et je me verse moins qu'un SMIC.",
-        "Mon voisin a arrêté l'élevage après {annees} ans, ses vaches sont parties à l'abattoir.",
-        "J'ai passé {mois} mois à monter mon dossier d'installation, il a été refusé pour un papier.",
-        "À {commune}, il y avait vingt fermes quand j'étais petit, il en reste quatre.",
+        "Mon voisin a arrêté l'élevage après {years} ans, ses vaches sont parties à l'abattoir.",
+        "J'ai passé {months} mois à monter mon dossier d'installation, il a été refusé pour un papier.",
+        "À {municipality}, il y avait vingt fermes quand j'étais petit, il en reste quatre.",
         "Ma mère touche une retraite agricole de {euros} euros par mois après quarante ans de travail.",
         "Les sangliers ont retourné la moitié de mon champ de maïs, j'ai été indemnisé une misère.",
         "Le dernier café du village a fermé l'an dernier, c'était le seul endroit où on se retrouvait.",
         "Cet été, on a dû acheter du fourrage à {km} kilomètres à cause de la sécheresse.",
         "J'ai eu trois contrôles en un an, chacun m'a pris une journée entière.",
-        "Ma femme a travaillé sur la ferme pendant {annees} ans sans cotiser.",
+        "Ma femme a travaillé sur la ferme pendant {years} ans sans cotiser.",
         "Dans le département, on a perdu beaucoup d'exploitations en dix ans.",
         "Au supermarché, mes pommes sont vendues trois fois le prix qu'on me les achète.",
-        "Les aides PAC de l'an dernier sont arrivées avec {mois} mois de retard, j'ai dû emprunter.",
-        "On vend nos légumes au marché de {commune}, les gens sont contents, mais il faut tout faire nous-mêmes.",
+        "Les aides PAC de l'an dernier sont arrivées avec {months} mois de retard, j'ai dû emprunter.",
+        "On vend nos légumes au marché de {municipality}, les gens sont contents, mais il faut tout faire nous-mêmes.",
       ],
       conclusions: [
         "Sans paysans, pas de pays.",
@@ -640,9 +640,9 @@ export const THEMES: Record<ThemeId, Theme> = {
   },
 
   education: {
-    libelle: "Éducation et jeunesse",
+    label: "Éducation et jeunesse",
     fragments: {
-      ouvertures: [
+      openings: [
         "Je veux parler de l'école, parce que c'est l'avenir de nos enfants.",
         "Bonjour, je suis enseignante en primaire.",
         "Ma contribution porte sur l'éducation et la jeunesse.",
@@ -657,9 +657,9 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Étudiante, je travaille à côté pour payer mes études.",
         "Je voudrais parler de la place des parents à l'école.",
         "Mon sujet, c'est l'avenir des jeunes de nos campagnes.",
-        "À {commune}, l'école est le cœur du village.",
+        "À {municipality}, l'école est le cœur du village.",
       ],
-      constats: [
+      findings: [
         "Les classes sont surchargées, parfois près de trente élèves en maternelle.",
         "Les écoles rurales ferment ou sont regroupées, les enfants passent des heures dans le car.",
         "Les enseignants sont mal payés par rapport aux autres pays européens.",
@@ -676,7 +676,7 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Les jeunes ont du mal à trouver un premier emploi sans expérience.",
         "Le métier d'enseignant n'attire plus, les concours ne font pas le plein.",
       ],
-      revendications: [
+      demands: [
         "Je demande moins d'élèves par classe, surtout en maternelle et en primaire.",
         "Il faut arrêter de fermer les écoles rurales.",
         "Revaloriser le salaire des enseignants.",
@@ -693,19 +693,19 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Je propose un vrai service civique pour tous les jeunes.",
         "Donner du temps aux réformes avant d'en lancer de nouvelles.",
       ],
-      exemples: [
+      examples: [
         "Dans la classe de ma fille, ils sont vingt-neuf en grande section.",
-        "L'école de {commune} a perdu une classe à la rentrée, les parents se sont mobilisés pour rien.",
+        "L'école de {municipality} a perdu une classe à la rentrée, les parents se sont mobilisés pour rien.",
         "Mon fils fait {km} kilomètres de car matin et soir pour aller au collège.",
-        "La maîtresse de mon fils a été absente {mois} semaines sans remplaçant.",
-        "Je gagne {euros} euros net après {annees} ans d'enseignement.",
+        "La maîtresse de mon fils a été absente {months} semaines sans remplaçant.",
+        "Je gagne {euros} euros net après {years} ans d'enseignement.",
         "Ma fille a eu des réponses négatives partout sur Parcoursup, elle était en larmes.",
         "Un élève autiste de ma classe n'a que douze heures d'accompagnement par semaine.",
         "Je travaille vingt heures par semaine en plus de mes études pour payer ma chambre.",
         "Dans le département, il n'y a pas d'université, les jeunes doivent partir loin.",
         "Le chauffage de l'école est tombé en panne en janvier, les enfants gardaient leur manteau.",
         "Mon neveu a trouvé un apprentissage en boulangerie, il est enfin heureux.",
-        "Ma petite-fille a été harcelée au collège pendant {mois} mois avant que quelqu'un réagisse.",
+        "Ma petite-fille a été harcelée au collège pendant {months} mois avant que quelqu'un réagisse.",
         "Le regroupement pédagogique a obligé les enfants de quatre ans à prendre le car.",
         "La cantine coûte {euros} euros par mois pour mes trois enfants.",
         "L'internat le plus proche est complet, mon fils ne peut pas aller dans la filière qu'il veut.",
@@ -730,14 +730,14 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
   },
 
-  retraites: {
-    libelle: "Retraites",
+  pensions: {
+    label: "Retraites",
     fragments: {
-      ouvertures: [
+      openings: [
         "Je suis retraité et je veux parler de nos pensions.",
         "Bonjour, après quarante-deux ans de travail, voilà ce que je vis.",
         "Ma contribution porte sur les retraites.",
-        "Veuve depuis {annees} ans, je vis avec une petite pension.",
+        "Veuve depuis {years} ans, je vis avec une petite pension.",
         "Je m'inquiète pour ma future retraite, alors j'écris.",
         "Je voudrais parler de la CSG sur les pensions.",
         "Ancienne commerçante, je touche une retraite de misère.",
@@ -748,9 +748,9 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Je voudrais aborder la question de la dépendance et des maisons de retraite.",
         "Retraitée et aidante de mon mari malade, je veux dire ce que c'est.",
         "Je souhaite parler de la réforme annoncée des retraites.",
-        "À {commune}, beaucoup de retraités vivent seuls avec peu.",
+        "À {municipality}, beaucoup de retraités vivent seuls avec peu.",
       ],
-      constats: [
+      findings: [
         "La hausse de la CSG a fait baisser nos pensions alors qu'on nous avait promis le contraire.",
         "Les pensions ne suivent pas l'inflation, on perd du pouvoir d'achat chaque année.",
         "Beaucoup de retraités vivent sous le seuil de pauvreté, surtout les femmes.",
@@ -767,7 +767,7 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Les régimes spéciaux créent un sentiment d'injustice.",
         "Le minimum vieillesse ne permet pas de vivre dignement.",
       ],
-      revendications: [
+      demands: [
         "Je demande l'annulation de la hausse de la CSG pour tous les retraités.",
         "Il faut indexer les pensions sur l'inflation chaque année.",
         "Aucune pension ne devrait être inférieure au SMIC pour une carrière complète.",
@@ -784,21 +784,21 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Supprimer la cotisation mutuelle pour les plus petites pensions.",
         "Créer une vraie prise en charge publique de la dépendance.",
       ],
-      exemples: [
+      examples: [
         "Je touche {euros} euros par mois après une carrière complète.",
         "La CSG m'a pris presque {euros} euros par mois depuis l'an dernier.",
         "Ma mère est en EHPAD, ça coûte {euros} euros par mois, sa pension n'en couvre pas la moitié.",
-        "J'ai commencé à travailler à l'usine de {commune} à quinze ans et demi.",
+        "J'ai commencé à travailler à l'usine de {municipality} à quinze ans et demi.",
         "Ma voisine, veuve, vit avec le minimum vieillesse et ne chauffe qu'une pièce.",
         "Je garde mes petits-enfants tous les mercredis, sinon ma fille ne pourrait pas travailler.",
-        "J'ai élevé quatre enfants et ça m'a fait perdre {annees} années de cotisation.",
-        "Mon mari a travaillé {annees} ans dans le bâtiment, son dos est cassé.",
-        "Je m'occupe de mon mari malade depuis {mois} mois sans aucune aide.",
-        "Après {annees} ans comme commerçant, ma retraite est plus basse que le RSA.",
+        "J'ai élevé quatre enfants et ça m'a fait perdre {years} années de cotisation.",
+        "Mon mari a travaillé {years} ans dans le bâtiment, son dos est cassé.",
+        "Je m'occupe de mon mari malade depuis {months} mois sans aucune aide.",
+        "Après {years} ans comme commerçant, ma retraite est plus basse que le RSA.",
         "Dans le département, beaucoup de retraités agricoles touchent moins de mille euros.",
         "Ma mutuelle me coûte {euros} euros par mois à soixante-quinze ans.",
-        "J'ai reçu ma première pension avec {mois} mois de retard, j'ai vécu sur mes économies.",
-        "À {commune}, le club des aînés compte beaucoup de gens qui vivent seuls.",
+        "J'ai reçu ma première pension avec {months} mois de retard, j'ai vécu sur mes économies.",
+        "À {municipality}, le club des aînés compte beaucoup de gens qui vivent seuls.",
         "Pour faire réparer ma chaudière, j'ai dû demander de l'aide à mes enfants.",
       ],
       conclusions: [
@@ -821,10 +821,10 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
   },
 
-  logement: {
-    libelle: "Logement",
+  housing: {
+    label: "Logement",
     fragments: {
-      ouvertures: [
+      openings: [
         "Je veux parler du logement, qui prend une part énorme de notre budget.",
         "Bonjour, je suis locataire et je n'arrive plus à suivre.",
         "Ma contribution porte sur l'accès au logement.",
@@ -839,9 +839,9 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Je voudrais aborder les APL.",
         "Ancien sans-abri, je veux témoigner.",
         "Je souhaite parler des résidences secondaires et des locations touristiques.",
-        "À {commune}, se loger correctement devient difficile.",
+        "À {municipality}, se loger correctement devient difficile.",
       ],
-      constats: [
+      findings: [
         "Le loyer prend presque la moitié de mon salaire.",
         "La baisse des APL de cinq euros a été vécue comme une humiliation.",
         "Les logements sociaux manquent et les listes d'attente sont interminables.",
@@ -858,7 +858,7 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Les personnes âgées ont du mal à adapter leur logement à la perte d'autonomie.",
         "Les loyers ont augmenté bien plus vite que les salaires.",
       ],
-      revendications: [
+      demands: [
         "Je demande l'encadrement des loyers dans les zones tendues.",
         "Il faut construire beaucoup plus de logements sociaux de qualité.",
         "Rétablir les APL à leur niveau d'avant.",
@@ -875,22 +875,22 @@ export const THEMES: Record<ThemeId, Theme> = {
         "Que personne ne dorme dehors dans un pays aussi riche.",
         "Baisser les frais de notaire pour une première acquisition.",
       ],
-      exemples: [
+      examples: [
         "Je paye {euros} euros de loyer pour un deux-pièces humide.",
-        "Notre demande de logement social est en attente depuis {annees} ans.",
+        "Notre demande de logement social est en attente depuis {years} ans.",
         "L'hiver dernier, ma facture de fioul a atteint {euros} euros, je n'ai chauffé que la cuisine.",
-        "À {commune}, une maison sur cinq du centre est vide et fermée.",
-        "On a visité {mois} appartements, à chaque fois il fallait un garant qu'on n'a pas.",
+        "À {municipality}, une maison sur cinq du centre est vide et fermée.",
+        "On a visité {months} appartements, à chaque fois il fallait un garant qu'on n'a pas.",
         "Mes voisins louent leur maison aux touristes l'été, on ne trouve plus rien à l'année.",
-        "Mon dossier pour l'isolation a été refusé pour un papier manquant, après {mois} mois d'attente.",
+        "Mon dossier pour l'isolation a été refusé pour un papier manquant, après {months} mois d'attente.",
         "Ma fille vit chez nous à vingt-huit ans avec son compagnon, faute de logement abordable.",
         "Il y a de la moisissure dans la chambre des enfants, le propriétaire ne fait rien.",
         "Dans le département, les prix de l'immobilier ont flambé près des villes.",
-        "J'ai passé {mois} mois en foyer avant de trouver un studio.",
+        "J'ai passé {months} mois en foyer avant de trouver un studio.",
         "Ma mère ne peut plus monter son escalier mais les travaux coûtent {euros} euros.",
         "Les APL de mon fils étudiant ont baissé, il a dû prendre un deuxième job.",
         "On habite à {km} kilomètres de la ville parce que c'est le seul endroit où on a pu acheter.",
-        "La maison de mes grands-parents est restée vide {annees} ans avant d'être vendue pour presque rien.",
+        "La maison de mes grands-parents est restée vide {years} ans avant d'être vendue pour presque rien.",
       ],
       conclusions: [
         "Un toit, c'est la base de tout.",
