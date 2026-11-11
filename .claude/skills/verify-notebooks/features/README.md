@@ -40,6 +40,8 @@ Un titre H1, un paragraphe de comportement visible, puis exactement quatre H2 : 
 
 ## État de vérification
 
+**Vérifié en `--prod` le 2026-11-11, base de 30 faux cahiers vectorisés :** `home-intro`, `home-search` (saisie puis Entrée depuis l'accueil), `home-figures` (confrontés à la base), `home-notice`, `home-browse`, `layout-nav` (rubrique active sur `/notebooks`, `/notebooks/<id>`, `/search`, aucune sur la 404), `notebooks-list`, `notebook-viewer`, `notebook-scan`, `notebook-not-found` (404 aussi en dev), `search-answer`, `search-sources`, `search-degraded` (standalone lancé avec `ALBERT_BASE_URL=http://127.0.0.1:9`). Preuves dans `../evidence/`.
+
 **Vérifié de bout en bout le 2026-11-06, en dev et en `--prod` :** `layout-header`, `layout-footer`.
 
 **Dérivé du code sans exécution :** le comportement de `layout-skip-links` au clavier (liens présents dans le `snapshot`, navigation par Tab non exercée).
