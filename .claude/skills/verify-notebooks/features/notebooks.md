@@ -12,7 +12,7 @@
 
 ## How to get to it (user POV)
 
-- Ouvrir `/notebooks` directement : aucun lien n'y mène encore depuis l'accueil ni l'en-tête.
+- Lien `Cahiers` de l'en-tête, ou bouton `Parcourir les cahiers` de l'accueil.
 - Clic sur un identifiant du tableau.
 
 ## Driving it with agent-browser

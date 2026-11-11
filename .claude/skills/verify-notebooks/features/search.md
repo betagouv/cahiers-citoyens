@@ -12,7 +12,7 @@
 
 ## How to get to it (user POV)
 
-- Ouvrir `/search` directement : aucun lien n'y mène encore depuis l'accueil ni l'en-tête.
+- Barre de recherche de l'accueil, ou lien `Rechercher` de l'en-tête.
 - Un exemple de la page vide.
 
 ## Driving it with agent-browser
