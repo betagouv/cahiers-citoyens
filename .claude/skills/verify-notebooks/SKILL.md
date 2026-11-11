@@ -83,7 +83,7 @@ Arrête **uniquement** le serveur dont ce run a écrit le PID, et ses processus 
 - **Le pastille « N » en bas de page** est l'indicateur de `next dev` : elle n'apparaît pas en `--prod` ni en production.
 - **Un 404 en dev ne prouve rien pour la production.** Avec Cache Components, le standalone envoie l'enveloppe statique précalculée avant le rendu de la page : un `notFound()` dans la page y répondait 200. Contrôler les statuts en `--prod`. Constaté le 2026-11-11.
 - **Le standalone ne lit pas `.env.local`.** `launch --prod` hérite de l'environnement du shell : exporter les variables avant (`set -a; . ./.env.local; set +a`).
-- **npm installe sur Scalingo, pas Bun.** Un conflit de peer dependencies toléré par Bun fait échouer le déploiement (`ERESOLVE`). `.npmrc` porte `legacy-peer-deps=true` pour cette raison. Après un ajout de dépendance, simuler `npm install --dry-run` dans un dossier temporaire avec `package.json` et `.npmrc`.
+- **npm installe sur Scalingo, pas Bun.** Un conflit de peer dependencies toléré par Bun fait échouer le déploiement (`ERESOLVE`). Après un ajout de dépendance, simuler `npm install --dry-run --ignore-scripts` dans un dossier temporaire qui ne contient que `package.json`.
 
 ## Maintenir
 
