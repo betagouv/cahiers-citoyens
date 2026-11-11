@@ -22,7 +22,7 @@ bun run format       # prettier sur tout le dépôt
 
 Le hook pre-commit (Husky) lance le typage, `lint-staged` (Prettier puis ESLint sur les fichiers indexés) et les tests. La CI GitHub (`.github/workflows/ci.yml`) lance `check`, `lint`, `test` et `build` sur chaque pull request et sur `main`. Conventions de code : `CODING_STANDARDS.md`.
 
-Pour vérifier un changement dans un vrai navigateur (serveur, captures, contrôle des graphiques) : voir `.claude/skills/verify-notebooks/SKILL.md`.
+Pour vérifier un changement dans un vrai navigateur (serveur, captures, statuts HTTP) : voir `.claude/skills/verify-notebooks/SKILL.md`.
 
 N'utiliser ni npm, ni yarn, ni pnpm en local : le seul lockfile est `bun.lock`.
 
@@ -43,7 +43,7 @@ createdb cahiers
 DATABASE_URL=postgres://localhost:5432/cahiers bun run db:migrate
 ```
 
-Le chargeur insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Il n'applique pas le schéma : `bun run db:migrate` le fait. Il laisse les embeddings vides : voir « Embeddings ».
+Le chargeur découpe chaque transcription en chunks (`scripts/chunk.ts`) : un par contribution, c'est-à-dire par paragraphe séparé d'une ligne vide, en-tête exclu. Une contribution de plus de 400 mots est coupée entre deux phrases. Le chargeur insère ou met à jour chaque cahier et remplace ses chunks. Le relancer ne crée pas de doublons. Il n'applique pas le schéma : `bun run db:migrate` le fait. Il laisse les embeddings vides : voir « Embeddings ».
 
 ```bash
 DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/load.ts --source data/fake-data
@@ -62,6 +62,22 @@ aws --region <region> --endpoint-url <endpoint> \
   s3 sync data/fake-data s3://<bucket>/fake-data/
 ```
 
+## Consulter les cahiers
+
+L'accueil (`/`) présente le projet, propose la barre de recherche et affiche les chiffres du corpus lus en base à chaque requête : nombre de cahiers et de contributions (chunks), période d'ouverture des cahiers, part des contributions vectorisées pour la recherche.
+
+`/notebooks` liste les cahiers chargés en base, 20 par page. `/notebooks/<id>` affiche le scan PDF à côté de la transcription (l'un sous l'autre sur mobile). Un id inconnu répond 404 : `src/proxy.ts` vérifie que le cahier existe avant le rendu. La vérification ne peut pas rester dans la page : avec Cache Components, le serveur envoie l'enveloppe statique précalculée (gabarit, en-tête) dès la requête, donc le statut 200 part avant que la page ne lise la base.
+
+Le scan est servi par `/notebooks/<id>/scan`, qui lit l'objet dans le bucket privé et le relaie en flux, requêtes `Range` comprises. Une redirection vers une URL présignée ne marche pas : le stockage répond `X-Frame-Options: SAMEORIGIN`, et le navigateur refuse alors d'afficher le PDF dans la page. Le proxy a aussi l'avantage de ne jamais exposer d'URL du bucket.
+
+Variables, à mettre dans `.env.local` en local (ignoré par git, voir `.env.example`) :
+
+- `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` : le stockage compatible S3.
+- `S3_PREFIX` : le dossier du bucket où se trouvent les clés enregistrées en base (`fake-data/` pour les faux cahiers).
+- `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` : une clé en lecture seule suffit.
+
+Le client S3 (`src/lib/scan-storage.ts`) n'envoie de somme de contrôle que si l'opération l'exige (`requestChecksumCalculation` et `responseChecksumValidation` à `WHEN_REQUIRED`), pour la même raison que l'AWS CLI ci-dessus. Sans ces variables, les pages s'affichent mais le scan répond 503.
+
 ## Embeddings
 
 Les chunks sont vectorisés par le modèle `bge-m3` de l'API Albert (`https://albert.api.etalab.gouv.fr/v1`, compatible OpenAI) : 1024 dimensions, la taille de la colonne `chunks.embedding`. Le client vit dans `src/lib/albert.ts`. La clé se passe par la variable `ALBERT_API_KEY` (voir `.env.example`), jamais en dur. `ALBERT_BASE_URL` permet de viser une autre instance.
@@ -73,7 +89,20 @@ DATABASE_URL=… ALBERT_API_KEY=… bun scripts/search.ts "Il n'y a plus de méd
 
 `embed.ts` ne traite que les chunks dont `embedding` est vide, par lots, et affiche la progression. Le relancer ne refait rien. Après un rechargement par `load.ts`, qui remplace les chunks, il ne vectorise que les nouveaux. Albert refuse plus de 64 textes par requête : le client découpe au-delà. Il retente trois fois au plus sur 429 et 5xx.
 
-`search.ts` est un outil de test manuel : il vectorise la question et affiche les chunks les plus proches en distance cosinus (distance, cahier, début du texte). Pas encore de recherche hybride ni de reclassement.
+`search.ts` est un outil de test manuel : il vectorise la question et affiche les chunks les plus proches en distance cosinus (distance, cahier, début du texte).
+
+## Recherche
+
+`/search?q=…` répond à une question à partir des cahiers (`src/lib/search/`) :
+
+1. la question est vectorisée par `bge-m3` ;
+2. deux recherches tournent en SQL, chacune limitée à 30 passages : plein texte en OU sur les mots de la question (`chunks.search`, classée par `ts_rank`) et vectorielle (distance cosinus sur `chunks.embedding`). Leurs classements sont fusionnés par Reciprocal Rank Fusion (k = 60) ;
+3. `bge-reranker-v2-m3` reclasse les 30 candidats et garde les 5 meilleurs. Un passage noté sous 0,01 est écarté : une question hors sujet n'affiche alors aucune source ;
+4. le modèle de chat rédige une réponse en français, fondée sur ces seuls passages, avec des renvois [1] à [5] vers les sources affichées dessous.
+
+Chaque étape qui appelle Albert peut échouer sans faire tomber la page. Sans embedding, seule la recherche plein texte tourne ; sans reclassement, l'ordre de la fusion est gardé ; sans génération, la page affiche les sources seules. Un encadré signale chaque repli.
+
+Variables : `ALBERT_API_KEY` (sans elle, la recherche se limite au plein texte), `ALBERT_BASE_URL` (facultative), `ALBERT_CHAT_MODEL` (facultative, `mistral-small-3-2-24b-instruct-2506` par défaut).
 
 ## Déploiement sur Scalingo
 

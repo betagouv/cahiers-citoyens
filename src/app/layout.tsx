@@ -7,6 +7,7 @@ import {
   DsfrHead,
   getHtmlAttributes,
 } from "@/dsfr-bootstrap/server-only-index";
+import { HeaderNavigation } from "./_components/header-navigation";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -52,6 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             brandTop={brandTop}
             serviceTitle="Cahiers citoyens"
             homeLinkProps={homeLinkProps}
+            navigation={<HeaderNavigation />}
           />
           <main id="content" className="flex-1">
             {children}

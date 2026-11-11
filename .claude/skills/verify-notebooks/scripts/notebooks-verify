@@ -100,8 +100,8 @@ cmd_doctor() {
   return $rc
 }
 
-# shot <nom> [chemin] : ouvre la page, attend les graphiques, enregistre
-# capture + arbre d'accessibilité dans evidence/<date>-<nom>.{png,txt}.
+# shot <nom> [chemin] : ouvre la page, attend le contenu diffusé en flux,
+# enregistre capture + arbre d'accessibilité dans evidence/<date>-<nom>.{png,txt}.
 cmd_shot() {
   local name="${1:-}" path="${2:-/}"
   [ -n "$name" ] || die "usage : notebooks-verify shot <nom> [chemin]"
@@ -110,35 +110,15 @@ cmd_shot() {
   agent-browser wait --load networkidle >/dev/null 2>&1
   agent-browser wait 2500 >/dev/null
   agent-browser snapshot >"$stem.txt" || die "snapshot impossible"
-  # Pas de `screenshot --full` : il agrandit la fenêtre et capture pendant que
-  # Chart.js se redimensionne, d'où des graphiques miniatures sur l'image alors
-  # que la page est juste. On agrandit nous-mêmes, on attend, puis on capture.
+  # Pas de `screenshot --full` : il agrandit la fenêtre et capture aussitôt,
+  # avant que la page ne se réajuste. On agrandit nous-mêmes, on attend, puis
+  # on capture.
   local height; height="$(agent-browser eval 'document.documentElement.scrollHeight' | tr -dc 0-9)"
   agent-browser set viewport 1280 "${height:-3000}" >/dev/null
   agent-browser wait 2000 >/dev/null
   agent-browser screenshot "$stem.png" | tail -1
   agent-browser set viewport 1280 800 >/dev/null
   echo "✓ $stem.txt"
-}
-
-# charts : état de rendu de chaque web component dsfr-chart.
-# - graphiques Chart.js : le canvas doit occuper toute la largeur du conteneur ;
-#   plus étroit, c'est le bug de dimensionnement de dsfr-chart.
-# - carte : SVG à côté d'un panneau de légende, donc jamais pleine largeur ;
-#   on compte les zones coloriées (18 régions attendues).
-cmd_charts() {
-  agent-browser eval '
-    JSON.stringify([...document.querySelectorAll("bar-chart,line-chart,pie-chart,map-chart")].map(e => {
-      const tag = e.tagName.toLowerCase();
-      if (tag === "map-chart") {
-        const zones = [...e.querySelectorAll("svg path")].filter(p => getComputedStyle(p).fill !== "none").length;
-        return { chart: tag, zones, ok: zones > 0 };
-      }
-      const c = e.querySelector("canvas");
-      const rendered = c ? Math.round(c.getBoundingClientRect().width) : 0;
-      const container = e.parentElement.clientWidth;
-      return { chart: tag, container, rendered, ok: rendered >= container - 1 };
-    }), null, 1)' | sed -e 's/^"//' -e 's/"$//' -e 's/\\n/\n/g' -e 's/\\"/"/g'
 }
 
 cmd_cleanup_server() {
@@ -166,7 +146,6 @@ case "${1:-}" in
   launch) shift; cmd_launch "$@" ;;
   doctor) cmd_doctor ;;
   shot) shift; cmd_shot "$@" ;;
-  charts) cmd_charts ;;
   cleanup) cmd_cleanup ;;
-  *) echo "usage : notebooks-verify {env|launch [--prod]|doctor|shot <nom> [chemin]|charts|cleanup}"; exit 2 ;;
+  *) echo "usage : notebooks-verify {env|launch [--prod]|doctor|shot <nom> [chemin]|cleanup}"; exit 2 ;;
 esac
