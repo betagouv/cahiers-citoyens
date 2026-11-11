@@ -76,6 +76,26 @@ export async function getNotebook(id: string): Promise<Notebook | undefined> {
   return row;
 }
 
+// `<id>` décodé d'un chemin `/notebooks/<id>`, undefined pour tout autre chemin.
+export function notebookIdFromPath(pathname: string): string | undefined {
+  const match = /^\/notebooks\/([^/]+)$/.exec(pathname);
+  if (match === null) return undefined;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return undefined;
+  }
+}
+
+export async function notebookExists(id: string): Promise<boolean> {
+  const [row] = await getDatabase()
+    .select({ id: notebooks.id })
+    .from(notebooks)
+    .where(eq(notebooks.id, id))
+    .limit(1);
+  return row !== undefined;
+}
+
 export async function getScanKey(id: string): Promise<string | undefined> {
   const [row] = await getDatabase()
     .select({ scanKey: notebooks.scanKey })

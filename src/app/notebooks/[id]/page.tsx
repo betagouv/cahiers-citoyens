@@ -5,8 +5,10 @@ import { Button } from "@codegouvfr/react-dsfr/Button";
 import { formatDate, formatNumber } from "@/lib/format";
 import { getNotebook } from "@/lib/notebooks";
 
-// La page attend la base avant d'envoyer quoi que ce soit : un id inconnu
-// répond ainsi un vrai 404, et non un 200 suivi d'une page « introuvable ».
+// La page lit la base hors de toute frontière Suspense : la navigation vers
+// elle attend la base. Le statut 404 d'un id inconnu est posé par
+// `src/proxy.ts`, avant le rendu ; le `notFound()` ci-dessous ne sert qu'à un
+// cahier supprimé entre-temps.
 export const instant = false;
 
 export async function generateMetadata({

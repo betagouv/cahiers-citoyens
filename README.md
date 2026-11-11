@@ -64,7 +64,7 @@ aws --region <region> --endpoint-url <endpoint> \
 
 ## Consulter les cahiers
 
-`/notebooks` liste les cahiers chargés en base, 20 par page. `/notebooks/<id>` affiche le scan PDF à côté de la transcription (l'un sous l'autre sur mobile). Un id inconnu répond 404.
+`/notebooks` liste les cahiers chargés en base, 20 par page. `/notebooks/<id>` affiche le scan PDF à côté de la transcription (l'un sous l'autre sur mobile). Un id inconnu répond 404 : `src/proxy.ts` vérifie que le cahier existe avant le rendu. La vérification ne peut pas rester dans la page : avec Cache Components, le serveur envoie l'enveloppe statique précalculée (gabarit, en-tête) dès la requête, donc le statut 200 part avant que la page ne lise la base.
 
 Le scan est servi par `/notebooks/<id>/scan`, qui lit l'objet dans le bucket privé et le relaie en flux, requêtes `Range` comprises. Une redirection vers une URL présignée ne marche pas : le stockage répond `X-Frame-Options: SAMEORIGIN`, et le navigateur refuse alors d'afficher le PDF dans la page. Le proxy a aussi l'avantage de ne jamais exposer d'URL du bucket.
 
