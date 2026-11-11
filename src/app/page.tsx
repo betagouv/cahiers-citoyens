@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { Button } from "@codegouvfr/react-dsfr/Button";
 import { Notice } from "@codegouvfr/react-dsfr/Notice";
@@ -19,6 +20,9 @@ function KeyFigure({ value, label }: { value: string; label: string }) {
 }
 
 async function CorpusFigures() {
+  // Rien d'autre ne lie ces chiffres à la requête : sans cet appel, le build
+  // tenterait de les lire en base pour les figer dans la page statique.
+  await connection();
   const stats = await getCorpusStats();
   if (
     stats.notebookCount === 0 ||

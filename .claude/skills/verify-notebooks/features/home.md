@@ -28,6 +28,7 @@ Préconditions : une base migrée et chargée (`scripts/load.ts`, puis `scripts/
 
 ## Gotchas
 
+- Les chiffres sont lus à chaque requête : `await connection()` dans `CorpusFigures` empêche le build de les lire en base. Sans lui, `next build` sans `DATABASE_URL` échoue sur `/` (`DATABASE_URL est obligatoire`), et avec une base il risque de figer les chiffres du moment dans la page statique. Contrôle : supprimer quelques chunks dans une base jetable, recharger `/`, le nombre de contributions baisse.
 - Un `curl` de `/` ne voit pas toujours les chiffres : ils arrivent en flux après l'enveloppe statique. Les lire dans le navigateur.
 - La part indexée vaut `0 %` tant que `scripts/embed.ts` n'a pas tourné après un `scripts/load.ts`, qui remplace les chunks.
 - La barre de recherche est un vrai formulaire (`src/app/_components/search-form.tsx`), pas le `SearchBar` de react-dsfr, qui navigue en JavaScript.
