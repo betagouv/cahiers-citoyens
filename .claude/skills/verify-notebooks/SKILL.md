@@ -1,11 +1,11 @@
 ---
 name: verify-notebooks
-description: Piloter l'application web Cahiers citoyens (Next.js 16 standalone, DSFR, graphiques @gouvfr/dsfr-chart) dans un vrai navigateur pour prouver qu'un changement marche réellement. Lance le serveur, ouvre la page, contrôle le rendu des graphiques et de la carte, capture des preuves. Utiliser avant de déclarer terminé un changement qui touche une page, un composant DSFR, un graphique, les données affichées ou le build standalone.
+description: Piloter l'application web Cahiers citoyens (Next.js 16 standalone, DSFR, Postgres, recherche via Albert) dans un vrai navigateur pour prouver qu'un changement marche réellement. Lance le serveur, ouvre la page, contrôle les données affichées et les statuts HTTP, capture des preuves. Utiliser avant de déclarer terminé un changement qui touche une page, un composant DSFR, les données affichées, la recherche ou le build standalone.
 ---
 
 # Vérifier Cahiers citoyens
 
-Cahiers citoyens recense les témoignages déposés dans les mairies de France lors des cahiers de doléances de l'hiver 2018-2019 et les rend consultables par territoire et par revendication. Pour l'instant : une page d'accueil publique, sans authentification ni base de données. Les chiffres viennent de `src/app/_home/sample-data.ts` et sont fictifs.
+Cahiers citoyens rend consultables les cahiers de doléances ouverts dans les mairies pendant l'hiver 2018-2019 : un accueil avec les chiffres du corpus, la liste des cahiers, une visionneuse scan + transcription et une recherche en langage courant qui rédige une réponse sourcée. Pas d'authentification. Les pages lisent une base Postgres (`DATABASE_URL`), les scans un bucket S3 privé, la recherche l'API Albert. Les cahiers chargés aujourd'hui sont fictifs (`scripts/fake-data/generate.ts`).
 
 La surface est une **application web** servie par Next.js sur `http://localhost:<port>`. **Lis d'abord [`features/README.md`](./features/README.md)**, puis la fiche de la feature concernée.
 
@@ -44,17 +44,11 @@ La boucle `agent-browser` : `open` → `wait --load networkidle` → `snapshot` 
 ```bash
 agent-browser open "$NOTEBOOKS_BASE_URL/"
 agent-browser wait --load networkidle
-agent-browser wait 2500                 # dsfr-chart se charge après l'hydratation
+agent-browser wait 2500                 # le contenu sous Suspense arrive en flux
 agent-browser snapshot
 ```
 
-Contrôler le rendu des graphiques :
-
-```bash
-.claude/skills/verify-notebooks/scripts/notebooks-verify charts
-```
-
-Pour chaque graphique Chart.js (`bar-chart`, `line-chart`, `pie-chart`), compare la largeur du canvas à celle de son conteneur : `ok: false` signale le bug de dimensionnement de dsfr-chart (voir Gotchas). Pour `map-chart`, compte les zones coloriées : 18 régions attendues.
+Un statut HTTP se contrôle avec `curl -s -o /dev/null -w "%{http_code}\n" "$NOTEBOOKS_BASE_URL<chemin>"`, en `--prod` : le dev ne précalcule pas l'enveloppe statique et peut répondre un statut que la production ne donne pas (voir la fiche `notebooks.md`).
 
 ## Preuves
 
@@ -64,13 +58,13 @@ Dossier : `.claude/skills/verify-notebooks/evidence/` (ignoré par git, jamais s
 .claude/skills/verify-notebooks/scripts/notebooks-verify shot <nom> [chemin]   # défaut : /
 ```
 
-`shot` ouvre la page, attend les graphiques, écrit `evidence/<date>-<nom>.txt` (arbre d'accessibilité) et `evidence/<date>-<nom>.png` (page entière). Le message `✓ Screenshot saved to <chemin>` est la preuve que la capture existe. Pour un `agent-browser screenshot` direct, passer un chemin absolu.
+`shot` ouvre la page, attend le contenu diffusé en flux, écrit `evidence/<date>-<nom>.txt` (arbre d'accessibilité) et `evidence/<date>-<nom>.png` (page entière). Le message `✓ Screenshot saved to <chemin>` est la preuve que la capture existe. Pour un `agent-browser screenshot` direct, passer un chemin absolu.
 
 Standards :
 
-- Exercer le vrai parcours utilisateur dans le navigateur, pas un rendu de composant isolé ni un `curl` du HTML : les graphiques n'existent qu'après hydratation.
-- Capturer l'action **et** l'état résultant. Un graphique se prouve par `charts` (mesure) **et** par la capture (image) : l'une sans l'autre a déjà menti (voir Gotchas).
-- Pour une donnée affichée, confronter la valeur lue dans le `snapshot` à sa source dans `src/app/_home/sample-data.ts`.
+- Exercer le vrai parcours utilisateur dans le navigateur, pas un rendu de composant isolé ni un `curl` du HTML : le contenu sous Suspense arrive en flux après l'enveloppe.
+- Capturer l'action **et** l'état résultant.
+- Pour une donnée affichée, confronter la valeur lue dans le `snapshot` à sa source en base (`psql`, requête donnée dans la fiche).
 - Pour un changement de build ou de déploiement, vérifier en `--prod`, puis sur l'app déployée après le push (`curl` de la page en production pour la présence du contenu).
 
 ## Nettoyer
@@ -83,12 +77,12 @@ Arrête **uniquement** le serveur dont ce run a écrit le PID, et ses processus 
 
 ## Gotchas qui invalident un run
 
-- **`agent-browser screenshot --full` ment sur les graphiques.** Il agrandit la fenêtre et capture pendant que Chart.js se redimensionne : l'image montre des graphiques miniatures alors que la page est juste. `shot` contourne en agrandissant la fenêtre lui-même puis en attendant 2 s. Constaté le 2026-11-06.
-- **dsfr-chart construit parfois son canvas hors de la page**, au montage et, pour le camembert, à chaque redimensionnement. Chart.js retombe alors sur une taille minuscule (20×16 px). `src/app/_home/dsfr-chart.tsx` le détecte et force une reconstruction. `charts` est le contrôle de non-régression : tout `ok: false` est un bug réel.
+- **`agent-browser screenshot --full` capture avant que la page ne se réajuste** à la nouvelle taille de fenêtre. `shot` contourne en agrandissant la fenêtre lui-même puis en attendant 2 s. Constaté le 2026-11-06.
 - **`document.querySelector("h1")` renvoie `Paramètres d'affichage`**, le titre de la modale de thème DSFR, placé dans le DOM. Lire les titres dans le `snapshot`.
 - **Un ancien serveur qui tient le port sert l'ancien code.** Si `next start` ou `node server.js` échoue en `EADDRINUSE`, l'ancien processus continue de répondre et la page paraît inchangée. `doctor` dit qui tient le port ; ne jamais conclure à un défaut sans l'avoir lu.
 - **Le pastille « N » en bas de page** est l'indicateur de `next dev` : elle n'apparaît pas en `--prod` ni en production.
-- **Les graphiques ne sont pas dans le HTML serveur.** Un `curl` de la page ne voit que le squelette de chargement (`role="status"`). Seul le navigateur prouve un graphique.
+- **Un 404 en dev ne prouve rien pour la production.** Avec Cache Components, le standalone envoie l'enveloppe statique précalculée avant le rendu de la page : un `notFound()` dans la page y répondait 200. Contrôler les statuts en `--prod`. Constaté le 2026-11-11.
+- **Le standalone ne lit pas `.env.local`.** `launch --prod` hérite de l'environnement du shell : exporter les variables avant (`set -a; . ./.env.local; set +a`).
 - **npm installe sur Scalingo, pas Bun.** Un conflit de peer dependencies toléré par Bun fait échouer le déploiement (`ERESOLVE`). `.npmrc` porte `legacy-peer-deps=true` pour cette raison. Après un ajout de dépendance, simuler `npm install --dry-run` dans un dossier temporaire avec `package.json` et `.npmrc`.
 
 ## Maintenir

@@ -22,7 +22,7 @@ bun run format       # prettier sur tout le dépôt
 
 Le hook pre-commit (Husky) lance le typage, `lint-staged` (Prettier puis ESLint sur les fichiers indexés) et les tests. La CI GitHub (`.github/workflows/ci.yml`) lance `check`, `lint`, `test` et `build` sur chaque pull request et sur `main`. Conventions de code : `CODING_STANDARDS.md`.
 
-Pour vérifier un changement dans un vrai navigateur (serveur, captures, contrôle des graphiques) : voir `.claude/skills/verify-notebooks/SKILL.md`.
+Pour vérifier un changement dans un vrai navigateur (serveur, captures, statuts HTTP) : voir `.claude/skills/verify-notebooks/SKILL.md`.
 
 N'utiliser ni npm, ni yarn, ni pnpm en local : le seul lockfile est `bun.lock`.
 
@@ -63,6 +63,8 @@ aws --region <region> --endpoint-url <endpoint> \
 ```
 
 ## Consulter les cahiers
+
+L'accueil (`/`) présente le projet, propose la barre de recherche et affiche les chiffres du corpus lus en base à chaque requête : nombre de cahiers et de contributions (chunks), période d'ouverture des cahiers, part des contributions vectorisées pour la recherche.
 
 `/notebooks` liste les cahiers chargés en base, 20 par page. `/notebooks/<id>` affiche le scan PDF à côté de la transcription (l'un sous l'autre sur mobile). Un id inconnu répond 404 : `src/proxy.ts` vérifie que le cahier existe avant le rendu. La vérification ne peut pas rester dans la page : avec Cache Components, le serveur envoie l'enveloppe statique précalculée (gabarit, en-tête) dès la requête, donc le statut 200 part avant que la page ne lise la base.
 
