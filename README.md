@@ -36,6 +36,39 @@ En attendant les vrais cahiers, `scripts/fake-data/generate.ts` produit des cahi
 bun scripts/fake-data/generate.ts --count 200 --out data/fake-data --seed 42
 ```
 
+### Faux dépôts Condorcet
+
+`scripts/fake-data/deliver.ts` produit, à partir des mêmes faux cahiers, un dépôt au format du [protocole](docs/ingestion-protocol.md) : `delivery-AAAA-MM-JJ-HHMM.zip`, avec pour chaque cahier `notebooks/<id>/notebook.json` et une image PNG par page (`0001.png`, `0002.png`…). L'identifiant imite les noms de l'inventaire (`CC_76351_190101_00012_MD_48213`). Le texte de chaque page est celui qui y est dessiné ; quelques pages blanches ont un texte vide. Les PNG sont stockés tels quels, `notebook.json` est compressé (Deflate).
+
+```bash
+# 10 cahiers, date du dépôt par défaut : 2026-11-24T09:30:00Z
+bun scripts/fake-data/deliver.ts --count 10 --seed 42 --out data/deliveries
+
+# Mêmes cahiers, dont 2 modifiés (texte ou image d'une page) : remplacements attendus
+bun scripts/fake-data/deliver.ts --count 10 --modify 2 --created-at 2026-11-25T09:30:00Z
+
+# Un dépôt défectueux : chaque défaut touche un seul cahier, toujours le même pour une graine
+bun scripts/fake-data/deliver.ts --count 10 --defect page-gap --defect invalid-png
+```
+
+Même graine, mêmes options : mêmes octets, y compris la date des fichiers dans le ZIP, tirée de `--created-at`. Relancer avec une autre `--created-at` reconstruit le même dépôt : chaque `notebook.json` et chaque PNG est identique octet pour octet, seuls le nom du ZIP et ses dates changent. C'est le cas « même contenu rezippé » du premier échange.
+
+`--defect` se répète. Défauts possibles, un par contrôle de la section 4 du protocole :
+
+| Défaut             | Effet sur le cahier visé                                              |
+| ------------------ | --------------------------------------------------------------------- |
+| `missing-image`    | La dernière image annoncée manque                                     |
+| `unlisted-file`    | Un `notes.txt` non annoncé dans le dossier                            |
+| `page-gap`         | La dernière page saute un numéro                                      |
+| `duplicate-page`   | Le dernier numéro de page revient, avec sa propre image               |
+| `invalid-png`      | La première image est tronquée de moitié                              |
+| `invalid-json`     | `notebook.json` tronqué                                               |
+| `schema-violation` | JSON valide, mais la première page n'a pas de `text`                  |
+| `path-traversal`   | Une entrée `notebooks/<id>/../../../escape.txt` qui sort de l'archive |
+| `nested-folder`    | Une copie de la première image dans un sous-dossier `scans/`          |
+
+Avec moins de cahiers que de défauts, un cahier en cumule plusieurs. Le script affiche les cahiers modifiés et les défauts injectés.
+
 Le schéma de la base est décrit dans `src/db/schema.ts` (Drizzle) et s'applique par les migrations de `drizzle/` (Postgres avec l'extension `vector`). Créer une base locale, puis appliquer les migrations :
 
 ```bash
