@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { composeText, MAX_WORDS } from "./compose-text";
+import { composeText, MAX_WORDS, TYPOS } from "./compose-text";
 import type { FragmentBank, Municipality } from "./domain";
 import { createRandom } from "./random";
 
@@ -44,5 +44,27 @@ describe("composeText", () => {
       const text = composeText(bank, NONTRON, createRandom(`long:${i}`));
       expect(countWords(text)).toBeLessThanOrEqual(MAX_WORDS);
     }
+  });
+});
+
+describe("TYPOS", () => {
+  it("ne touche que des mots entiers, accentués compris", () => {
+    const samples: Record<string, string> = {
+      a: "aller à la mairie",
+      ca: "ça suffit",
+      deja: "il est déjà parti",
+      tres: "très cher",
+      meme: "la même chose",
+      leur: "leurs enfants",
+      etre: "doit être fait",
+      probleme: "un problème réel",
+      "nous somme": "nous sommes là",
+    };
+    for (const [pattern, typo] of TYPOS) {
+      const sample = samples[typo];
+      expect(sample.replace(pattern, typo)).not.toBe(sample);
+    }
+    const [accent] = TYPOS;
+    expect("voilà là".replace(accent[0], accent[1])).toBe("voilà là");
   });
 });

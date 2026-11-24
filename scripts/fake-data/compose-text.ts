@@ -4,16 +4,21 @@ import { fillTemplate } from "./template";
 
 export const MIN_WORDS = 40;
 export const MAX_WORDS = 200;
-const TYPOS: readonly [RegExp, string][] = [
-  [/\bà\b/, "a"],
-  [/\bça\b/, "ca"],
-  [/\bdéjà\b/, "deja"],
-  [/\btrès\b/, "tres"],
-  [/\bmême\b/, "meme"],
-  [/\bleurs\b/, "leur"],
-  [/\bêtre\b/, "etre"],
-  [/\bproblème\b/, "probleme"],
-  [/\bnous sommes\b/, "nous somme"],
+// `\b` ne voit pas de frontière de mot autour des lettres accentuées.
+function word(text: string): RegExp {
+  return new RegExp(`(?<!\\p{L})${text}(?!\\p{L})`, "u");
+}
+
+export const TYPOS: readonly [RegExp, string][] = [
+  [word("à"), "a"],
+  [word("ça"), "ca"],
+  [word("déjà"), "deja"],
+  [word("très"), "tres"],
+  [word("même"), "meme"],
+  [word("leurs"), "leur"],
+  [word("être"), "etre"],
+  [word("problème"), "probleme"],
+  [word("nous sommes"), "nous somme"],
 ];
 
 function countWords(text: string): number {
