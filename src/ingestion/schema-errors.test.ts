@@ -29,6 +29,33 @@ describe("schemaErrorToPageError", () => {
     });
   });
 
+  it("préfixe le champ manquant par l'objet qui le contient", () => {
+    const error = ajvError("required", "/pages/0/meta", {
+      missingProperty: "x",
+    });
+    expect(schemaErrorToPageError(error)).toMatchObject({
+      page: 1,
+      message: "Champ obligatoire manquant : meta.x.",
+    });
+  });
+
+  it("préfixe le champ en trop par l'objet qui le contient", () => {
+    const error = ajvError("additionalProperties", "/meta", {
+      additionalProperty: "x",
+    });
+    expect(schemaErrorToPageError(error)).toMatchObject({
+      page: undefined,
+      message: "Champ non prévu par le format : meta.x.",
+    });
+  });
+
+  it("garde le nom brut d'un type sans libellé", () => {
+    const error = ajvError("type", "/format", { type: "boolean" });
+    expect(schemaErrorToPageError(error).message).toBe(
+      "Le champ format doit être de type boolean.",
+    );
+  });
+
   it("signale un champ en trop", () => {
     const error = ajvError("additionalProperties", "/pages/0", {
       additionalProperty: "width",

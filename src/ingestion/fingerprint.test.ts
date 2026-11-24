@@ -1,7 +1,10 @@
+import * as crypto from "node:crypto";
 import { createHash } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { notebookFingerprint, parseSha256 } from "./fingerprint";
 import type { FingerprintPage, Sha256 } from "./fingerprint";
+
+vi.mock("node:crypto", { spy: true });
 
 function sha256Of(content: string): Sha256 {
   const hash = parseSha256(createHash("sha256").update(content).digest("hex"));
@@ -86,5 +89,15 @@ describe("notebookFingerprint", () => {
       { page: 2, imageSha256: PAGES[1].imageSha256, text: "b" },
     ];
     expect(notebookFingerprint(pages)).not.toBe(notebookFingerprint(shifted));
+  });
+
+  it("refuse un condensat qui n'est pas un SHA-256", async () => {
+    const actual = await vi.importActual<typeof crypto>("node:crypto");
+    vi.mocked(crypto.createHash).mockImplementationOnce(() =>
+      actual.createHash("md5"),
+    );
+    expect(() => notebookFingerprint(PAGES)).toThrow(
+      /Empreinte SHA-256 inattendue/,
+    );
   });
 });

@@ -4,7 +4,6 @@ import type { PageError } from "./errors";
 const TYPE_LABELS: Record<string, string> = {
   array: "liste",
   integer: "entier",
-  number: "nombre",
   object: "objet",
   string: "texte",
 };

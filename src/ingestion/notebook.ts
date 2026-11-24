@@ -42,7 +42,6 @@ export function parseNotebookManifest(
   try {
     data = JSON.parse(rawText);
   } catch (error) {
-    const detail = error instanceof Error ? ` (${error.message})` : "";
     return {
       ok: false,
       errors: [
@@ -50,7 +49,7 @@ export function parseNotebookManifest(
           notebook: id,
           file: NOTEBOOK_FILE,
           code: "invalid-json",
-          message: `${NOTEBOOK_FILE} n'est pas un JSON valide${detail}.`,
+          message: `${NOTEBOOK_FILE} n'est pas un JSON valide (${String(error)}).`,
         },
       ],
     };
