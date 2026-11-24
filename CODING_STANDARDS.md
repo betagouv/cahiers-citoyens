@@ -5,7 +5,7 @@ ESLint et `tsconfig.json` imposent déjà `function` plutôt que les fonctions f
 ## TypeScript
 
 - `unknown` puis un rétrécissement là où le type est inconnu : `typeof`, `in`, ou une garde `valeur is T`.
-- Les données externes (JSON lu sur disque, arguments de ligne de commande, variables d'environnement, réponses réseau) se parsent à la frontière, en un type du domaine. Le reste du code fait confiance à ce type. Exemple : `parseManifestLine` dans `scripts/load.ts`.
+- Les données externes (JSON lu sur disque, arguments de ligne de commande, variables d'environnement, réponses réseau) se parsent à la frontière, en un type du domaine. Le reste du code fait confiance à ce type. Exemple : `parseManifestLine` dans `scripts/load-notebooks.ts`.
 - Une liste de valeurs fermée est un tableau `as const` dont on dérive le type (`THEME_IDS` et `ThemeId` dans `scripts/fake-data/domain.ts`).
 
 ## Next.js et interface
@@ -27,3 +27,11 @@ Tout le nommage du code est en anglais : fichiers, dossiers, identifiants, table
 
 - Les scripts de `scripts/` utilisent les modules `node:` (`node:fs/promises`, `node:path`, `node:util`) plutôt que les API `Bun.*`, pour rester exécutables par Node.
 - Une fonction qu'on veut tester vit dans son propre module, sans effet de bord à l'import. Le script principal l'importe.
+
+## Tests et couverture
+
+- `bun run test` échoue sous 100 % de couverture (lignes, branches, fonctions, instructions) sur `src/` et `scripts/`. Seuls les tests et les déclarations `.d.ts` sont exclus (`vitest.config.mts`).
+- Un test vérifie un comportement : il appelle le code comme son utilisateur et compare le résultat exact. Éviter `/* v8 ignore */` ; un cas vraiment inatteignable se justifie en commentaire.
+- Un point d'entrée (page, route, script) ne fait que brancher des modules testés. La base, le stockage et le réseau sont injectés ou remplacés par `vi.mock`.
+- Une page ou un composant serveur se teste en rendant son HTML avec `renderToHtml` (`src/test/render.ts`), qui attend les composants asynchrones sous Suspense. Une route se teste en appelant `GET(new Request(…), contexte)`.
+- ESLint limite un fichier à 300 lignes et une fonction à 60 (hors lignes vides et commentaires). Au-delà, découper en modules.

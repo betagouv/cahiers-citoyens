@@ -1,5 +1,25 @@
-import { describe, expect, it } from "vitest";
-import { notebookIdFromPath, parsePageNumber } from "./notebooks";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  NOTEBOOKS_PAGE_SIZE,
+  getCorpusStats,
+  getNotebook,
+  getScanKey,
+  listNotebooks,
+  notebookExists,
+  notebookIdFromPath,
+  parsePageNumber,
+} from "./notebooks";
+
+const fake = await vi.hoisted(async () => {
+  const { createFakePostgres } = await import("../test/fake-postgres");
+  return createFakePostgres();
+});
+vi.mock("postgres", () => ({ default: fake.connect }));
+vi.stubEnv("DATABASE_URL", "postgres://test/app");
+
+beforeEach(() => {
+  fake.reset();
+});
 
 describe("parsePageNumber", () => {
   it("lit un entier positif", () => {
@@ -35,5 +55,104 @@ describe("notebookIdFromPath", () => {
 
   it("ignore un encodage invalide", () => {
     expect(notebookIdFromPath("/notebooks/%E0%A4%A")).toBeUndefined();
+  });
+});
+
+describe("listNotebooks", () => {
+  it("renvoie la page demandée, avec son nombre de passages par cahier", async () => {
+    fake.reply([["45"]], [["notebook-0021", "2019-01-10", "3"]]);
+
+    await expect(listNotebooks(2)).resolves.toEqual({
+      notebooks: [
+        { id: "notebook-0021", openedOn: "2019-01-10", chunkCount: 3 },
+      ],
+      page: 2,
+      pageCount: 3,
+      total: 45,
+    });
+    const [, pageQuery] = fake.queries;
+    expect(pageQuery.sql).toContain('order by "notebooks"."id" asc');
+    expect(pageQuery.params).toEqual([NOTEBOOKS_PAGE_SIZE, 20]);
+  });
+
+  it("ramène une page trop grande à la dernière page", async () => {
+    fake.reply([["45"]], []);
+
+    const result = await listNotebooks(9);
+
+    expect(result.page).toBe(3);
+    expect(fake.queries[1].params).toEqual([NOTEBOOKS_PAGE_SIZE, 40]);
+  });
+
+  it("compte une page même sans cahier", async () => {
+    fake.reply([["0"]], []);
+
+    await expect(listNotebooks(1)).resolves.toEqual({
+      notebooks: [],
+      page: 1,
+      pageCount: 1,
+      total: 0,
+    });
+  });
+});
+
+describe("getNotebook", () => {
+  it("renvoie le cahier, sa transcription et son nombre de passages", async () => {
+    fake.reply([["notebook-0001", "2019-01-10", "Texte", "13"]]);
+
+    await expect(getNotebook("notebook-0001")).resolves.toEqual({
+      id: "notebook-0001",
+      openedOn: "2019-01-10",
+      transcription: "Texte",
+      chunkCount: 13,
+    });
+    expect(fake.queries[0].params).toEqual(["notebook-0001"]);
+  });
+
+  it("renvoie undefined pour un cahier inconnu", async () => {
+    await expect(getNotebook("inconnu")).resolves.toBeUndefined();
+  });
+});
+
+describe("notebookExists", () => {
+  it("vrai si une ligne porte cet id", async () => {
+    fake.reply([["notebook-0001"]]);
+
+    await expect(notebookExists("notebook-0001")).resolves.toBe(true);
+    expect(fake.queries[0].sql).toContain('where "notebooks"."id" = $1');
+    expect(fake.queries[0].params).toEqual(["notebook-0001", 1]);
+  });
+
+  it("faux sinon", async () => {
+    await expect(notebookExists("inconnu")).resolves.toBe(false);
+  });
+});
+
+describe("getScanKey", () => {
+  it("renvoie la clé du scan du cahier", async () => {
+    fake.reply([["notebooks/notebook-0001/scan.pdf"]]);
+
+    await expect(getScanKey("notebook-0001")).resolves.toBe(
+      "notebooks/notebook-0001/scan.pdf",
+    );
+    expect(fake.queries[0].params).toEqual(["notebook-0001"]);
+  });
+
+  it("renvoie undefined pour un cahier inconnu", async () => {
+    await expect(getScanKey("inconnu")).resolves.toBeUndefined();
+  });
+});
+
+describe("getCorpusStats", () => {
+  it("réunit les chiffres des cahiers et des passages", async () => {
+    fake.reply([["2", "2018-12-10", "2019-02-20"]], [["30", "29"]]);
+
+    await expect(getCorpusStats()).resolves.toEqual({
+      notebookCount: 2,
+      firstOpenedOn: "2018-12-10",
+      lastOpenedOn: "2019-02-20",
+      chunkCount: 30,
+      embeddedChunkCount: 29,
+    });
   });
 });
