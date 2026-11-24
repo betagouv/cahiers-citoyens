@@ -4,8 +4,15 @@ import {
   formatDate,
   formatMonth,
   formatMonthRange,
+  formatNumber,
   formatShare,
 } from "./format";
+
+describe("formatNumber", () => {
+  it("sépare les milliers à la française", () => {
+    expect(formatNumber(12345)).toBe("12 345");
+  });
+});
 
 describe("formatDate et formatMonth", () => {
   it("écrivent une date AAAA-MM-JJ en français, sans décalage de fuseau", () => {
@@ -23,6 +30,10 @@ describe("excerpt", () => {
     expect(excerpt("Les urgences sont saturées, on attend.", 27)).toBe(
       "Les urgences sont saturées…",
     );
+  });
+
+  it("coupe au milieu d'un mot unique trop long", () => {
+    expect(excerpt("Anticonstitutionnellement", 6)).toBe("Antico…");
   });
 });
 

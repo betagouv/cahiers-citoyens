@@ -1,6 +1,6 @@
 # Accueil
 
-La page d'accueil (`/`, `src/app/page.tsx`) présente le projet, propose la barre de recherche, signale que les cahiers sont fictifs, affiche quatre chiffres tirés de la base et renvoie vers la liste des cahiers. Les chiffres viennent de `getCorpusStats` (`src/lib/notebooks.ts`) et arrivent en flux sous une frontière Suspense : la page affiche d'abord `Chargement des chiffres…`.
+La page d'accueil (`/`, `src/app/page.tsx`) présente le projet, propose la barre de recherche, signale que les cahiers sont fictifs, affiche quatre chiffres tirés de la base et renvoie vers la liste des cahiers. Les chiffres (`src/app/_components/corpus-figures.tsx`) viennent de `getCorpusStats` (`src/lib/notebooks.ts`) et arrivent en flux sous une frontière Suspense : la page affiche d'abord `Chargement des chiffres…`.
 
 ## Sub-features
 

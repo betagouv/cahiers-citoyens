@@ -1,8 +1,5 @@
-import {
-  type AlbertClient,
-  DEFAULT_CHAT_MODEL,
-  createAlbertClient,
-} from "../albert";
+import type { AlbertClient } from "../albert";
+import { chatModelName, getAlbert } from "./albert-config";
 import { fuseRankings } from "./fusion";
 import { buildAnswerMessages } from "./prompt";
 import { type Candidate, searchByVector, searchFullText } from "./retrieval";
@@ -35,6 +32,12 @@ export type SearchOutcome =
       notices: string[];
     };
 
+// Albert configuré et question vectorisée : reclassement et réponse possibles.
+interface SemanticSearch {
+  albert: AlbertClient;
+  vector: number[];
+}
+
 // `?q=` vient de l'URL : espaces normalisés, longueur bornée.
 export function parseQuestion(raw: string | string[] | undefined): string {
   const value = Array.isArray(raw) ? raw[0] : raw;
@@ -42,87 +45,83 @@ export function parseQuestion(raw: string | string[] | undefined): string {
   return value.replace(/\s+/g, " ").trim().slice(0, MAX_QUESTION_LENGTH);
 }
 
-function chatModelName(): string {
-  return process.env.ALBERT_CHAT_MODEL || DEFAULT_CHAT_MODEL;
-}
-
-function getAlbert(): AlbertClient | undefined {
-  const apiKey = process.env.ALBERT_API_KEY;
-  if (!apiKey) return undefined;
-  return createAlbertClient({
-    apiKey,
-    baseUrl: process.env.ALBERT_BASE_URL || undefined,
-    chatModel: chatModelName(),
-  });
-}
-
 function logFailure(stage: string, error: unknown) {
   console.error(`Recherche : ${stage} en échec`, error);
 }
 
-// Embedding de la question, recherche hybride (plein texte + vecteurs,
-// fusion RRF), reclassement, puis réponse rédigée à partir des 5 meilleurs
-// passages. Chaque appel à Albert peut échouer sans faire tomber la page :
-// on se replie sur ce qui reste (plein texte seul, ordre RRF, sources sans
-// réponse) et on le signale.
-export async function searchNotebooks(
+async function embedQuestion(
   question: string,
-): Promise<SearchOutcome> {
+  notices: string[],
+): Promise<SemanticSearch | undefined> {
   const albert = getAlbert();
-  const notices: string[] = [];
-
-  let vector: number[] | undefined;
   if (albert === undefined) {
     notices.push(
       "La recherche par le sens n'est pas configurée : seuls les mots de la question ont été cherchés.",
     );
-  } else {
-    try {
-      [vector] = await albert.embed([question]);
-    } catch (error) {
-      logFailure("embedding", error);
-      notices.push(
-        "La recherche par le sens est momentanément indisponible : seuls les mots de la question ont été cherchés.",
-      );
-    }
+    return undefined;
   }
+  try {
+    const [vector] = await albert.embed([question]);
+    return { albert, vector };
+  } catch (error) {
+    logFailure("embedding", error);
+    notices.push(
+      "La recherche par le sens est momentanément indisponible : seuls les mots de la question ont été cherchés.",
+    );
+    return undefined;
+  }
+}
 
+// Recherche hybride : plein texte et vecteurs, fusionnés par RRF.
+async function findCandidates(
+  question: string,
+  semantic: SemanticSearch | undefined,
+): Promise<Candidate[]> {
   const [textHits, vectorHits] = await Promise.all([
     searchFullText(question, CANDIDATE_COUNT),
-    vector === undefined
+    semantic === undefined
       ? Promise.resolve([])
-      : searchByVector(vector, CANDIDATE_COUNT),
+      : searchByVector(semantic.vector, CANDIDATE_COUNT),
   ]);
-  const candidates = fuseRankings([textHits, vectorHits], (hit) => hit.id)
+  return fuseRankings([textHits, vectorHits], (hit) => hit.id)
     .slice(0, CANDIDATE_COUNT)
     .map(({ item }) => item);
-  if (candidates.length === 0) return { status: "no-results", notices };
+}
 
-  let best = candidates.slice(0, SOURCE_COUNT);
-  if (albert !== undefined && vector !== undefined) {
-    try {
-      const ranked = await albert.rerank(
-        question,
-        candidates.map((candidate) => candidate.content),
-        SOURCE_COUNT,
-      );
-      best = ranked
-        .filter(({ relevanceScore }) => relevanceScore >= MIN_RELEVANCE)
-        .map(({ index }) => candidates[index]);
-      if (best.length === 0) return { status: "no-results", notices };
-    } catch (error) {
-      logFailure("reclassement", error);
-      notices.push(
-        "Le reclassement des passages est momentanément indisponible : ils sont présentés dans l'ordre de la recherche.",
-      );
-    }
+// Reclassement des candidats ; sans Albert ou s'il échoue, l'ordre RRF.
+async function selectBest(
+  question: string,
+  candidates: Candidate[],
+  semantic: SemanticSearch | undefined,
+  notices: string[],
+): Promise<Candidate[]> {
+  const fallback = candidates.slice(0, SOURCE_COUNT);
+  if (semantic === undefined) return fallback;
+  try {
+    const ranked = await semantic.albert.rerank(
+      question,
+      candidates.map((candidate) => candidate.content),
+      SOURCE_COUNT,
+    );
+    return ranked
+      .filter(({ relevanceScore }) => relevanceScore >= MIN_RELEVANCE)
+      .map(({ index }) => candidates[index]);
+  } catch (error) {
+    logFailure("reclassement", error);
+    notices.push(
+      "Le reclassement des passages est momentanément indisponible : ils sont présentés dans l'ordre de la recherche.",
+    );
+    return fallback;
   }
-  const sources = best.map((candidate, index) => ({
-    ...candidate,
-    number: index + 1,
-  }));
+}
 
-  if (albert === undefined || vector === undefined) {
+async function answerFromSources(
+  question: string,
+  sources: Source[],
+  semantic: SemanticSearch | undefined,
+  notices: string[],
+): Promise<SearchOutcome> {
+  if (semantic === undefined) {
     return {
       status: "sources-only",
       reason:
@@ -132,7 +131,9 @@ export async function searchNotebooks(
     };
   }
   try {
-    const answer = await albert.chat(buildAnswerMessages(question, sources));
+    const answer = await semantic.albert.chat(
+      buildAnswerMessages(question, sources),
+    );
     return {
       status: "answered",
       answer,
@@ -150,4 +151,24 @@ export async function searchNotebooks(
       notices,
     };
   }
+}
+
+// Embedding de la question, recherche hybride, reclassement, puis réponse
+// rédigée à partir des 5 meilleurs passages. Chaque appel à Albert peut
+// échouer sans faire tomber la page : on se replie sur ce qui reste (plein
+// texte seul, ordre RRF, sources sans réponse) et on le signale.
+export async function searchNotebooks(
+  question: string,
+): Promise<SearchOutcome> {
+  const notices: string[] = [];
+  const semantic = await embedQuestion(question, notices);
+  const candidates = await findCandidates(question, semantic);
+  if (candidates.length === 0) return { status: "no-results", notices };
+  const best = await selectBest(question, candidates, semantic, notices);
+  if (best.length === 0) return { status: "no-results", notices };
+  const sources = best.map((candidate, index) => ({
+    ...candidate,
+    number: index + 1,
+  }));
+  return answerFromSources(question, sources, semantic, notices);
 }

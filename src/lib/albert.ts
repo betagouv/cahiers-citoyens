@@ -1,3 +1,5 @@
+import { AlbertError, createAlbertPost } from "./albert-http";
+
 export const ALBERT_BASE_URL = "https://albert.api.etalab.gouv.fr/v1";
 export const EMBEDDING_MODEL = "bge-m3";
 export const EMBEDDING_DIMENSIONS = 1024;
@@ -6,8 +8,6 @@ export const MAX_EMBEDDING_BATCH = 64;
 export const RERANK_MODEL = "bge-reranker-v2-m3";
 export const DEFAULT_CHAT_MODEL = "mistral-small-3-2-24b-instruct-2506";
 
-const MAX_ATTEMPTS = 3;
-const BASE_RETRY_DELAY_MS = 500;
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 export interface AlbertClientOptions {
@@ -45,24 +45,12 @@ export interface AlbertClient {
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<string>;
 }
 
-// Toute défaillance d'Albert (réseau, HTTP, réponse illisible) : l'appelant
-// peut la distinguer d'une erreur de base de données et se replier.
-export class AlbertError extends Error {}
-
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
 function isNumberArray(value: unknown): value is number[] {
   return Array.isArray(value) && value.every((x) => typeof x === "number");
-}
-
-function isRetryable(status: number): boolean {
-  return status === 429 || status >= 500;
-}
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function parseEmbeddingResponse(
@@ -168,49 +156,12 @@ export function createAlbertClient({
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fetch: fetchImpl = fetch,
 }: AlbertClientOptions): AlbertClient {
-  const root = baseUrl.replace(/\/+$/, "");
-
-  async function post(path: string, body: unknown): Promise<unknown> {
-    for (let attempt = 1; ; attempt++) {
-      let response: Response;
-      try {
-        response = await fetchImpl(`${root}${path}`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(timeoutMs),
-        });
-      } catch (error) {
-        if (attempt >= MAX_ATTEMPTS) {
-          const reason = error instanceof Error ? error.message : String(error);
-          throw new AlbertError(
-            `Albert ${path} injoignable après ${attempt} essai(s) : ${reason}`,
-          );
-        }
-        await wait(BASE_RETRY_DELAY_MS * 2 ** (attempt - 1));
-        continue;
-      }
-      if (response.ok) {
-        const raw: unknown = await response.json();
-        return raw;
-      }
-      if (response.status === 401) {
-        throw new AlbertError(
-          "Albert a refusé la clé d'API (401) : vérifier ALBERT_API_KEY",
-        );
-      }
-      if (!isRetryable(response.status) || attempt >= MAX_ATTEMPTS) {
-        const detail = (await response.text()).slice(0, 200);
-        throw new AlbertError(
-          `Albert ${path} a répondu ${response.status} après ${attempt} essai(s) : ${detail}`,
-        );
-      }
-      await wait(BASE_RETRY_DELAY_MS * 2 ** (attempt - 1));
-    }
-  }
+  const post = createAlbertPost({
+    apiKey,
+    root: baseUrl.replace(/\/+$/, ""),
+    timeoutMs,
+    fetch: fetchImpl,
+  });
 
   async function embed(texts: string[]): Promise<number[][]> {
     const vectors: number[][] = [];
