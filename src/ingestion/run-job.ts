@@ -15,6 +15,10 @@ interface JobFailure {
 
 export type JobReport = JobSuccess | JobFailure;
 
+export function exitCode(report: JobReport): number {
+  return report.ok ? 0 : 1;
+}
+
 export async function runJob(
   event: string,
   task: () => Promise<void>,

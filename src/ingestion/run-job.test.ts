@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { runJob } from "./run-job";
+import { exitCode, runJob } from "./run-job";
 
 function clock(...times: number[]): () => number {
   let index = 0;
   return () => times[index++] ?? Number.NaN;
 }
+
+describe("exitCode", () => {
+  it("vaut 0 pour un succès et 1 pour un échec", () => {
+    expect(exitCode({ event: "ingest.run", ok: true, durationMs: 1 })).toBe(0);
+    expect(
+      exitCode({ event: "ingest.run", ok: false, durationMs: 1, error: "x" }),
+    ).toBe(1);
+  });
+});
 
 describe("runJob", () => {
   it("rapporte un succès avec sa durée arrondie", async () => {

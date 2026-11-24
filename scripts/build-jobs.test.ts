@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -12,9 +12,9 @@ interface ProcessResult {
   stdout: string;
 }
 
-async function runNode(args: string[], cwd: string): Promise<ProcessResult> {
+async function runNode(file: string, cwd: string): Promise<ProcessResult> {
   try {
-    const { stdout } = await run("node", args, {
+    const { stdout } = await run("node", [file], {
       cwd,
       env: { PATH: process.env.PATH, NODE_ENV: "production" },
     });
@@ -34,23 +34,24 @@ async function runNode(args: string[], cwd: string): Promise<ProcessResult> {
 }
 
 describe("build-jobs", () => {
-  let outdir = "";
+  let isolated = "";
 
   beforeAll(async () => {
-    outdir = await mkdtemp(join(tmpdir(), "jobs-"));
-    await run("node", ["scripts/build-jobs.mjs", "--outdir", outdir]);
-  });
+    await import("./build-jobs.mjs");
+    isolated = await mkdtemp(join(tmpdir(), "jobs-"));
+    await copyFile("dist/jobs/ingest.mjs", join(isolated, "ingest.mjs"));
+  }, 30_000);
 
   afterAll(async () => {
-    await rm(outdir, { recursive: true, force: true });
+    await rm(isolated, { recursive: true, force: true });
   });
 
   it("produit un seul fichier par job", async () => {
-    expect(await readdir(outdir)).toEqual(["ingest.mjs"]);
+    expect(await readdir("dist/jobs")).toEqual(["ingest.mjs"]);
   });
 
   it("tourne sous Node sans node_modules et journalise l'échec en JSON", async () => {
-    const result = await runNode(["ingest.mjs"], outdir);
+    const result = await runNode("ingest.mjs", isolated);
     expect(result.code).toBe(1);
     expect(JSON.parse(result.stdout)).toMatchObject({
       event: "ingest.run",
