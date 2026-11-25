@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  notAWordTitle,
+  placePagesTitle,
   resultsSummary,
   searchDescription,
   searchTitle,
@@ -56,6 +58,28 @@ describe("searchDescription", () => {
     );
     expect(searchDescription("retraite", undefined)).toBe(
       "Les pages des cahiers citoyens qui contiennent « retraite ».",
+    );
+  });
+});
+
+describe("notAWordTitle", () => {
+  it("dit que la saisie n'est pas un mot, dans le lieu ou partout", () => {
+    expect(notAWordTitle("retr", "Charolles (71)")).toBe(
+      "« retr » n’est pas un mot des cahiers de Charolles (71)",
+    );
+    expect(notAWordTitle("retr", undefined)).toBe(
+      "« retr » n’est pas un mot des cahiers publiés",
+    );
+  });
+});
+
+describe("placePagesTitle", () => {
+  it("annonce les pages du lieu", () => {
+    expect(placePagesTitle(21, "Charolles (71)")).toBe(
+      "Les 21 pages de Charolles (71)",
+    );
+    expect(placePagesTitle(1, "Charolles (71)")).toBe(
+      "La page de Charolles (71)",
     );
   });
 });

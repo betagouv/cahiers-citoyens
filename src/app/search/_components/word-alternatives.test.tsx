@@ -1,28 +1,20 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { suggestWords } from "@/lib/page-search/suggest-words";
+import { describe, expect, it } from "vitest";
 import { renderToHtml } from "@/test/render";
 import { WordAlternatives } from "./word-alternatives";
 
-vi.mock("@/lib/page-search/suggest-words", () => ({ suggestWords: vi.fn() }));
-
-const charolles = { kind: "municipality", code: "71106" } as const;
-
-beforeEach(() => {
-  vi.mocked(suggestWords).mockReset();
-});
-
 describe("WordAlternatives", () => {
   it("propose les mots qui commencent par la saisie, en liens", async () => {
-    vi.mocked(suggestWords).mockResolvedValue([
-      { word: "retraite", pageCount: 7 },
-      { word: "retraité", pageCount: 1 },
-    ]);
-
     const html = await renderToHtml(
-      <WordAlternatives place={charolles} placeCode="71106" keyword="retr" />,
+      <WordAlternatives
+        suggestions={[
+          { word: "retraite", pageCount: 7 },
+          { word: "retraité", pageCount: 1 },
+        ]}
+        placeCode="71106"
+        keyword="retr"
+      />,
     );
 
-    expect(suggestWords).toHaveBeenCalledWith("retr", charolles);
     expect(html).toContain(
       '<p id="word-alternatives-title" class="fr-mb-1w">Mots des cahiers publiés qui commencent par « retr » :</p>',
     );
@@ -34,10 +26,8 @@ describe("WordAlternatives", () => {
   });
 
   it("ne dit rien sans mot à proposer", async () => {
-    vi.mocked(suggestWords).mockResolvedValue([]);
-
     const html = await renderToHtml(
-      <WordAlternatives place={undefined} placeCode="" keyword="zzz" />,
+      <WordAlternatives suggestions={[]} placeCode="" keyword="zzz" />,
     );
 
     expect(html).toBe("");

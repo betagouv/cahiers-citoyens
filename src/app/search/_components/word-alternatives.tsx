@@ -1,23 +1,23 @@
 import Link from "next/link";
-import type { PlaceCodes } from "@/lib/page-search/place-codes";
 import { pageSearchHref } from "@/lib/page-search/search-params";
-import { suggestWords } from "@/lib/page-search/suggest-words";
-import { pageCountLabel } from "@/lib/page-search/word-suggestion";
+import {
+  type WordSuggestion,
+  pageCountLabel,
+} from "@/lib/page-search/word-suggestion";
 
 interface WordAlternativesProps {
-  place: PlaceCodes | undefined;
+  suggestions: WordSuggestion[];
   placeCode: string;
   keyword: string;
 }
 
-// Un mot-clé sans page, souvent un début de mot (« retr ») : les mots des
-// pages du lieu qui commencent ainsi, chacun menant à ses pages.
-export async function WordAlternatives({
-  place,
+// Les mots des pages du lieu qui commencent par la saisie, chacun menant à
+// ses pages.
+export function WordAlternatives({
+  suggestions,
   placeCode,
   keyword,
 }: WordAlternativesProps) {
-  const suggestions = await suggestWords(keyword, place);
   if (suggestions.length === 0) return null;
   return (
     <>

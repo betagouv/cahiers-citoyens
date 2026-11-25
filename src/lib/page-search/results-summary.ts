@@ -45,3 +45,22 @@ export function searchDescription(
     ? `Les pages des cahiers citoyens${where}, ouverts en mairie en 2019, transcrites et consultables.`
     : `Les pages des cahiers citoyens${where} qui contiennent « ${keyword} ».`;
 }
+
+// Titre de l'avis quand le mot-clé n'est dans aucune page du lieu : souvent
+// un début de mot (« retr »).
+export function notAWordTitle(
+  keyword: string,
+  placeLabel: string | undefined,
+): string {
+  return placeLabel === undefined
+    ? `« ${keyword} » n’est pas un mot des cahiers publiés`
+    : `« ${keyword} » n’est pas un mot des cahiers de ${placeLabel}`;
+}
+
+// Titre des pages du lieu montrées à la place : le nombre qu'annonçait le
+// bouton du formulaire.
+export function placePagesTitle(total: number, placeLabel: string): string {
+  return total === 1
+    ? `La page de ${placeLabel}`
+    : `Les ${formatNumber(total)} pages de ${placeLabel}`;
+}

@@ -5,10 +5,8 @@ import { renderToHtml } from "@/test/render";
 import { PageResults } from "./page-results";
 
 vi.mock("@/lib/page-search/count-pages", () => ({ countPages: vi.fn() }));
-vi.mock("./word-alternatives", () => ({
-  WordAlternatives: ({ keyword }: { keyword: string }) => (
-    <p>Mots en {keyword}</p>
-  ),
+vi.mock("./not-a-word", () => ({
+  NotAWord: ({ keyword }: { keyword: string }) => <p>Pas un mot : {keyword}</p>,
 }));
 vi.mock("@/lib/page-search/list-pages", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/page-search/list-pages")>()),
@@ -82,7 +80,7 @@ describe("PageResults", () => {
     expect(html).not.toContain("<ol");
   });
 
-  it("propose des mots entiers pour un mot-clé sans page", async () => {
+  it("passe la main à NotAWord pour un mot-clé sans page", async () => {
     vi.mocked(countPages).mockResolvedValue(0);
     vi.mocked(listPages).mockResolvedValue([]);
 
@@ -90,10 +88,7 @@ describe("PageResults", () => {
       <PageResults place={charolles} keyword="retr" pageIndex={1} />,
     );
 
-    expect(html).toContain(
-      "Aucune page publiée à Charolles (71) ne contient « retr »",
-    );
-    expect(html).toContain("Mots en retr");
+    expect(html).toBe("<p>Pas un mot : retr</p>");
   });
 
   it("renvoie à la première page au-delà de la dernière", async () => {
