@@ -1,10 +1,10 @@
 # Pipeline d'ingestion des dépôts Condorcet
 
-Plan d'implémentation. Le format des dépôts est décrit dans [../ingestion-protocol.md](../ingestion-protocol.md) : un ZIP horodaté, un dossier par cahier avec `notebook.json` et une image PNG par page.
+Plan d'implémentation. Le format des dépôts est décrit dans [../ingestion-protocol.md](../ingestion-protocol.md) : un ZIP horodaté où tout est à la racine : pour chaque cahier, un JSON au format de Condorcet et une image JPEG ou PNG par page.
 
 ## Contexte
 
-Condorcet déposera ses archives directement dans le stockage S3 (option 1, retenue le 2026-11-24). Aujourd'hui, `scripts/load.ts` charge des faux cahiers depuis le disque : pas de versions, pas de retrait, un PDF et une transcription d'un seul bloc. Les vrais cahiers arrivent en images PNG, une par page, avec la transcription de chaque page. Il faut une pipeline qui tourne seule en production, qui ne publie qu'un dépôt entièrement vérifié, et dont on voit l'état sans aller lire des logs.
+Condorcet déposera ses archives directement dans le stockage S3 (option 1, retenue le 2026-11-24). Aujourd'hui, `scripts/load.ts` charge des faux cahiers depuis le disque : pas de versions, pas de retrait, un PDF et une transcription d'un seul bloc. Les vrais cahiers arrivent en images JPEG ou PNG, une par page, avec la transcription ligne à ligne et la position de chaque ligne sur l'image. Il faut une pipeline qui tourne seule en production, qui ne publie qu'un dépôt entièrement vérifié, et dont on voit l'état sans aller lire des logs.
 
 ## Scope
 
@@ -30,7 +30,7 @@ Exclu pour l'instant :
 - Le stockage S3 accepte seulement les sommes de contrôle « when required » (voir `src/lib/scan-storage.ts`).
 - Les fichiers passent par le serveur (aujourd'hui `/notebooks/<id>/scan`) : le bucket reste privé et l'état en base décide de ce qui est visible.
 - Le dépôt est public : aucun nom d'hôte, de bucket ni de clé dans le code, la doc ou les commits.
-- Une image PNG par page de scan : un cahier peut peser des centaines de Mo, un dépôt plusieurs Go. Lecture en flux, jamais d'archive entière en mémoire.
+- Une image par page de scan (des JPEG à 300 ppp dans l'échantillon reçu) : un cahier peut peser des centaines de Mo, un dépôt plusieurs Go. Lecture en flux, jamais d'archive entière en mémoire.
 
 ## Forme de la pipeline
 
@@ -39,12 +39,12 @@ Condorcet ──aws s3 cp──▶ incoming/delivery-AAAA-MM-JJ-HHMM.zip
                               │  cron toutes les 10 min : job `ingest`
                               ▼
    1. claim      verrou Postgres, déplace le ZIP vers deliveries/
-   2. verify     pour chaque notebooks/<id>/ : notebook.json, pages 1..n,
-                 PNG présents et lisibles, aucun fichier en trop
+   2. verify     pour chaque <id>.json : schéma, pages croissantes, identifiants,
+                 une image JPEG ou PNG lisible par page, aucun fichier en trop
                  une erreur → dépôt entier refusé
    3. plan       empreinte de chaque cahier : inconnu → publié,
                  identique → rien, différente → remplacé
-   4. apply      copie des PNG de la nouvelle version, puis une transaction en base
+   4. apply      copie des images de la nouvelle version, puis une transaction en base
    5. embed      vectorise les nouveaux chunks (on peut reprendre plus tard)
    6. report     reports/<nom du ZIP>.json + alerte si refus ou échec
 ```
@@ -69,16 +69,16 @@ received → verifying → rejected            (dépôt invalide : rapport à Co
 | Processus `worker` en boucle                  | Latence faible                                                       | Un conteneur payé en permanence pour quelques dépôts par semaine               | Non        |
 | Notifications d'événements S3 vers un webhook | Temps réel                                                           | Support incertain chez le fournisseur, traitement long dans le conteneur `web` | Non        |
 
-| Validation des JSON                               | Pour                                                                      | Contre                                                           | Choix                                               |
-| ------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------- |
-| Ajv sur le schéma de `notebook.json` du protocole | Le schéma convenu avec Condorcet fait foi, on s'appuie directement dessus | Types TypeScript à écrire à côté                                 | **Retenu**, à confirmer en phase 2 avec `architect` |
-| Zod                                               | Types dérivés automatiquement                                             | Une deuxième version des schémas qui peut s'écarter du protocole | Non                                                 |
-| Parseurs écrits à la main, comme `load.ts`        | Aucune dépendance                                                         | Gros volume de code qui reproduit les schémas                    | Non                                                 |
+| Validation des JSON                              | Pour                                                                      | Contre                                                           | Choix      |
+| ------------------------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------- |
+| Ajv sur le schéma du JSON Condorcet du protocole | Le schéma convenu avec Condorcet fait foi, on s'appuie directement dessus | Types TypeScript à écrire à côté                                 | **Retenu** |
+| Zod                                              | Types dérivés automatiquement                                             | Une deuxième version des schémas qui peut s'écarter du protocole | Non        |
+| Parseurs écrits à la main, comme `load.ts`       | Aucune dépendance                                                         | Gros volume de code qui reproduit les schémas                    | Non        |
 
 ## Phases
 
 1. [Exécuter un job TypeScript sur Scalingo](phase-1-job-runtime.md)
-2. [Types du domaine et parseur de `notebook.json`](phase-2-protocol-parsers.md)
+2. [Types du domaine et parseur du JSON Condorcet](phase-2-protocol-parsers.md)
 3. [Générateur de faux dépôts](phase-3-fake-deliveries.md)
 4. [Lecture et vérification d'une archive](phase-4-archive-verification.md)
 5. [Schéma de la base](phase-5-database-schema.md)
@@ -98,12 +98,12 @@ Les phases 2 et 3 peuvent avancer en parallèle. Pareil pour 8 et 9 une fois la 
 
 ## Décisions ouvertes
 
-- **Inventaire.** Où trouver l'inventaire des Archives nationales, et dans quel format ? Tant qu'il manque, l'identifiant du cahier (nom du dossier) n'est rapproché de rien.
+- **Inventaire.** Où trouver l'inventaire des Archives nationales, et dans quel format ? Tant qu'il manque, l'identifiant du cahier (`id_cahier`) n'est rapproché de rien.
 - **Canal d'alerte.** E-mail, Tchap ou Mattermost ? Le plan suppose un webhook générique.
 - **Accès au tableau de bord.** Authentification basique via `src/proxy.ts` pour commencer, ou ProConnect ?
 - **Droits S3.** Le fournisseur sait-il limiter une clé à un préfixe ? Sinon, prévoir un bucket de dépôt séparé.
 - **Conservation.** Combien de temps garder les ZIP reçus et les fichiers des versions remplacées ou retirées ?
-- **Affichage.** Servir les PNG tels quels, ou en générer des versions allégées (WebP, vignettes) pour le site ?
+- **Affichage.** Servir les images telles quelles, ou en générer des versions allégées (WebP, vignettes) pour le site ?
 
 ## Consignes d'implémentation
 
