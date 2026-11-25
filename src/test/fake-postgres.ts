@@ -1,7 +1,8 @@
 // Client `postgres` factice pour les tests : remplace le module `postgres`
 // via `vi.mock`, enregistre chaque requête SQL produite par Drizzle et
 // renvoie les lignes mises en file par `reply`, dans l'ordre des requêtes.
-// Une ligne est un tableau de valeurs, dans l'ordre des colonnes du `select`.
+// Une ligne est un tableau de valeurs, dans l'ordre des colonnes du `select`,
+// ou un objet indexé par nom de colonne pour `db.execute(sql…)`.
 
 export interface RecordedQuery {
   sql: string;
@@ -20,7 +21,7 @@ export interface FakeClient {
 
 export interface FakePostgres {
   connect(url: string): FakeClient;
-  reply(...rowSets: unknown[][][]): void;
+  reply(...rowSets: unknown[][]): void;
   reset(): void;
   readonly urls: string[];
   readonly queries: RecordedQuery[];
@@ -30,7 +31,7 @@ export interface FakePostgres {
 export function createFakePostgres(): FakePostgres {
   const urls: string[] = [];
   const queries: RecordedQuery[] = [];
-  const replies: unknown[][][] = [];
+  const replies: unknown[][] = [];
   let ended = false;
 
   const client: FakeClient = {
