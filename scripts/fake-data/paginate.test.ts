@@ -4,13 +4,19 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { composeNotebook } from "./compose";
 import { newHand, registerFonts } from "./hands";
 import { LINES_PER_PAGE } from "./page-geometry";
-import { pageText } from "./page-layout";
+import type { Line } from "./page-layout";
 import { paginate, wrapLines } from "./paginate";
 import { createRandom } from "./random";
 import { formatTranscription } from "./transcription";
 
 function words(text: string): string[] {
   return text.split(/\s+/).filter(Boolean);
+}
+
+function writtenWords(pages: Line[][]): string[] {
+  return pages
+    .flat()
+    .flatMap((line) => (line.kind === "text" ? line.words : []));
 }
 
 beforeAll(() => registerFonts(join(import.meta.dirname, "fonts")));
@@ -57,9 +63,7 @@ describe("paginate", () => {
   it("répartit sur les pages tous les mots de la transcription, dans l'ordre", () => {
     for (const notebook of notebooks) {
       const pages = paginate(notebook, ctx, createRandom("p"));
-      expect(words(pages.map(pageText).join(" "))).toEqual(
-        words(formatTranscription(notebook)),
-      );
+      expect(writtenWords(pages)).toEqual(words(formatTranscription(notebook)));
     }
   });
 
@@ -70,5 +74,25 @@ describe("paginate", () => {
     );
     expect(aligns[0]).toBe("center");
     expect(aligns).toContain("left");
+  });
+
+  it("distingue l'en-tête, le corps des contributions et les signatures", () => {
+    const notebook = notebooks[0];
+    const text = paginate(notebook, ctx, createRandom("p"))
+      .flat()
+      .flatMap((line) => (line.kind === "text" ? [line] : []));
+    expect(text.slice(0, 3).map(({ role }) => role)).toEqual([
+      "header",
+      "header",
+      "header",
+    ]);
+    expect(text[3].role).toBe("body");
+    const signatures = text.filter(({ role }) => role === "signature");
+    expect(signatures.map(({ words }) => words.join(" "))).toEqual(
+      notebook.contributions.flatMap(({ signature }) =>
+        signature === null ? [] : [signature],
+      ),
+    );
+    expect(signatures.every(({ align }) => align === "right")).toBe(true);
   });
 });

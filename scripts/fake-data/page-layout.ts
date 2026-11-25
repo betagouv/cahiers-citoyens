@@ -13,34 +13,19 @@ export interface Hand {
   pressure: number;
 }
 
+// En-tête de la mairie, corps d'une contribution, signature.
+export type LineRole = "header" | "body" | "signature";
+
 export type Line =
   | {
       kind: "text";
       words: string[];
       hand: Hand;
       align: "left" | "right" | "center";
-      joiner: " " | "\n";
+      role: LineRole;
     }
   | { kind: "rule"; hand: Hand }
   | { kind: "blank" };
-
-// Reprend formatTranscription page par page : lignes d'un même bloc jointes comme
-// dans la transcription, blocs séparés par une ligne vide.
-export function pageText(lines: readonly Line[]): string {
-  let text = "";
-  let inBlock = false;
-  for (const line of lines) {
-    if (line.kind !== "text") {
-      inBlock = false;
-      continue;
-    }
-    const words = line.words.join(" ");
-    if (text === "") text = words;
-    else text += (inBlock ? line.joiner : "\n\n") + words;
-    inBlock = true;
-  }
-  return text;
-}
 
 export function insertBlankPages(pages: Line[][], random: Random): Line[][] {
   const withBlanks: Line[][] = [];

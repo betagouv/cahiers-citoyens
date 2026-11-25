@@ -1,9 +1,12 @@
+// Chaque défaut casse un seul contrôle de la section 4 du protocole.
 export const DEFECTS = [
   "missing-image",
   "unlisted-file",
-  "page-gap",
   "duplicate-page",
-  "invalid-png",
+  "decreasing-pages",
+  "invalid-page-id",
+  "notebook-id-mismatch",
+  "invalid-image",
   "invalid-json",
   "schema-violation",
   "path-traversal",

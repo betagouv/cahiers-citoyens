@@ -1,7 +1,8 @@
+import type { RawNotebook } from "../../src/ingestion/condorcet-notebook";
 import {
   buildNotebookJson,
   imageName,
-  type NotebookJson,
+  type NotebookContent,
   serializeJson,
 } from "./notebook-json";
 
@@ -11,49 +12,37 @@ export interface ArchiveEntry {
   compress: boolean;
 }
 
-export interface NotebookPage {
-  text: string;
-  png: Uint8Array;
-}
-
-export interface NotebookContent {
-  id: string;
-  pages: NotebookPage[];
-}
-
-// Un cahier prêt à zipper. `manifest` remplace la sérialisation de `json` quand un
-// défaut doit produire un notebook.json que le type NotebookJson ne peut pas décrire.
+// Un cahier prêt à zipper, à plat à la racine du ZIP. `jsonBytes` remplace la
+// sérialisation de `json` quand un défaut doit produire un JSON que le type
+// RawNotebook ne peut pas décrire.
 export interface NotebookDraft {
-  dir: string;
-  json: NotebookJson;
-  manifest: Uint8Array | null;
+  id: string;
+  json: RawNotebook;
+  jsonBytes: Uint8Array | null;
   images: ArchiveEntry[];
   extras: ArchiveEntry[];
 }
 
 export function draftNotebook(content: NotebookContent): NotebookDraft {
-  const dir = `notebooks/${content.id}`;
   return {
-    dir,
-    json: buildNotebookJson(
-      content.id,
-      content.pages.map(({ text }) => text),
-    ),
-    manifest: null,
-    images: content.pages.map(({ png }, i) => ({
-      path: `${dir}/${imageName(i + 1)}`,
-      bytes: png,
+    id: content.id,
+    json: buildNotebookJson(content),
+    jsonBytes: null,
+    images: content.pages.map(({ number, image }) => ({
+      path: imageName(content.id, number, image.extension),
+      bytes: image.bytes,
       compress: false,
     })),
     extras: [],
   };
 }
 
+// Le JSON est compressé (Deflate) ; les images, déjà compressées, sont stockées.
 export function draftEntries(draft: NotebookDraft): ArchiveEntry[] {
   return [
     {
-      path: `${draft.dir}/notebook.json`,
-      bytes: draft.manifest ?? serializeJson(draft.json),
+      path: `${draft.id}.json`,
+      bytes: draft.jsonBytes ?? serializeJson(draft.json),
       compress: true,
     },
     ...draft.images,

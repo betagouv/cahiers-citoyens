@@ -1,5 +1,5 @@
 import { type Canvas, createCanvas } from "@napi-rs/canvas";
-import { HEIGHT, WIDTH } from "./page-geometry";
+import { HEIGHT, PAPER_SCALE, WIDTH } from "./page-geometry";
 import type { Random } from "./random";
 
 export function createGrain(random: Random): Canvas {
@@ -30,7 +30,7 @@ export function digitize(paper: Canvas, grain: Canvas, random: Random): Canvas {
     HEIGHT / 2 + random.float() * 16 - 8,
   );
   ctx.rotate(((random.float() - 0.5) * 1.6 * Math.PI) / 180);
-  ctx.scale(0.975, 0.975);
+  ctx.scale(PAPER_SCALE, PAPER_SCALE);
   ctx.shadowColor = "rgba(0,0,0,0.25)";
   ctx.shadowBlur = 12;
   ctx.drawImage(paper, -WIDTH / 2, -HEIGHT / 2);

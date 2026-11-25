@@ -1,108 +1,137 @@
 import { describe, expect, it } from "vitest";
 import { injectDefect } from "./inject-defect";
-import { draftEntries, draftNotebook } from "./notebook-draft";
+import {
+  draftEntries,
+  draftNotebook,
+  type NotebookDraft,
+} from "./notebook-draft";
+import { testContent } from "./test-notebook";
 
-const FIRST = new Uint8Array([10, 11, 12, 13]);
-const LAST = new Uint8Array([20, 21]);
-const BASE = draftNotebook({
-  id: "CC_1",
-  pages: [
-    { text: "Première", png: FIRST },
-    { text: "", png: new Uint8Array([15]) },
-    { text: "Dernière", png: LAST },
-  ],
-});
-const DIR = "notebooks/CC_1";
+const CONTENT = testContent();
+const FIRST = CONTENT.pages[0].image.bytes;
+const LAST = CONTENT.pages[2].image.bytes;
+const BASE = draftNotebook(CONTENT);
 
-function paths(draft: typeof BASE): string[] {
+function paths(draft: NotebookDraft): string[] {
   return draftEntries(draft).map(({ path }) => path);
 }
 
-function manifestText(draft: typeof BASE): string {
+function jsonText(draft: NotebookDraft): string {
   return new TextDecoder().decode(draftEntries(draft)[0].bytes);
 }
 
-describe("injectDefect", () => {
-  it("missing-image : la dernière image annoncée manque", () => {
+function pageIds(draft: NotebookDraft): [number, string, string[]][] {
+  return draft.json.pages.map((page) => [
+    page.numero_page,
+    page.id_page,
+    page.lignes.map(({ id_ligne }) => id_ligne),
+  ]);
+}
+
+describe("injectDefect, fichiers", () => {
+  it("missing-image : l'image de la dernière page manque", () => {
     const draft = injectDefect(BASE, "missing-image");
-    expect(paths(draft)).not.toContain(`${DIR}/0003.png`);
+    expect(paths(draft)).toEqual(["CC_1.json", "CC_1_1.png", "CC_1_2.png"]);
     expect(draft.json).toEqual(BASE.json);
   });
 
-  it("unlisted-file : un fichier non annoncé s'ajoute au dossier", () => {
+  it("unlisted-file : l'image d'une page absente du JSON s'ajoute", () => {
     const draft = injectDefect(BASE, "unlisted-file");
-    expect(paths(draft)).toEqual([...paths(BASE), `${DIR}/notes.txt`]);
-    expect(draft.extras[0].compress).toBe(true);
-  });
-
-  it("page-gap : la dernière page saute un numéro", () => {
-    const draft = injectDefect(BASE, "page-gap");
-    expect(draft.json.pages.map(({ page }) => page)).toEqual([1, 2, 4]);
-    expect(paths(draft)).toEqual(paths(BASE));
-  });
-
-  it("duplicate-page : le dernier numéro revient, avec sa propre image", () => {
-    const draft = injectDefect(BASE, "duplicate-page");
-    expect(draft.json.pages.map(({ page, image }) => [page, image])).toEqual([
-      [1, "0001.png"],
-      [2, "0002.png"],
-      [3, "0003.png"],
-      [3, "0004.png"],
-    ]);
-    expect(draft.images[3]).toEqual({
-      path: `${DIR}/0004.png`,
+    expect(paths(draft)).toEqual([...paths(BASE), "CC_1_6.png"]);
+    expect(draft.extras[0]).toEqual({
+      path: "CC_1_6.png",
       bytes: LAST,
       compress: false,
     });
   });
-});
 
-describe("injectDefect, contenu des fichiers", () => {
-  it("invalid-png : la première image est tronquée", () => {
-    const draft = injectDefect(BASE, "invalid-png");
-    expect(Array.from(draft.images[0].bytes)).toEqual([10, 11]);
+  it("invalid-image : la première image n'est ni un JPEG ni un PNG", () => {
+    const draft = injectDefect(BASE, "invalid-image");
+    expect(new TextDecoder().decode(draft.images[0].bytes)).toBe(
+      "Ceci n'est pas une image.\n",
+    );
+    expect(draft.images[0].path).toBe("CC_1_1.png");
     expect(draft.images.slice(1)).toEqual(BASE.images.slice(1));
   });
 
-  it("invalid-json : notebook.json n'est plus du JSON", () => {
-    const text = manifestText(injectDefect(BASE, "invalid-json"));
-    expect(() => {
-      JSON.parse(text);
-    }).toThrow();
-    expect(manifestText(BASE).startsWith(text)).toBe(true);
+  it("path-traversal : une entrée remonte hors du dépôt", () => {
+    expect(injectDefect(BASE, "path-traversal").extras).toEqual([
+      {
+        path: "../../escape.txt",
+        bytes: new TextEncoder().encode("Hors du dépôt.\n"),
+        compress: true,
+      },
+    ]);
   });
 
-  it("schema-violation : du JSON valide, mais la première page n'a pas de texte", () => {
-    const parsed: unknown = JSON.parse(
-      manifestText(injectDefect(BASE, "schema-violation")),
-    );
-    expect(parsed).toEqual({
-      ...BASE.json,
-      pages: [{ page: 1, image: "0001.png" }, ...BASE.json.pages.slice(1)],
-    });
+  it("nested-folder : une image apparaît dans un sous-dossier", () => {
+    expect(injectDefect(BASE, "nested-folder").extras).toEqual([
+      { path: "scans/CC_1_1.png", bytes: FIRST, compress: false },
+    ]);
   });
 });
 
-describe("injectDefect, arborescence", () => {
-  it("path-traversal : une entrée remonte hors du dépôt", () => {
-    expect(paths(injectDefect(BASE, "path-traversal"))).toContain(
-      `${DIR}/../../../escape.txt`,
-    );
+describe("injectDefect, pages", () => {
+  it("duplicate-page : la dernière page revient sous le même numéro", () => {
+    const draft = injectDefect(BASE, "duplicate-page");
+    expect(pageIds(draft)).toEqual([...pageIds(BASE), pageIds(BASE)[2]]);
+    expect(paths(draft)).toEqual(paths(BASE));
   });
 
-  it("nested-folder : un sous-dossier apparaît dans le cahier", () => {
-    const [extra] = injectDefect(BASE, "nested-folder").extras;
-    expect(extra).toEqual({
-      path: `${DIR}/scans/0001.png`,
-      bytes: FIRST,
+  it("decreasing-pages : une page 6 s'insère avant la page 5, avec son image", () => {
+    const draft = injectDefect(BASE, "decreasing-pages");
+    expect(pageIds(draft)).toEqual([
+      [1, "CC_1_1", ["CC_1_1_1", "CC_1_1_2"]],
+      [2, "CC_1_2", []],
+      [6, "CC_1_6", ["CC_1_6_1"]],
+      [5, "CC_1_5", ["CC_1_5_1"]],
+    ]);
+    expect(draft.images[3]).toEqual({
+      path: "CC_1_6.png",
+      bytes: LAST,
       compress: false,
+    });
+  });
+
+  it("invalid-page-id : la première page porte un id_page mal formé", () => {
+    const draft = injectDefect(BASE, "invalid-page-id");
+    expect(pageIds(draft)[0]).toEqual([1, "CC_1_01", ["CC_1_1_1", "CC_1_1_2"]]);
+    expect(pageIds(draft).slice(1)).toEqual(pageIds(BASE).slice(1));
+  });
+
+  it("notebook-id-mismatch : id_cahier ne reprend plus le nom du fichier", () => {
+    const draft = injectDefect(BASE, "notebook-id-mismatch");
+    expect(draft.json.id_cahier).toBe("CC_1_bis");
+    expect(paths(draft)).toEqual(paths(BASE));
+  });
+});
+
+describe("injectDefect, JSON", () => {
+  it("invalid-json : le fichier n'est plus du JSON", () => {
+    const text = jsonText(injectDefect(BASE, "invalid-json"));
+    expect(() => {
+      JSON.parse(text);
+    }).toThrow();
+    expect(jsonText(BASE).startsWith(text)).toBe(true);
+  });
+
+  it("schema-violation : du JSON valide, mais la première page n'a pas de largeur", () => {
+    const parsed: unknown = JSON.parse(
+      jsonText(injectDefect(BASE, "schema-violation")),
+    );
+    const { largeur, ...first } = BASE.json.pages[0];
+    expect(largeur).toBe(1240);
+    expect(parsed).toEqual({
+      ...BASE.json,
+      pages: [first, ...BASE.json.pages.slice(1)],
     });
   });
 
   it("ne modifie pas le brouillon reçu", () => {
     const before = structuredClone(BASE);
-    injectDefect(BASE, "page-gap");
-    injectDefect(BASE, "duplicate-page");
+    injectDefect(BASE, "decreasing-pages");
+    injectDefect(BASE, "invalid-page-id");
+    injectDefect(BASE, "schema-violation");
     expect(BASE).toEqual(before);
   });
 });

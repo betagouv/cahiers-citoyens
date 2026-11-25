@@ -2,15 +2,23 @@ import { join } from "node:path";
 import { createCanvas } from "@napi-rs/canvas";
 import { beforeAll, describe, expect, it } from "vitest";
 import { registerFonts } from "./hands";
-import { correctText, stampCorrection } from "./notebook-change";
+import {
+  correctMunicipality,
+  correctText,
+  stampCorrection,
+} from "./notebook-change";
 
 beforeAll(() => registerFonts(join(import.meta.dirname, "fonts")));
 
 describe("correctText", () => {
   it("garde le texte et y ajoute une mention de relecture", () => {
-    expect(correctText("Texte")).toBe(
-      "Texte\n\n[Transcription relue et corrigée]",
-    );
+    expect(correctText("Texte")).toBe("Texte [relu et corrigé]");
+  });
+});
+
+describe("correctMunicipality", () => {
+  it("corrige le nom de la commune", () => {
+    expect(correctMunicipality("Gap")).toBe("Gap (commune nouvelle)");
   });
 });
 

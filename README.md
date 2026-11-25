@@ -38,34 +38,39 @@ bun scripts/fake-data/generate.ts --count 200 --out data/fake-data --seed 42
 
 ### Faux dépôts Condorcet
 
-`scripts/fake-data/deliver.ts` produit, à partir des mêmes faux cahiers, un dépôt au format du [protocole](docs/ingestion-protocol.md) : `delivery-AAAA-MM-JJ-HHMM.zip`, avec pour chaque cahier `notebooks/<id>/notebook.json` et une image PNG par page (`0001.png`, `0002.png`…). L'identifiant imite les noms de l'inventaire (`CC_76351_190101_00012_MD_48213`). Le texte de chaque page est celui qui y est dessiné ; quelques pages blanches ont un texte vide. Les PNG sont stockés tels quels, `notebook.json` est compressé (Deflate).
+`scripts/fake-data/deliver.ts` produit, à partir des mêmes faux cahiers, un dépôt au format du [protocole](docs/ingestion-protocol.md) : `delivery-AAAA-MM-JJ-HHMM.zip`, avec à la racine, pour chaque cahier, `<id_cahier>.json` et une image par page nommée `<id_cahier>_<numero_page>.png`. L'identifiant imite ceux de Condorcet (`CC_76600_190101_76351_MD_10012` : code postal fictif, date d'ouverture, code INSEE, numéro). Chaque ligne dessinée devient une ligne du JSON, avec son polygone ; quelques pages blanches n'ont aucune ligne. Comme dans l'échantillon reçu, la plupart des images sont des JPEG nommés `.png` ; quelques cahiers ont de vrais PNG ou des `.jpg`. Les images sont stockées telles quelles, le JSON est compressé (Deflate).
 
 ```bash
 # 10 cahiers, date du dépôt par défaut : 2026-11-24T09:30:00Z
 bun scripts/fake-data/deliver.ts --count 10 --seed 42 --out data/deliveries
 
-# Mêmes cahiers, dont 2 modifiés (texte ou image d'une page) : remplacements attendus
+# Mêmes cahiers, dont 2 modifiés (texte, image ou commune) : remplacements attendus
 bun scripts/fake-data/deliver.ts --count 10 --modify 2 --created-at 2026-11-25T09:30:00Z
 
+# Numéros de page avec des trous (1, 3, 4, 7…), admis par le protocole
+bun scripts/fake-data/deliver.ts --count 10 --gaps
+
 # Un dépôt défectueux : chaque défaut touche un seul cahier, toujours le même pour une graine
-bun scripts/fake-data/deliver.ts --count 10 --defect page-gap --defect invalid-png
+bun scripts/fake-data/deliver.ts --count 10 --defect duplicate-page --defect invalid-image
 ```
 
-Même graine, mêmes options : mêmes octets, y compris la date des fichiers dans le ZIP, tirée de `--created-at`. Relancer avec une autre `--created-at` reconstruit le même dépôt : chaque `notebook.json` et chaque PNG est identique octet pour octet, seuls le nom du ZIP et ses dates changent. C'est le cas « même contenu rezippé » du premier échange.
+Même graine, mêmes options : mêmes octets, y compris la date des fichiers dans le ZIP, tirée de `--created-at`. Relancer avec une autre `--created-at` reconstruit le même dépôt : chaque JSON et chaque image est identique octet pour octet, seuls le nom du ZIP et ses dates changent. C'est le cas « même contenu rezippé » du premier échange.
 
 `--defect` se répète. Défauts possibles, un par contrôle de la section 4 du protocole :
 
-| Défaut             | Effet sur le cahier visé                                              |
-| ------------------ | --------------------------------------------------------------------- |
-| `missing-image`    | La dernière image annoncée manque                                     |
-| `unlisted-file`    | Un `notes.txt` non annoncé dans le dossier                            |
-| `page-gap`         | La dernière page saute un numéro                                      |
-| `duplicate-page`   | Le dernier numéro de page revient, avec sa propre image               |
-| `invalid-png`      | La première image est tronquée de moitié                              |
-| `invalid-json`     | `notebook.json` tronqué                                               |
-| `schema-violation` | JSON valide, mais la première page n'a pas de `text`                  |
-| `path-traversal`   | Une entrée `notebooks/<id>/../../../escape.txt` qui sort de l'archive |
-| `nested-folder`    | Une copie de la première image dans un sous-dossier `scans/`          |
+| Défaut                 | Effet sur le cahier visé                                          |
+| ---------------------- | ----------------------------------------------------------------- |
+| `missing-image`        | L'image de la dernière page manque                                |
+| `unlisted-file`        | L'image d'une page que le JSON n'annonce pas                      |
+| `duplicate-page`       | La dernière page revient sous le même numéro                      |
+| `decreasing-pages`     | Une page n+1 est insérée avant la dernière page n, avec son image |
+| `invalid-page-id`      | La première page a un `id_page` mal formé (`<id>_01`)             |
+| `notebook-id-mismatch` | `id_cahier` ne reprend pas le nom du fichier JSON                 |
+| `invalid-image`        | La première image n'est ni un JPEG ni un PNG                      |
+| `invalid-json`         | Le JSON est tronqué                                               |
+| `schema-violation`     | JSON valide, mais la première page n'a pas de `largeur`           |
+| `path-traversal`       | Une entrée `../../escape.txt` qui sort de l'archive               |
+| `nested-folder`        | Une copie de la première image dans un sous-dossier `scans/`      |
 
 Avec moins de cahiers que de défauts, un cahier en cumule plusieurs. Le script affiche les cahiers modifiés et les défauts injectés.
 

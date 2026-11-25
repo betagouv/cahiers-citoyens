@@ -5,16 +5,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DeliverySpec, NotebookSpec } from "./delivery-plan";
 import { registerFonts } from "./hands";
 import { readArchive } from "./read-archive";
-import { shortNotebook } from "./test-notebook";
+import { testSpec } from "./test-notebook";
 import { describeNotebook, writeDelivery } from "./write-delivery";
 
-const NOTEBOOK: NotebookSpec = {
-  index: 1,
-  id: "CC_1",
-  notebook: shortNotebook(),
-  change: "none",
-  defects: [],
-};
+const NOTEBOOK: NotebookSpec = testSpec();
 
 function spec(createdAt: string): DeliverySpec {
   return { seed: "42", createdAt: new Date(createdAt), notebooks: [NOTEBOOK] };
@@ -41,11 +35,13 @@ describe("describeNotebook", () => {
       describeNotebook({
         ...NOTEBOOK,
         change: "image",
-        defects: ["page-gap", "invalid-png"],
+        defects: ["duplicate-page", "invalid-image"],
       }),
-    ).toBe("CC_1 : modifié (image), page-gap, invalid-png");
-    expect(describeNotebook({ ...NOTEBOOK, defects: ["page-gap"] })).toBe(
-      "CC_1 : page-gap",
+    ).toBe(
+      "CC_76600_190101_76351_MD_10001 : modifié (image), duplicate-page, invalid-image",
+    );
+    expect(describeNotebook({ ...NOTEBOOK, defects: ["duplicate-page"] })).toBe(
+      "CC_76600_190101_76351_MD_10001 : duplicate-page",
     );
   });
 });

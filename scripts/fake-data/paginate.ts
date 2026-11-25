@@ -41,7 +41,7 @@ export function paginate(
       words: line.split(" "),
       hand: townHall,
       align: i === 0 ? "center" : "left",
-      joiner: "\n",
+      role: "header",
     });
   }
   flow.push({ kind: "blank" });
@@ -57,7 +57,7 @@ export function paginate(
       hand,
       TEXT_END - TEXT_START - indent,
     )) {
-      flow.push({ kind: "text", words, hand, align: "left", joiner: " " });
+      flow.push({ kind: "text", words, hand, align: "left", role: "body" });
     }
     if (contribution.signature !== null) {
       flow.push({
@@ -65,7 +65,7 @@ export function paginate(
         words: contribution.signature.split(" "),
         hand,
         align: "right",
-        joiner: "\n",
+        role: "signature",
       });
     }
     flow.push(random.chance(0.5) ? { kind: "rule", hand } : { kind: "blank" });

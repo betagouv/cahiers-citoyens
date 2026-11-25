@@ -3,18 +3,15 @@ import { sourceId } from "./source-id";
 import { shortNotebook } from "./test-notebook";
 
 describe("sourceId", () => {
-  it("suit la forme des noms de l'inventaire", () => {
-    expect(sourceId(shortNotebook(), 12, "42")).toMatch(
-      /^CC_76351_190101_00012_MD_\d{5}$/,
+  it("suit la forme des identifiants Condorcet", () => {
+    expect(sourceId(shortNotebook(), "76600", 12)).toBe(
+      "CC_76600_190101_76351_MD_10012",
     );
   });
 
-  it("dépend de la graine et reste stable pour une même graine", () => {
-    const notebook = shortNotebook();
-    expect(sourceId(notebook, 1, "42")).toBe(sourceId(notebook, 1, "42"));
-    const batches = new Set(
-      ["1", "2", "3", "4", "5"].map((seed) => sourceId(notebook, 1, seed)),
+  it("distingue deux cahiers de la même commune ouverts le même jour", () => {
+    expect(sourceId(shortNotebook(), "76600", 1)).not.toBe(
+      sourceId(shortNotebook(), "76600", 2),
     );
-    expect(batches.size).toBeGreaterThan(1);
   });
 });

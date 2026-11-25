@@ -7,12 +7,12 @@ import { utcAsLocal } from "./write-archive";
 const AT = new Date("2026-11-24T09:30:00Z");
 const ENTRIES: ArchiveEntry[] = [
   {
-    path: "notebooks/CC_1/notebook.json",
-    bytes: new TextEncoder().encode('{"format":1,"text":"aaaaaaaaaaaaaaaa"}'),
+    path: "CC_1.json",
+    bytes: new TextEncoder().encode('{"id_cahier":"CC_1","x":"aaaaaaaaaaaa"}'),
     compress: true,
   },
   {
-    path: "notebooks/CC_1/0001.png",
+    path: "CC_1_1.png",
     bytes: new Uint8Array(64).fill(7),
     compress: false,
   },
@@ -37,13 +37,13 @@ describe("utcAsLocal", () => {
 });
 
 describe("writeArchive", () => {
-  it("stocke les PNG, compresse le JSON, restitue les octets", async () => {
+  it("stocke les images, compresse le JSON, restitue les octets", async () => {
     const records = await readArchive(await archiveBytes(ENTRIES, AT));
     expect(
       records.map(({ path, compressionMethod }) => [path, compressionMethod]),
     ).toEqual([
-      ["notebooks/CC_1/notebook.json", 8],
-      ["notebooks/CC_1/0001.png", 0],
+      ["CC_1.json", 8],
+      ["CC_1_1.png", 0],
     ]);
     records.forEach((record, i) =>
       expect(Buffer.from(ENTRIES[i].bytes).equals(record.bytes)).toBe(true),
@@ -75,7 +75,7 @@ describe("writeArchive", () => {
         [
           ...ENTRIES,
           {
-            path: "notebooks/CC_1/../../../escape.txt",
+            path: "../../escape.txt",
             bytes: new TextEncoder().encode("x"),
             compress: true,
           },
@@ -83,9 +83,7 @@ describe("writeArchive", () => {
         AT,
       ),
     );
-    expect(records.map(({ path }) => path)).toContain(
-      "notebooks/CC_1/../../../escape.txt",
-    );
+    expect(records.map(({ path }) => path)).toContain("../../escape.txt");
     expect(records.map(({ path }) => path).join()).not.toContain("__");
   });
 });

@@ -10,6 +10,7 @@ describe("parseDeliverArgs", () => {
         seed: "42",
         createdAt: new Date(DEFAULT_CREATED_AT),
         modify: 0,
+        gaps: false,
         defects: [],
       },
     });
@@ -28,10 +29,11 @@ describe("parseDeliverArgs", () => {
         "2026-12-01T08:15:00Z",
         "--modify",
         "3",
+        "--gaps",
         "--defect",
-        "page-gap",
+        "duplicate-page",
         "--defect",
-        "invalid-png",
+        "invalid-image",
       ]),
     ).toEqual({
       out: "tmp",
@@ -40,7 +42,8 @@ describe("parseDeliverArgs", () => {
         seed: "7",
         createdAt: new Date("2026-12-01T08:15:00Z"),
         modify: 3,
-        defects: ["page-gap", "invalid-png"],
+        gaps: true,
+        defects: ["duplicate-page", "invalid-image"],
       },
     });
   });

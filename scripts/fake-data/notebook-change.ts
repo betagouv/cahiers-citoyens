@@ -1,7 +1,11 @@
 import type { Canvas } from "@napi-rs/canvas";
 
 export function correctText(text: string): string {
-  return `${text}\n\n[Transcription relue et corrigée]`;
+  return `${text} [relu et corrigé]`;
+}
+
+export function correctMunicipality(name: string): string {
+  return `${name} (commune nouvelle)`;
 }
 
 export function stampCorrection(canvas: Canvas): void {

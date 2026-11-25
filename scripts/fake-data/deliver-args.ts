@@ -52,6 +52,7 @@ export function parseDeliverArgs(args: string[]): DeliverArgs {
       out: { type: "string", default: "data/deliveries" },
       "created-at": { type: "string", default: DEFAULT_CREATED_AT },
       modify: { type: "string", default: "0" },
+      gaps: { type: "boolean", default: false },
       defect: { type: "string", multiple: true, default: [] },
     },
   });
@@ -63,6 +64,7 @@ export function parseDeliverArgs(args: string[]): DeliverArgs {
       seed: values.seed,
       createdAt: parseCreatedAt(values["created-at"]),
       modify: parseInteger("modify", values.modify, 0, count),
+      gaps: values.gaps,
       defects: values.defect.map(parseDefect),
     },
   };

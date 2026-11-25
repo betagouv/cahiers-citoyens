@@ -3,7 +3,6 @@ import {
   type Hand,
   insertBlankPages,
   type Line,
-  pageText,
   splitPages,
 } from "./page-layout";
 import { createRandom } from "./random";
@@ -15,54 +14,31 @@ const HAND: Hand = {
   pressure: 1,
 };
 
-function text(words: string, joiner: " " | "\n"): Line {
+function text(words: string): Line {
   return {
     kind: "text",
     words: words.split(" "),
     hand: HAND,
     align: "left",
-    joiner,
+    role: "body",
   };
 }
-
-describe("pageText", () => {
-  it("joint les lignes d'un bloc et sépare les blocs par une ligne vide", () => {
-    const lines: Line[] = [
-      text("Titre", "\n"),
-      text("Commune", "\n"),
-      { kind: "blank" },
-      text("Une contribution", " "),
-      text("sur deux lignes.", " "),
-      text("M. A.", "\n"),
-      { kind: "rule", hand: HAND },
-      text("Suite", " "),
-    ];
-    expect(pageText(lines)).toBe(
-      "Titre\nCommune\n\nUne contribution sur deux lignes.\nM. A.\n\nSuite",
-    );
-  });
-
-  it("rend une page sans ligne écrite vide", () => {
-    expect(pageText([])).toBe("");
-    expect(pageText([{ kind: "blank" }])).toBe("");
-  });
-});
 
 describe("splitPages", () => {
   it("coupe le flux en pages, sans ligne vide ni trait en fin de page", () => {
     const flow: Line[] = [
-      text("a", " "),
+      text("a"),
       { kind: "blank" },
-      text("b", " "),
+      text("b"),
       { kind: "rule", hand: HAND },
       { kind: "blank" },
       { kind: "blank" },
-      text("c", " "),
+      text("c"),
     ];
     expect(splitPages(flow, 2)).toEqual([
-      [text("a", " ")],
-      [text("b", " ")],
-      [text("c", " ")],
+      [text("a")],
+      [text("b")],
+      [text("c")],
     ]);
   });
 });
@@ -70,7 +46,7 @@ describe("splitPages", () => {
 describe("insertBlankPages", () => {
   it("insère des pages vides après des pages écrites, sans en perdre", () => {
     const pages: Line[][] = Array.from({ length: 40 }, (_, i) => [
-      text(`page ${i}`, " "),
+      text(`page ${i}`),
     ]);
     const withBlanks = insertBlankPages(pages, createRandom("blancs"));
     expect(withBlanks.filter((page) => page.length > 0)).toEqual(pages);
