@@ -35,10 +35,12 @@ Un titre H1, un paragraphe de comportement visible, puis exactement quatre H2 : 
 
 - [Gabarit DSFR](./dsfr-layout.md) — en-tête, navigation, paramètres d'affichage, pied de page, liens d'évitement, titre de page, communs à toutes les pages.
 - [Cahiers : liste et visionneuse](./notebooks.md) — tableau paginé, scan PDF et transcription côte à côte, 404.
-- [Recherche](./search.md) — question en langage courant, réponse sourcée, replis quand Albert est indisponible.
-- [Accueil](./home.md) — recherche par lieu et mot-clé, carte MapLibre des départements publiés, étiquettes par zone, tuiles de lecture.
+- [Recherche](./search.md) — pages d'un lieu et d'un mot-clé (liste paginée, extraits surlignés) ; question en langage courant, réponse sourcée, replis quand Albert est indisponible.
+- [Accueil](./home.md) — recherche par lieu et mot-clé avec suggestions et nombre de pages, carte MapLibre des départements publiés, étiquettes par zone, tuiles de lecture.
 
 ## État de vérification
+
+**Vérifié le 2026-11-25 en `--prod`, base locale (référentiel réel, 40 000 pages fictives) :** `home-search` (suggestions de lieux et de mots, clavier, souris, annonce, champ caché `place`, bouton `Voir les <n> pages` / `Voir la page`), `search-pages`, `search-pages-place` (pagination, 375 px), `search-pages-nojs` (`curl`), en-têtes `Cache-Control` des routes `/api/suggestions/*` et `/api/pages/count`. Non exercé : lecteur d'écran réel.
 
 **Vérifié le 2026-11-25, en dev et en `--prod`, sans base :** `home-hero`, `home-search`, `home-online-text`, `home-online-tags`, `home-map` (départements colorés, survol, clic vers `/search?place=25`, thème sombre en direct), `home-map-legend`, `home-tiles`, captures 1280 px et 375 px ; `layout-nav` (rubrique active sur `/`, `/understanding`, `/publication`, `/faq`, aucune sur `/search`, `/notebooks` et la 404), `layout-display`, menu mobile.
 

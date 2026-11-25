@@ -7,6 +7,12 @@ const searchNotebooks = vi.hoisted(() =>
   vi.fn<(question: string) => Promise<SearchOutcome>>(),
 );
 
+vi.mock("./page-search-section", () => ({
+  PageSearchSection: ({ search }: { search: { place: string } }) => (
+    <p>Recherche par lieu {search.place}</p>
+  ),
+}));
+
 vi.mock("@/lib/search/search", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/search/search")>()),
   searchNotebooks,
@@ -39,5 +45,16 @@ describe("SearchSection", () => {
     expect(html).toContain("ne répond à « médecin »");
     expect(html).not.toContain("Par exemple :");
     expect(html).not.toContain("Recherche des passages");
+  });
+});
+
+describe("SearchSection, recherche par lieu et mot-clé", () => {
+  it("passe la main dès que `place` est présent", async () => {
+    const html = await renderToHtml(
+      <SearchSection searchParams={Promise.resolve({ place: "25", q: "x" })} />,
+    );
+
+    expect(searchNotebooks).not.toHaveBeenCalled();
+    expect(html).toContain("Recherche par lieu 25");
   });
 });
