@@ -58,7 +58,7 @@ Dossier : `.claude/skills/verify-notebooks/evidence/` (ignoré par git, jamais s
 .claude/skills/verify-notebooks/scripts/notebooks-verify shot <nom> [chemin]   # défaut : /
 ```
 
-`shot` ouvre la page, attend le contenu diffusé en flux, écrit `evidence/<date>-<nom>.txt` (arbre d'accessibilité) et `evidence/<date>-<nom>.png` (page entière). Le message `✓ Screenshot saved to <chemin>` est la preuve que la capture existe. Pour un `agent-browser screenshot` direct, passer un chemin absolu.
+`shot` ouvre la page, attend le contenu diffusé en flux, écrit `evidence/<date>-<nom>.txt` (arbre d'accessibilité) et `evidence/<date>-<nom>.png` (page entière). Largeur 1280 px par défaut ; `NOTEBOOKS_SHOT_WIDTH=375 notebooks-verify shot <nom>` capture la version mobile. Le message `✓ Screenshot saved to <chemin>` est la preuve que la capture existe. Pour un `agent-browser screenshot` direct, passer un chemin absolu.
 
 Standards :
 

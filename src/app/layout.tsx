@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { headerFooterDisplayItem } from "@codegouvfr/react-dsfr/Display";
 import { Footer } from "@codegouvfr/react-dsfr/Footer";
 import { Header } from "@codegouvfr/react-dsfr/Header";
 import { SkipLinks } from "@codegouvfr/react-dsfr/SkipLinks";
-import { DsfrProvider } from "@/dsfr-bootstrap";
+import { DsfrProvider, StartDsfrOnHydration } from "@/dsfr-bootstrap";
 import {
   DsfrHead,
   getHtmlAttributes,
@@ -43,6 +44,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-screen flex-col">
         <DsfrProvider lang={lang}>
+          {/* Sans lui, le JavaScript du DSFR ne démarre pas : ni la modale
+              « Paramètres d'affichage » ni le menu mobile ne s'ouvrent. */}
+          <StartDsfrOnHydration />
           <SkipLinks
             links={[
               { label: "Accéder au contenu", anchor: "#content" },
@@ -52,6 +56,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Header
             brandTop={brandTop}
             serviceTitle="Cahiers citoyens"
+            serviceTagline="Consulter les cahiers du Grand Débat national"
+            quickAccessItems={[headerFooterDisplayItem]}
             homeLinkProps={homeLinkProps}
             navigation={<HeaderNavigation />}
           />
@@ -63,6 +69,19 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             brandTop={brandTop}
             homeLinkProps={homeLinkProps}
             accessibility="non compliant"
+            contentDescription="Ce site donne accès aux cahiers citoyens du Grand Débat national, numérisés et transcrits. Il est édité par la DITP et la DINUM, avec le Campus Condorcet."
+            accessibilityLinkProps={{ href: "/accessibility" }}
+            termsLinkProps={{ href: "/legal-notice" }}
+            // Plan du site passe par bottomItems plutôt que websiteMapLinkProps,
+            // que react-dsfr place en tête : l'ordre suit ainsi la maquette.
+            bottomItems={[
+              {
+                text: "Données personnelles",
+                linkProps: { href: "/personal-data" },
+              },
+              { text: "Plan du site", linkProps: { href: "/site-map" } },
+              headerFooterDisplayItem,
+            ]}
           />
         </DsfrProvider>
       </body>

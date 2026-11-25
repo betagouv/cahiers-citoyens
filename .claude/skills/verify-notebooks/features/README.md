@@ -6,7 +6,7 @@ Ce dossier est la source maintenue pour vérifier le comportement visible de Cah
 
 Pendant l'hiver 2018-2019, en réponse au mouvement des Gilets jaunes, des mairies ont ouvert des **cahiers de doléances** (ou cahiers citoyens) où les habitants ont écrit des **contributions**. Chaque cahier est numérisé (scan PDF) et transcrit ; chaque contribution devient un **passage** (chunk) indexé pour la recherche, en plein texte et par vecteur.
 
-Aujourd'hui : accueil, liste des cahiers, visionneuse, recherche. Pas de compte. Les cahiers chargés sont fictifs et l'accueil le dit.
+Aujourd'hui : accueil (recherche par lieu et mot-clé, carte des départements publiés), liste des cahiers, visionneuse, recherche, et des pages provisoires au texte fictif (`/understanding`, `/publication`, `/faq`, `/accessibility`, `/legal-notice`, `/personal-data`) plus le plan du site (`/site-map`). Pas de compte. Les cahiers chargés sont fictifs.
 
 ## Préconditions de base
 
@@ -33,14 +33,16 @@ Un titre H1, un paragraphe de comportement visible, puis exactement quatre H2 : 
 
 ## Features
 
-- [Gabarit DSFR](./dsfr-layout.md) — en-tête, pied de page, liens d'évitement, titre de page, communs à toutes les pages.
+- [Gabarit DSFR](./dsfr-layout.md) — en-tête, navigation, paramètres d'affichage, pied de page, liens d'évitement, titre de page, communs à toutes les pages.
 - [Cahiers : liste et visionneuse](./notebooks.md) — tableau paginé, scan PDF et transcription côte à côte, 404.
 - [Recherche](./search.md) — question en langage courant, réponse sourcée, replis quand Albert est indisponible.
-- [Accueil](./home.md) — présentation, barre de recherche, chiffres du corpus tirés de la base, lien vers la liste.
+- [Accueil](./home.md) — recherche par lieu et mot-clé, carte MapLibre des départements publiés, étiquettes par zone, tuiles de lecture.
 
 ## État de vérification
 
-**Vérifié en `--prod` le 2026-11-11, base de 30 faux cahiers vectorisés :** `home-intro`, `home-search` (saisie puis Entrée depuis l'accueil), `home-figures` (confrontés à la base), `home-notice`, `home-browse`, `layout-nav` (rubrique active sur `/notebooks`, `/notebooks/<id>`, `/search`, aucune sur la 404), `notebooks-list`, `notebook-viewer`, `notebook-scan`, `notebook-not-found` (404 aussi en dev), `search-answer`, `search-sources`, `search-degraded` (standalone lancé avec `ALBERT_BASE_URL=http://127.0.0.1:9`). Preuves dans `../evidence/`.
+**Vérifié le 2026-11-25, en dev et en `--prod`, sans base :** `home-hero`, `home-search`, `home-online-text`, `home-online-tags`, `home-map` (départements colorés, survol, clic vers `/search?place=25`, thème sombre en direct), `home-map-legend`, `home-tiles`, captures 1280 px et 375 px ; `layout-nav` (rubrique active sur `/`, `/understanding`, `/publication`, `/faq`, aucune sur `/search`, `/notebooks` et la 404), `layout-display`, menu mobile.
+
+**Vérifié en `--prod` le 2026-11-11, base de 30 faux cahiers vectorisés :** `notebooks-list`, `notebook-viewer`, `notebook-scan`, `notebook-not-found` (404 aussi en dev), `search-answer`, `search-sources`, `search-degraded` (standalone lancé avec `ALBERT_BASE_URL=http://127.0.0.1:9`). Preuves dans `../evidence/`.
 
 **Vérifié de bout en bout le 2026-11-06, en dev et en `--prod` :** `layout-header`, `layout-footer`.
 
