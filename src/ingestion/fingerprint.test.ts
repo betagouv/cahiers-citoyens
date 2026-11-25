@@ -1,24 +1,58 @@
 import * as crypto from "node:crypto";
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { notebookFingerprint, parseSha256 } from "./fingerprint";
-import type { FingerprintPage, Sha256 } from "./fingerprint";
+import { toNotebook } from "./condorcet-notebook";
+import {
+  type FingerprintInput,
+  type FingerprintPage,
+  notebookFingerprint,
+  parseSha256,
+  type Sha256,
+} from "./fingerprint";
+import type { Line } from "./notebook";
+import { parseNotebookId } from "./notebook-id";
+import { EXAMPLE_ID, exampleNotebook } from "./test-notebook";
 
 vi.mock("node:crypto", { spy: true });
 
 function sha256Of(content: string): Sha256 {
   const hash = parseSha256(createHash("sha256").update(content).digest("hex"));
-  if (hash === undefined) {
-    throw new Error("SHA-256 invalide");
-  }
+  if (hash === undefined) throw new Error("SHA-256 invalide");
   return hash;
 }
 
-const PAGES: FingerprintPage[] = [
-  { page: 1, imageSha256: sha256Of("image 1"), text: "Délibération" },
-  { page: 2, imageSha256: sha256Of("image 2"), text: "" },
-  { page: 3, imageSha256: sha256Of("image 3"), text: "Suite du texte" },
-];
+function example(): FingerprintInput {
+  const id = parseNotebookId(EXAMPLE_ID);
+  if (!id.ok) throw new Error(id.error.message);
+  const { metadata, pages } = toNotebook(id.id, exampleNotebook());
+  return {
+    metadata,
+    pages: pages.map((page) => ({
+      ...page,
+      imageSha256: sha256Of(`image ${page.number}`),
+    })),
+  };
+}
+
+const REFERENCE = notebookFingerprint(example());
+
+function withPage(
+  index: number,
+  change: (page: FingerprintPage) => FingerprintPage,
+): FingerprintInput {
+  const input = example();
+  return {
+    ...input,
+    pages: input.pages.map((page, i) => (i === index ? change(page) : page)),
+  };
+}
+
+function withLine(change: (line: Line) => Line): FingerprintInput {
+  return withPage(0, (page) => ({
+    ...page,
+    lines: page.lines.map((line, i) => (i === 0 ? change(line) : line)),
+  }));
+}
 
 describe("parseSha256", () => {
   it("accepte un SHA-256 hexadécimal en minuscules", () => {
@@ -33,70 +67,127 @@ describe("parseSha256", () => {
   );
 });
 
-describe("notebookFingerprint", () => {
-  const reference = notebookFingerprint(PAGES);
+describe("notebookFingerprint, ce qui ne compte pas", () => {
+  it("produit un SHA-256 hexadécimal stable", () => {
+    expect(REFERENCE).toMatch(/^[0-9a-f]{64}$/);
+    expect(notebookFingerprint(example())).toBe(REFERENCE);
+  });
 
-  it("produit un SHA-256 hexadécimal en minuscules", () => {
-    expect(reference).toMatch(/^[0-9a-f]{64}$/);
+  it("ne dépend ni de l'id des pages ni de celui des lignes", () => {
+    const input = withPage(0, (page) => ({
+      ...page,
+      id: "autre",
+      lines: page.lines.map((line) => ({ ...line, id: `${line.id}-bis` })),
+    }));
+    expect(notebookFingerprint(input)).toBe(REFERENCE);
   });
 
   it("ne dépend pas de l'ordre des clés", () => {
-    const reordered = PAGES.map(({ page, imageSha256, text }) => ({
-      text,
-      imageSha256,
-      page,
-    }));
-    expect(notebookFingerprint(reordered)).toBe(reference);
+    const { metadata, pages } = example();
+    const reordered = {
+      handwrittenTranscription: metadata.handwrittenTranscription,
+      typedTranscription: metadata.typedTranscription,
+      postalCode: metadata.postalCode,
+      inseeCode: metadata.inseeCode,
+      municipality: metadata.municipality,
+      departmentCode: metadata.departmentCode,
+      department: metadata.department,
+    };
+    expect(notebookFingerprint({ pages, metadata: reordered })).toBe(REFERENCE);
+  });
+});
+
+describe("notebookFingerprint, ce qui compte", () => {
+  it.each<[string, FingerprintInput]>([
+    [
+      "la commune",
+      {
+        ...example(),
+        metadata: {
+          ...example().metadata,
+          municipality: "Exempleville-sur-Ain",
+        },
+      },
+    ],
+    [
+      "le code postal",
+      {
+        ...example(),
+        metadata: { ...example().metadata, postalCode: "01501" },
+      },
+    ],
+    [
+      "le mode de transcription",
+      {
+        ...example(),
+        metadata: { ...example().metadata, typedTranscription: "manual" },
+      },
+    ],
+    ["un numéro de page", withPage(1, (page) => ({ ...page, number: 2 }))],
+    [
+      "la largeur d'une page",
+      withPage(1, (page) => ({ ...page, width: 2480 })),
+    ],
+    [
+      "une image",
+      withPage(1, (page) => ({
+        ...page,
+        imageSha256: sha256Of("image 3 bis"),
+      })),
+    ],
+    ["le texte d'une ligne", withLine((line) => ({ ...line, text: "Cahier" }))],
+    [
+      "le type d'une ligne",
+      withLine((line) => ({ ...line, kind: "handwritten" })),
+    ],
+    ["la zone d'une ligne", withLine((line) => ({ ...line, zone: "En-tête" }))],
+    [
+      "le polygone d'une ligne",
+      withLine((line) => ({
+        ...line,
+        polygon: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 0],
+          ],
+        ],
+      })),
+    ],
+    [
+      "l'ordre des lignes",
+      withPage(0, (page) => ({ ...page, lines: [...page.lines].reverse() })),
+    ],
+  ])("change avec %s", (_label, input) => {
+    expect(notebookFingerprint(input)).not.toBe(REFERENCE);
   });
 
-  it("ne dépend pas du nom des images", () => {
-    const renamed = PAGES.map((page) => ({
+  it("distingue un texte déplacé d'une ligne à l'autre", () => {
+    const joined = withPage(0, (page) => ({
       ...page,
-      image: `renamed-${page.page}.png`,
+      lines: [
+        { ...page.lines[0], text: "ab" },
+        { ...page.lines[1], text: "" },
+      ],
     }));
-    expect(notebookFingerprint(renamed)).toBe(reference);
-  });
-
-  it("change quand un texte change", () => {
-    const pages = PAGES.map((page) =>
-      page.page === 2 ? { ...page, text: " " } : page,
-    );
-    expect(notebookFingerprint(pages)).not.toBe(reference);
-  });
-
-  it("change quand une image change", () => {
-    const pages = PAGES.map((page) =>
-      page.page === 3
-        ? { ...page, imageSha256: sha256Of("image 3 bis") }
-        : page,
-    );
-    expect(notebookFingerprint(pages)).not.toBe(reference);
-  });
-
-  it("change quand deux pages échangent leur contenu", () => {
-    const [first, second, third] = PAGES;
-    const swapped = [{ ...second, page: 1 }, { ...first, page: 2 }, third];
-    expect(notebookFingerprint(swapped)).not.toBe(reference);
-  });
-
-  it("distingue un texte déplacé d'une page à l'autre", () => {
-    const pages: FingerprintPage[] = [
-      { page: 1, imageSha256: PAGES[0].imageSha256, text: "ab" },
-      { page: 2, imageSha256: PAGES[1].imageSha256, text: "" },
-    ];
-    const shifted: FingerprintPage[] = [
-      { page: 1, imageSha256: PAGES[0].imageSha256, text: "a" },
-      { page: 2, imageSha256: PAGES[1].imageSha256, text: "b" },
-    ];
-    expect(notebookFingerprint(pages)).not.toBe(notebookFingerprint(shifted));
+    const split = withPage(0, (page) => ({
+      ...page,
+      lines: [
+        { ...page.lines[0], text: "a" },
+        { ...page.lines[1], text: "b" },
+      ],
+    }));
+    expect(notebookFingerprint(joined)).not.toBe(notebookFingerprint(split));
   });
 
   it("refuse un condensat qui n'est pas un SHA-256", async () => {
     const actual = await vi.importActual<typeof crypto>("node:crypto");
+    const input = example();
     vi.mocked(crypto.createHash).mockImplementationOnce(() =>
       actual.createHash("md5"),
     );
-    expect(() => notebookFingerprint(PAGES)).toThrow(
+    expect(() => notebookFingerprint(input)).toThrow(
       /Empreinte SHA-256 inattendue/,
     );
   });

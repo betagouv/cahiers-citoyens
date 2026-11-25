@@ -1,85 +1,49 @@
-import Ajv2020 from "ajv/dist/2020";
-import type { IngestError } from "./errors";
 import type { NotebookId } from "./notebook-id";
-import { checkPageSequence } from "./page-sequence";
-import { schemaErrorToPageError } from "./schema-errors";
-import notebookSchema from "./schemas/notebook.schema.json";
+
+// Type du domaine d'un cahier, en anglais. Le JSON de Condorcet (champs en
+// français) est converti en ce type par `parseNotebook`, à la frontière.
+
+export type TranscriptionMethod = "automatic" | "manual";
+
+export type LineKind = "handwritten" | "typed";
+
+// Coordonnées en pixels de l'image de la page, origine en haut à gauche.
+export type Point = [x: number, y: number];
+
+// Anneaux d'un polygone GeoJSON : le premier est le contour, chacun est fermé.
+export type Polygon = Point[][];
+
+export interface NotebookMetadata {
+  department: string;
+  departmentCode: string;
+  municipality: string;
+  inseeCode: string;
+  postalCode: string;
+  typedTranscription: TranscriptionMethod;
+  handwrittenTranscription: TranscriptionMethod;
+}
+
+export interface Line {
+  id: string;
+  kind: LineKind;
+  // `null` quand Condorcet n'a pas renseigné la zone.
+  zone: string | null;
+  text: string;
+  polygon: Polygon;
+}
 
 export interface Page {
-  page: number;
-  image: string;
-  text: string;
+  number: number;
+  id: string;
+  width: number;
+  height: number;
+  lines: Line[];
 }
 
-export interface NotebookManifest {
-  sourceFilename: string;
-  pipelineRelease: string;
+export interface Notebook {
+  id: NotebookId;
+  // Valeur opaque de Condorcet, gardée telle quelle.
+  schemaVersion: string;
+  metadata: NotebookMetadata;
   pages: Page[];
-}
-
-export type ParseNotebookManifestResult =
-  | { ok: true; manifest: NotebookManifest }
-  | { ok: false; errors: IngestError[] };
-
-const NOTEBOOK_FILE = "notebook.json";
-
-interface RawNotebook {
-  format: 1;
-  source_filename: string;
-  pipeline_release: string;
-  pages: Page[];
-}
-
-const validateNotebook = new Ajv2020({ allErrors: true }).compile<RawNotebook>(
-  notebookSchema,
-);
-
-export function parseNotebookManifest(
-  id: NotebookId,
-  rawText: string,
-): ParseNotebookManifestResult {
-  let data: unknown;
-  try {
-    data = JSON.parse(rawText);
-  } catch (error) {
-    return {
-      ok: false,
-      errors: [
-        {
-          notebook: id,
-          file: NOTEBOOK_FILE,
-          code: "invalid-json",
-          message: `${NOTEBOOK_FILE} n'est pas un JSON valide (${String(error)}).`,
-        },
-      ],
-    };
-  }
-
-  const sequenceErrors = checkPageSequence(data);
-  if (validateNotebook(data) && sequenceErrors.length === 0) {
-    return {
-      ok: true,
-      manifest: {
-        sourceFilename: data.source_filename,
-        pipelineRelease: data.pipeline_release,
-        pages: data.pages.map(({ page, image, text }) => ({
-          page,
-          image,
-          text,
-        })),
-      },
-    };
-  }
-
-  const schemaErrors = (validateNotebook.errors ?? []).map(
-    schemaErrorToPageError,
-  );
-  return {
-    ok: false,
-    errors: [...schemaErrors, ...sequenceErrors].map((error) => ({
-      notebook: id,
-      file: NOTEBOOK_FILE,
-      ...error,
-    })),
-  };
 }
