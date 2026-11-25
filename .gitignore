@@ -44,3 +44,6 @@ next-env.d.ts
 
 # fausses données générées
 /data/
+
+# worktrees d'agents
+/.claude/worktrees/

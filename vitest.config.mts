@@ -1,8 +1,10 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
+    // Les worktrees d'agents ont leurs propres tests, à ne pas lancer ici.
+    exclude: [...configDefaults.exclude, ".claude/worktrees/**"],
     coverage: {
       enabled: true,
       provider: "v8",

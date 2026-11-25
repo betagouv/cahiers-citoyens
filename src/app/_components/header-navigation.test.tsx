@@ -19,9 +19,11 @@ function activeLinks(html: string): string[] {
 
 describe("HeaderNavigation", () => {
   it.each([
-    ["search", ["Rechercher"]],
-    ["notebooks", ["Cahiers"]],
-    [null, []],
+    [null, ["Accueil"]],
+    ["understanding", ["Comprendre les cahiers"]],
+    ["publication", ["Publication des cahiers"]],
+    ["faq", ["Questions fréquentes"]],
+    ["search", []],
   ])(
     "sous le segment %j, marque %j comme rubrique courante",
     (current, active) => {
@@ -29,8 +31,8 @@ describe("HeaderNavigation", () => {
 
       const html = renderToStaticMarkup(<HeaderNavigation />);
 
-      expect(html).toMatch(/href="\/search"[^>]*>Rechercher</);
-      expect(html).toMatch(/href="\/notebooks"[^>]*>Cahiers</);
+      expect(html).toMatch(/href="\/"[^>]*>Accueil</);
+      expect(html).toMatch(/href="\/faq"[^>]*>Questions fréquentes</);
       expect(activeLinks(html)).toEqual(active);
     },
   );

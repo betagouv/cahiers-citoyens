@@ -21,7 +21,17 @@ describe("RootLayout", () => {
     expect(html).toContain('href="#content"');
     expect(html).toContain('href="#footer"');
     expect(html).toMatch(/<header[^>]*class="fr-header"/);
-    expect(html).toMatch(/href="\/search"[^>]*>Rechercher</);
+    expect(html).toContain("Consulter les cahiers du Grand Débat national");
+    expect(html).toMatch(/href="\/understanding"[^>]*>Comprendre les cahiers</);
+    expect(html).toContain("Paramètres d&#x27;affichage");
+    expect(html).toContain("Il est édité par la DITP et la DINUM");
+    for (const href of [
+      "/accessibility",
+      "/legal-notice",
+      "/personal-data",
+      "/site-map",
+    ])
+      expect(html).toContain(`href="${href}"`);
     expect(html).toContain(
       '<main id="content" class="flex-1"><p>Contenu de la page</p></main>',
     );

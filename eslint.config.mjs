@@ -19,6 +19,7 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "next-env.d.ts",
     "data/**",
+    ".claude/worktrees/**",
   ]),
   {
     files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts"],

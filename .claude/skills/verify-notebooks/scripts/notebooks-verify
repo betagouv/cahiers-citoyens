@@ -102,10 +102,12 @@ cmd_doctor() {
 
 # shot <nom> [chemin] : ouvre la page, attend le contenu diffusé en flux,
 # enregistre capture + arbre d'accessibilité dans evidence/<date>-<nom>.{png,txt}.
+# NOTEBOOKS_SHOT_WIDTH change la largeur (375 pour le mobile).
 cmd_shot() {
-  local name="${1:-}" path="${2:-/}"
+  local name="${1:-}" path="${2:-/}" width="${NOTEBOOKS_SHOT_WIDTH:-1280}"
   [ -n "$name" ] || die "usage : notebooks-verify shot <nom> [chemin]"
   local stem; stem="$EVIDENCE_DIR/$(date +%Y%m%d-%H%M%S)-$name"
+  agent-browser set viewport "$width" 800 >/dev/null
   agent-browser open "$BASE_URL$path" >/dev/null || die "ouverture de $BASE_URL$path impossible"
   agent-browser wait --load networkidle >/dev/null 2>&1
   agent-browser wait 2500 >/dev/null
@@ -114,7 +116,7 @@ cmd_shot() {
   # avant que la page ne se réajuste. On agrandit nous-mêmes, on attend, puis
   # on capture.
   local height; height="$(agent-browser eval 'document.documentElement.scrollHeight' | tr -dc 0-9)"
-  agent-browser set viewport 1280 "${height:-3000}" >/dev/null
+  agent-browser set viewport "$width" "${height:-3000}" >/dev/null
   agent-browser wait 2000 >/dev/null
   agent-browser screenshot "$stem.png" | tail -1
   agent-browser set viewport 1280 800 >/dev/null
