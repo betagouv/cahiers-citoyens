@@ -1,31 +1,16 @@
 import {
   THEME_IDS,
   type Contribution,
-  type FragmentBank,
-  type Municipality,
   type Notebook,
   type ThemeId,
 } from "./domain";
-import { MUNICIPALITIES, withPreposition } from "./municipalities";
+import { composeText } from "./compose-text";
+import { MUNICIPALITIES } from "./municipalities";
 import type { Random } from "./random";
 import { THEMES } from "./themes";
 
-const MIN_WORDS = 40;
-const MAX_WORDS = 200;
 const FIRST_OPENING = Date.UTC(2018, 11, 1);
 const OPENING_DAYS = 90;
-
-const TYPOS: readonly [RegExp, string][] = [
-  [/\bà\b/, "a"],
-  [/\bça\b/, "ca"],
-  [/\bdéjà\b/, "deja"],
-  [/\btrès\b/, "tres"],
-  [/\bmême\b/, "meme"],
-  [/\bleurs\b/, "leur"],
-  [/\bêtre\b/, "etre"],
-  [/\bproblème\b/, "probleme"],
-  [/\bnous sommes\b/, "nous somme"],
-];
 
 const FIRST_NAMES = [
   "Nadine",
@@ -57,89 +42,6 @@ const SELF_DESCRIPTIONS = [
   "Une aide-soignante",
 ];
 const INITIALS = "ABCDEFGHJLMNPRSTV";
-
-function countWords(text: string): number {
-  return text.split(/\s+/).filter(Boolean).length;
-}
-
-function fillTemplate(
-  fragment: string,
-  municipality: Municipality,
-  random: Random,
-): string {
-  const withPrepositions = fragment.replace(
-    /\b([Dd]e|[àÀ]) \{municipality\}/g,
-    (_, prep: string) => {
-      const group = withPreposition(
-        prep.toLowerCase() === "de" ? "de" : "à",
-        municipality.name,
-      );
-      return prep === prep.toLowerCase()
-        ? group
-        : group[0].toUpperCase() + group.slice(1);
-    },
-  );
-  return withPrepositions.replace(/\{(\w+)\}/g, (_, key: string) => {
-    switch (key) {
-      case "municipality":
-        return municipality.name;
-      case "km":
-        return String(random.int(8, 70));
-      case "euros":
-        return String(random.int(3, 90) * 10);
-      case "years":
-        return String(random.int(3, 35));
-      case "months":
-        return String(random.int(2, 14));
-      default:
-        throw new Error(`gabarit inconnu : {${key}} dans « ${fragment} »`);
-    }
-  });
-}
-
-function composeText(
-  bank: FragmentBank,
-  municipality: Municipality,
-  random: Random,
-): string {
-  const target = random.int(MIN_WORDS, MAX_WORDS);
-  const piles = {
-    findings: random.shuffle(bank.findings),
-    examples: random.shuffle(bank.examples),
-    demands: random.shuffle(bank.demands),
-  };
-  const sentences: string[] = [];
-  let words = 0;
-  function add(fragment: string | undefined): void {
-    if (fragment === undefined) return;
-    const sentence = fillTemplate(fragment, municipality, random);
-    const n = countWords(sentence);
-    if (words + n > MAX_WORDS) return;
-    sentences.push(sentence);
-    words += n;
-  }
-
-  if (random.chance(0.85)) add(random.pick(bank.openings));
-  add(piles.findings.pop());
-  if (random.chance(0.6)) add(piles.examples.pop());
-  add(piles.demands.pop());
-  const categories = ["findings", "examples", "demands"] as const;
-  for (
-    let attempts = 0;
-    (words < target || words < MIN_WORDS) && attempts < 12;
-    attempts++
-  ) {
-    add(piles[random.pick(categories)].pop());
-  }
-  if (random.chance(0.65)) add(random.pick(bank.conclusions));
-
-  let text = sentences.join(" ");
-  if (random.chance(0.3)) {
-    const [pattern, typo] = random.pick(TYPOS);
-    text = text.replace(pattern, typo);
-  }
-  return text;
-}
 
 function sign(random: Random): string | null {
   function initial(): string {

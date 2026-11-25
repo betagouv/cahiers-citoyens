@@ -11,9 +11,6 @@ export default defineConfig({
         "**/*.test.{ts,tsx}",
         // Déclarations de types, aucune instruction exécutable.
         "**/*.d.ts",
-        // Exclusion temporaire : la branche feat/ingestion-fake-deliveries
-        // réécrit ce dossier et le porte à 100 % ; elle retire cette ligne.
-        "scripts/fake-data/**",
       ],
       reporter: ["text-summary", "text"],
       thresholds: {
