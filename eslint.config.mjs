@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "dist/**",
     "coverage/**",
     "next-env.d.ts",
     "data/**",
@@ -75,17 +76,6 @@ const eslintConfig = defineConfig([
     // la complexité d'une fonction.
     files: ["**/*.test.{ts,tsx}"],
     rules: { "max-lines-per-function": "off" },
-  },
-  {
-    // Données pures (contributions types par thème), sans logique.
-    files: ["scripts/fake-data/themes.ts"],
-    rules: { "max-lines": "off" },
-  },
-  {
-    // Exemption temporaire : la branche feat/ingestion-fake-deliveries
-    // réécrit ce fichier et la retire.
-    files: ["scripts/fake-data/scan.ts"],
-    rules: { "max-lines": "off" },
   },
   {
     files: NEXT_DEFAULT_EXPORT_FILES,

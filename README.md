@@ -36,6 +36,39 @@ En attendant les vrais cahiers, `scripts/fake-data/generate.ts` produit des cahi
 bun scripts/fake-data/generate.ts --count 200 --out data/fake-data --seed 42
 ```
 
+### Faux dépôts Condorcet
+
+`scripts/fake-data/deliver.ts` produit, à partir des mêmes faux cahiers, un dépôt au format du [protocole](docs/ingestion-protocol.md) : `delivery-AAAA-MM-JJ-HHMM.zip`, avec pour chaque cahier `notebooks/<id>/notebook.json` et une image PNG par page (`0001.png`, `0002.png`…). L'identifiant imite les noms de l'inventaire (`CC_76351_190101_00012_MD_48213`). Le texte de chaque page est celui qui y est dessiné ; quelques pages blanches ont un texte vide. Les PNG sont stockés tels quels, `notebook.json` est compressé (Deflate).
+
+```bash
+# 10 cahiers, date du dépôt par défaut : 2026-11-24T09:30:00Z
+bun scripts/fake-data/deliver.ts --count 10 --seed 42 --out data/deliveries
+
+# Mêmes cahiers, dont 2 modifiés (texte ou image d'une page) : remplacements attendus
+bun scripts/fake-data/deliver.ts --count 10 --modify 2 --created-at 2026-11-25T09:30:00Z
+
+# Un dépôt défectueux : chaque défaut touche un seul cahier, toujours le même pour une graine
+bun scripts/fake-data/deliver.ts --count 10 --defect page-gap --defect invalid-png
+```
+
+Même graine, mêmes options : mêmes octets, y compris la date des fichiers dans le ZIP, tirée de `--created-at`. Relancer avec une autre `--created-at` reconstruit le même dépôt : chaque `notebook.json` et chaque PNG est identique octet pour octet, seuls le nom du ZIP et ses dates changent. C'est le cas « même contenu rezippé » du premier échange.
+
+`--defect` se répète. Défauts possibles, un par contrôle de la section 4 du protocole :
+
+| Défaut             | Effet sur le cahier visé                                              |
+| ------------------ | --------------------------------------------------------------------- |
+| `missing-image`    | La dernière image annoncée manque                                     |
+| `unlisted-file`    | Un `notes.txt` non annoncé dans le dossier                            |
+| `page-gap`         | La dernière page saute un numéro                                      |
+| `duplicate-page`   | Le dernier numéro de page revient, avec sa propre image               |
+| `invalid-png`      | La première image est tronquée de moitié                              |
+| `invalid-json`     | `notebook.json` tronqué                                               |
+| `schema-violation` | JSON valide, mais la première page n'a pas de `text`                  |
+| `path-traversal`   | Une entrée `notebooks/<id>/../../../escape.txt` qui sort de l'archive |
+| `nested-folder`    | Une copie de la première image dans un sous-dossier `scans/`          |
+
+Avec moins de cahiers que de défauts, un cahier en cumule plusieurs. Le script affiche les cahiers modifiés et les défauts injectés.
+
 Le schéma de la base est décrit dans `src/db/schema.ts` (Drizzle) et s'applique par les migrations de `drizzle/` (Postgres avec l'extension `vector`). Créer une base locale, puis appliquer les migrations :
 
 ```bash
@@ -112,5 +145,19 @@ Déploiement : `git push scalingo main`, avec le remote `scalingo` ajouté depui
 - `output: "standalone"` dans `next.config.ts`. Le script `build` lance `next build`, puis copie `public/` et `.next/static/` dans `.next/standalone/`.
 - `Procfile` : `postdeploy: npm run db:migrate` applique les migrations Drizzle à chaque déploiement, une fois le build fait et avant la bascule du trafic. Si elles échouent, le déploiement est refusé et l'ancienne version reste en ligne. `drizzle-kit` est donc dans `dependencies`, car Scalingo retire les `devDependencies` après le build. L'addon PostgreSQL fournit `DATABASE_URL` : il doit exister avant le premier déploiement qui contient ce hook.
 - `Procfile` : `web: npm start`, qui lance `node .next/standalone/server.js` sur `0.0.0.0:$PORT`.
+
+### Tâches planifiées
+
+Il n'y a pas de Bun sur Scalingo. Les jobs sont donc écrits en TypeScript sous `src/`, puis compilés au build en un seul fichier JavaScript lancé par Node. La fin du script `build` lance `scripts/build-jobs.mjs`, qui appelle esbuild : `src/ingestion/job.ts` et toutes ses dépendances (`src/db`, `drizzle-orm`, `postgres`) sont regroupés dans `dist/jobs/ingest.mjs`. Le fichier se suffit à lui-même : il tourne sans `node_modules`, donc après le retrait des `devDependencies`. `scripts/build-jobs.test.ts` le vérifie en lançant le job compilé depuis un dossier temporaire. `dist/` est ignoré par git.
+
+`cron.json` déclare les tâches au planificateur de Scalingo, qui les lance chacune dans un conteneur à part, avec la même image que l'app. Les heures sont en UTC et l'intervalle minimal est de 10 minutes. Le job `ingest` tourne toutes les 10 minutes. Pour l'instant, il ouvre la base désignée par `DATABASE_URL`, lance `select 1` et écrit une ligne JSON dans les logs : `{"event":"ingest.run","ok":true,"durationMs":…}`. En cas d'erreur, la ligne porte `"ok":false` et le message, et le code de sortie vaut 1.
+
+En local, après `bun run build` :
+
+```bash
+DATABASE_URL=postgres://localhost:5432/cahiers node dist/jobs/ingest.mjs
+```
+
+### Installation par npm
 
 Le buildpack officiel ne connaît pas Bun. Comme il ne trouve aucun lockfile qu'il sait lire, il installe les dépendances avec `npm install`. C'est pour ça que les scripts de `package.json` n'appellent jamais `bun` directement.
