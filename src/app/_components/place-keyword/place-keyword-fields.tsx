@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { isKnownWord } from "@/lib/page-search/known-word";
 import type { SelectedPlace } from "@/lib/page-search/place-label";
 import { KeywordField } from "./keyword-field";
 import { PlaceField } from "./place-field";
 import { SubmitButton } from "./submit-button";
 import { usePageCount } from "./use-page-count";
+import { useWordSuggestions } from "./use-word-suggestions";
 
 interface PlaceKeywordFieldsProps {
   id: string;
@@ -15,7 +17,8 @@ interface PlaceKeywordFieldsProps {
   initialKeyword: string;
 }
 
-// Les deux champs et le bouton, qui annonce le nombre de pages à voir.
+// Les deux champs et le bouton, qui annonce le nombre de pages à voir : celles
+// du mot-clé quand c'est un mot entier des pages, sinon celles du lieu.
 export function PlaceKeywordFields({
   id,
   initialPlace,
@@ -27,7 +30,14 @@ export function PlaceKeywordFields({
     initialPlace?.label ?? initialPlaceText,
   );
   const [keyword, setKeyword] = useState(initialKeyword);
-  const count = usePageCount(place, placeText, keyword);
+  const [chosenWord, setChosenWord] = useState<string | null>(null);
+  const words = useWordSuggestions(keyword, place?.code);
+  const knownWord = isKnownWord(
+    keyword,
+    chosenWord,
+    words.loading ? undefined : words.data,
+  );
+  const count = usePageCount(place, placeText, knownWord ? keyword : "");
   return (
     <>
       <div className="md:flex-1">
@@ -49,8 +59,12 @@ export function PlaceKeywordFields({
         <KeywordField
           id={`${id}-keyword`}
           value={keyword}
-          placeCode={place?.code}
+          suggestions={words}
           onChange={setKeyword}
+          onChoose={(word) => {
+            setKeyword(word);
+            setChosenWord(word);
+          }}
         />
       </div>
       <SubmitButton count={count} />

@@ -1,6 +1,6 @@
 # Recherche par lieu et mot-clé
 
-Le formulaire de l'accueil (`src/app/_components/home-search-form.tsx`) a deux champs : « Lieu » (commune, code postal ou département) et « Mot-clé ». Chacun propose des suggestions pendant la frappe, avec le nombre de pages publiées. Le bouton annonce le nombre de pages qu'il va montrer (« Voir les 286 pages »). `/search?place=…&q=…` liste ces pages.
+Le formulaire de l'accueil (`src/app/_components/home-search-form.tsx`) a deux champs : « Lieu » (commune, code postal ou département) et « Mot-clé ». Chacun propose des suggestions pendant la frappe, avec le nombre de pages publiées. Le bouton annonce le nombre de pages qu'il va montrer : celles du lieu (« Voir les 286 pages »), puis celles du mot-clé une fois que c'est un mot entier, choisi dans la liste ou tapé exactement comme une suggestion. Un début de mot (« retr ») ne change pas le nombre ; envoyé quand même, il donne une page de résultats vide qui propose les mots qui commencent ainsi. `/search?place=…&q=…` liste ces pages.
 
 ## Ce que compte un nombre
 

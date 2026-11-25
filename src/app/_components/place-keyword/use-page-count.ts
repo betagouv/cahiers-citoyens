@@ -7,9 +7,10 @@ import type { PageCountState } from "@/lib/page-search/submit-label";
 import { useDebouncedJson } from "./use-debounced-json";
 
 // Le nombre de pages que montrera le formulaire. Un lieu seul : son nombre,
-// connu depuis la suggestion choisie. Un mot-clé : compté par
-// `/api/pages/count`, dans le lieu choisi ou dans toute la France. Un lieu
-// saisi mais pas choisi : inconnu, la page de résultats l'interprétera.
+// connu depuis la suggestion choisie. Un mot entier (`keyword`, vide pour un
+// début de mot) : compté par `/api/pages/count`, dans le lieu choisi ou dans
+// toute la France. Un lieu saisi mais pas choisi : inconnu, la page de
+// résultats l'interprétera.
 export function usePageCount(
   place: SelectedPlace | null,
   placeText: string,

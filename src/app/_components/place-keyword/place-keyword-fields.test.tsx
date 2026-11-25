@@ -73,6 +73,7 @@ beforeEach(() => {
     suggestions: [
       { word: "retraite", pageCount: 7 },
       { word: "retraité", pageCount: 1 },
+      { word: "retraites", pageCount: 4 },
     ],
   });
   routes.set("/api/pages/count", { pageCount: 7 });
@@ -140,7 +141,7 @@ describe("PlaceKeywordFields", () => {
     expect(buttonText()).toBe("Voir les 286 pages");
   });
 
-  it("propose les mots du lieu choisi et compte les pages du mot-clé", async () => {
+  it("annonce les pages du lieu tant que le mot-clé n'est qu'un début de mot", async () => {
     mounted = await render({
       code: "71106",
       label: "Charolles (71)",
@@ -148,31 +149,53 @@ describe("PlaceKeywordFields", () => {
     });
 
     await typeInto(field("t-keyword"), "retr");
+    expect(buttonText()).toBe("Voir les 286 pages");
+    await settle();
+
+    expect(requested).toEqual(["/api/suggestions/words?q=retr&place=71106"]);
+    expect(buttonText()).toBe("Voir les 286 pages");
+    const options = [...mounted.container.querySelectorAll('[role="option"]')];
+    expect(options[1].textContent).toBe("retraité1 page");
+  });
+
+  it("compte les pages du mot choisi, avec une roue pendant le compte", async () => {
+    mounted = await render({
+      code: "71106",
+      label: "Charolles (71)",
+      pageCount: 286,
+    });
+    await typeInto(field("t-keyword"), "retr");
+    await settle();
+    routes.set("/api/pages/count", { pageCount: 1 });
+
+    await click(mounted.container.querySelectorAll('[role="option"]')[1]);
+    expect(field("t-keyword").value).toBe("retraité");
     expect(buttonText()).toBe("Voir les pages");
     expect(mounted.container.querySelector("svg")).not.toBeNull();
     await settle();
 
-    expect(requested).toEqual([
-      "/api/suggestions/words?q=retr&place=71106",
-      "/api/pages/count?q=retr&place=71106",
-    ]);
-    const options = [...mounted.container.querySelectorAll('[role="option"]')];
-    expect(options[1].textContent).toBe("retraité1 page");
-    await click(options[1]);
-    routes.set("/api/pages/count", { pageCount: 1 });
-    await settle();
-
-    expect(field("t-keyword").value).toBe("retraité");
+    expect(requested).toContain("/api/pages/count?q=retrait%C3%A9&place=71106");
     expect(buttonText()).toBe("Voir la page");
+  });
+
+  it("garde « Rechercher » pour un lieu sans page publiée", async () => {
+    mounted = await render({
+      code: "71999",
+      label: "Ailleurs (71)",
+      pageCount: 0,
+    });
+
+    expect(buttonText()).toBe("Rechercher");
   });
 
   it("compte un mot-clé dans toute la France sans lieu", async () => {
     mounted = await render();
 
-    await typeInto(field("t-keyword"), "retraite");
+    await typeInto(field("t-keyword"), "Retraite");
+    await settle();
     await settle();
 
-    expect(requested).toContain("/api/pages/count?q=retraite");
+    expect(requested).toContain("/api/pages/count?q=Retraite");
     expect(buttonText()).toBe("Voir les 7 pages");
   });
 
@@ -213,6 +236,8 @@ describe("PlaceKeywordFields", () => {
 
     await typeInto(field("t-keyword"), "retraite");
     await settle();
+    await settle();
+    expect(requested).toContain("/api/pages/count?q=retraite");
     expect(buttonText()).toBe("Rechercher");
 
     routes.set("/api/suggestions/words", "pas du JSON attendu");
@@ -249,6 +274,7 @@ describe("PlaceKeywordFields", () => {
     await typeInto(field("t-keyword"), "retraite");
     await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
     await typeInto(field("t-keyword"), "retraites");
+    await settle();
     await settle();
 
     expect(buttonText()).toBe("Voir les 7 pages");

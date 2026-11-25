@@ -8,6 +8,7 @@ import { formatPlaceCodes } from "@/lib/page-search/place-codes";
 import { resultsSummary } from "@/lib/page-search/results-summary";
 import { pageSearchHref } from "@/lib/page-search/search-params";
 import { PageHitItem } from "./page-hit-item";
+import { WordAlternatives } from "./word-alternatives";
 
 interface PageResultsProps {
   place: ResolvedPlace | undefined;
@@ -15,16 +16,33 @@ interface PageResultsProps {
   pageIndex: number;
 }
 
-function NoPages() {
+interface NoPagesProps {
+  place: ResolvedPlace | undefined;
+  placeCode: string;
+  keyword: string;
+}
+
+// Aucune page : des mots entiers si le mot-clé n'en est que le début, puis
+// pourquoi un lieu peut n'avoir rien en ligne.
+function NoPages({ place, placeCode, keyword }: NoPagesProps) {
   return (
-    <p>
-      Les cahiers sont publiés progressivement : certaines communes n’en ont pas
-      encore en ligne. La recherche trouve les mots tels qu’ils sont écrits :
-      essayez une autre forme du mot, au pluriel ou avec un accent.{" "}
-      <Link className={fr.cx("fr-link")} href="/publication">
-        Voir l’état de publication
-      </Link>
-    </p>
+    <>
+      {keyword !== "" && (
+        <WordAlternatives
+          place={place?.codes}
+          placeCode={placeCode}
+          keyword={keyword}
+        />
+      )}
+      <p>
+        Les cahiers sont publiés progressivement : certaines communes n’en ont
+        pas encore en ligne. La recherche trouve les mots tels qu’ils sont
+        écrits : essayez une autre forme du mot, au pluriel ou avec un accent.{" "}
+        <Link className={fr.cx("fr-link")} href="/publication">
+          Voir l’état de publication
+        </Link>
+      </p>
+    </>
   );
 }
 
@@ -47,7 +65,9 @@ export async function PageResults({
       <h2 id="results-title" className={fr.cx("fr-h4")}>
         {resultsSummary(total, keyword, place?.label)}
       </h2>
-      {total === 0 && <NoPages />}
+      {total === 0 && (
+        <NoPages place={place} placeCode={placeCode} keyword={keyword} />
+      )}
       {total > 0 && hits.length === 0 && (
         <p>
           Cette page de résultats n’existe pas.{" "}
