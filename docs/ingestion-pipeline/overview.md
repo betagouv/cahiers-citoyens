@@ -87,8 +87,9 @@ received → verifying → rejected            (dépôt invalide : rapport à Co
 8. [Côté public : pages en images, retraits, recherche](phase-8-public-surface.md)
 9. [Monitoring : rapports, alertes, tableau de bord](phase-9-monitoring.md)
 10. [Mise en service avec Condorcet](phase-10-onboarding.md)
+11. [Assistant Tchap : alertes, questions, retraits](phase-11-tchap-bot.md)
 
-Les phases 2 et 3 peuvent avancer en parallèle. Pareil pour 8 et 9 une fois la 7 livrée. Tout le reste s'enchaîne.
+Les phases 2 et 3 peuvent avancer en parallèle. Pareil pour 8 et 9 une fois la 7 livrée. La partie questions de la phase 11 peut commencer tout de suite ; ses alertes et ses retraits attendent les phases 8 et 9. Tout le reste s'enchaîne.
 
 ## Vérification
 
@@ -99,7 +100,7 @@ Les phases 2 et 3 peuvent avancer en parallèle. Pareil pour 8 et 9 une fois la 
 ## Décisions ouvertes
 
 - **Inventaire.** Où trouver l'inventaire des Archives nationales, et dans quel format ? Tant qu'il manque, l'identifiant du cahier (nom du dossier) n'est rapproché de rien.
-- **Canal d'alerte.** E-mail, Tchap ou Mattermost ? Le plan suppose un webhook générique.
+- **Canal d'alerte.** Tchap, proposé en phase 11. Les autres phases supposent toujours un webhook générique.
 - **Accès au tableau de bord.** Authentification basique via `src/proxy.ts` pour commencer, ou ProConnect ?
 - **Droits S3.** Le fournisseur sait-il limiter une clé à un préfixe ? Sinon, prévoir un bucket de dépôt séparé.
 - **Conservation.** Combien de temps garder les ZIP reçus et les fichiers des versions remplacées ou retirées ?
