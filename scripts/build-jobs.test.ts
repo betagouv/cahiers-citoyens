@@ -33,13 +33,17 @@ async function runNode(file: string, cwd: string): Promise<ProcessResult> {
   }
 }
 
+const JOBS = ["ingest.mjs", "load-geography.mjs"];
+
 describe("build-jobs", () => {
   let isolated = "";
 
   beforeAll(async () => {
     await import("./build-jobs.mjs");
     isolated = await mkdtemp(join(tmpdir(), "jobs-"));
-    await copyFile("dist/jobs/ingest.mjs", join(isolated, "ingest.mjs"));
+    for (const job of JOBS) {
+      await copyFile(join("dist/jobs", job), join(isolated, job));
+    }
   }, 30_000);
 
   afterAll(async () => {
@@ -47,7 +51,7 @@ describe("build-jobs", () => {
   });
 
   it("produit un seul fichier par job", async () => {
-    expect(await readdir("dist/jobs")).toEqual(["ingest.mjs"]);
+    expect((await readdir("dist/jobs")).sort()).toEqual(JOBS);
   });
 
   it("tourne sous Node sans node_modules et journalise l'échec en JSON", async () => {
@@ -58,5 +62,10 @@ describe("build-jobs", () => {
       ok: false,
       error: "DATABASE_URL est obligatoire",
     });
+  });
+
+  it("lance le chargement géographique sous Node sans node_modules, en échec sans DATABASE_URL", async () => {
+    const result = await runNode("load-geography.mjs", isolated);
+    expect(result.code).toBe(1);
   });
 });

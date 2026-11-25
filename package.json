@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "prepare": "husky",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "geo:load": "node dist/jobs/load-geography.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1161.0",

@@ -3,9 +3,15 @@ import type { NotebookId } from "./notebook-id";
 // Type du domaine d'un cahier, en anglais. Le JSON de Condorcet (champs en
 // français) est converti en ce type par `parseNotebook`, à la frontière.
 
-export type TranscriptionMethod = "automatic" | "manual";
+export const TRANSCRIPTION_METHOD_VALUES = ["automatic", "manual"] as const;
+export type TranscriptionMethod = (typeof TRANSCRIPTION_METHOD_VALUES)[number];
 
-export type LineKind = "handwritten" | "typed";
+export const LINE_KIND_VALUES = ["handwritten", "typed"] as const;
+export type LineKind = (typeof LINE_KIND_VALUES)[number];
+
+// Formats d'image acceptés par le protocole, reconnus à leur contenu.
+export const IMAGE_CONTENT_TYPES = ["image/jpeg", "image/png"] as const;
+export type ImageContentType = (typeof IMAGE_CONTENT_TYPES)[number];
 
 // Coordonnées en pixels de l'image de la page, origine en haut à gauche.
 export type Point = [x: number, y: number];

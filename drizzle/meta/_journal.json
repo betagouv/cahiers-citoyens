@@ -15,6 +15,13 @@
       "when": 1794327987471,
       "tag": "0001_init",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795640935999,
+      "tag": "0002_ingestion-and-geography",
+      "breakpoints": true
     }
   ]
 }
