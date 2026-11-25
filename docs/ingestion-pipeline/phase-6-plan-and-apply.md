@@ -16,8 +16,9 @@ Transformer un `VerifiedDelivery` en changements, puis les appliquer de façon a
 - `src/ingestion/apply.ts` :
   1. copie les images vers `notebooks/<id>/v<version>/`. La clé est déterministe : une copie interrompue peut être relancée sans risque ;
   2. dans une seule transaction, il ajoute les versions, met à jour `notebooks`, remplace `pages` et `chunks`, puis passe le dépôt à `applied` ;
-  3. après le commit seulement, il supprime les fichiers des versions remplacées.
-- `withdraw(id, reason)` : passe le cahier à `withdrawn` (il disparaît du site et de la recherche), puis supprime ses fichiers servis. Exposé par la commande `ingest withdraw`.
+  3. après le commit seulement, il supprime les fichiers des versions remplacées ;
+  4. après le commit aussi, il recalcule les comptes des suggestions de recherche : `select refresh_search_counts()` (voir [la recherche par lieu et mot-clé](../search-by-place-and-keyword.md)).
+- `withdraw(id, reason)` : passe le cahier à `withdrawn` (il disparaît du site et de la recherche), appelle `refresh_search_counts()`, puis supprime ses fichiers servis. Exposé par la commande `ingest withdraw`.
 - Le découpage en chunks se fait par page, puis par contribution à l'intérieur de la page. C'est une évolution de `scripts/chunk.ts`, qui passe dans `src/ingestion/`.
 
 ## Données

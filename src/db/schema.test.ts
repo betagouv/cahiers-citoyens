@@ -122,15 +122,20 @@ describe("pages et lignes", () => {
     ]);
   });
 
-  it("indexe le texte de chaque page pour la recherche plein texte", () => {
+  it("indexe le texte de chaque page, par racine et par mot tel qu'écrit", () => {
     const config = getTableConfig(pages);
 
     expect(
       config.indexes.map(({ config: { name, method } }) => [name, method]),
-    ).toEqual([["pages_search_idx", "gin"]]);
+    ).toEqual([
+      ["pages_search_idx", "gin"],
+      ["pages_words_idx", "gin"],
+    ]);
     expect(
-      config.columns.find(({ name }) => name === "search")?.getSQLType(),
-    ).toBe("tsvector");
+      config.columns
+        .filter(({ name }) => name === "search" || name === "words")
+        .map((column) => column.getSQLType()),
+    ).toEqual(["tsvector", "tsvector"]);
   });
 });
 
@@ -144,6 +149,15 @@ describe("référentiel géographique", () => {
         "indexConfig" in column ? column.indexConfig?.opClass : undefined,
       ),
     ).toEqual(["text_pattern_ops"]);
+  });
+
+  it("cherche les communes par code postal", () => {
+    const [, , postalCodes] = getTableConfig(municipalities).indexes;
+
+    expect([postalCodes.config.name, postalCodes.config.method]).toEqual([
+      "municipalities_postal_codes_idx",
+      "gin",
+    ]);
   });
 
   it("fait pointer un ancien code vers une commune actuelle", () => {

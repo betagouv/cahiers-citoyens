@@ -141,6 +141,8 @@ DATABASE_URL=… ALBERT_API_KEY=… bun scripts/search.ts "Il n'y a plus de méd
 
 ## Recherche
 
+La recherche par lieu et mot-clé de l'accueil (`/search?place=…&q=…`, suggestions et nombres de pages) est décrite dans [docs/search-by-place-and-keyword.md](docs/search-by-place-and-keyword.md).
+
 `/search?q=…` répond à une question à partir des cahiers (`src/lib/search/`) :
 
 1. la question est vectorisée par `bge-m3` ;

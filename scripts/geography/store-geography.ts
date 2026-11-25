@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import type { Database } from "../../src/db/client";
 import {
   departments,
@@ -27,7 +28,9 @@ export function batches<T>(rows: T[], size: number = BATCH_SIZE): T[][] {
 
 // Remplace tout le référentiel dans une transaction : une commune fusionnée
 // depuis le dernier chargement disparaît, et un nouveau lancement aboutit au
-// même état. Les lecteurs voient l'ancien référentiel jusqu'au commit.
+// même état. Les lecteurs voient l'ancien référentiel jusqu'au commit. Les
+// pages par commune dépendent des anciens codes INSEE : leurs comptes sont
+// recalculés ensuite.
 export async function replaceGeography(
   db: Database,
   geography: Geography,
@@ -46,4 +49,5 @@ export async function replaceGeography(
       await tx.insert(municipalityCodeHistory).values(batch);
     }
   });
+  await db.execute(sql`select refresh_search_counts()`);
 }

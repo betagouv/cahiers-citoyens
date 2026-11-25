@@ -34,6 +34,8 @@ export const municipalities = pgTable(
       table.searchName.op("text_pattern_ops"),
     ),
     index("municipalities_department_code_idx").on(table.departmentCode),
+    // Recherche par code postal : `postal_codes && '{71120,71121…}'`.
+    index("municipalities_postal_codes_idx").using("gin", table.postalCodes),
   ],
 );
 
