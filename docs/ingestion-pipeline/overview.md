@@ -36,7 +36,7 @@ Exclu pour l'instant :
 
 ```
 Condorcet ──aws s3 cp──▶ incoming/delivery-AAAA-MM-JJ-HHMM.zip
-                              │  cron toutes les 5 min : job `ingest`
+                              │  cron toutes les 10 min : job `ingest`
                               ▼
    1. claim      verrou Postgres, déplace le ZIP vers deliveries/
    2. verify     pour chaque notebooks/<id>/ : notebook.json, pages 1..n,
@@ -65,7 +65,7 @@ received → verifying → rejected            (dépôt invalide : rapport à Co
 
 | Déclenchement                                 | Pour                                                                 | Contre                                                                         | Choix      |
 | --------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------- |
-| Cron Scalingo qui relève `incoming/`          | Rien à faire tourner en continu, relance gratuite, conteneur jetable | Jusqu'à 5 min de latence                                                       | **Retenu** |
+| Cron Scalingo qui relève `incoming/`          | Rien à faire tourner en continu, relance gratuite, conteneur jetable | Jusqu'à 10 min de latence (intervalle minimal de Scalingo)                     | **Retenu** |
 | Processus `worker` en boucle                  | Latence faible                                                       | Un conteneur payé en permanence pour quelques dépôts par semaine               | Non        |
 | Notifications d'événements S3 vers un webhook | Temps réel                                                           | Support incertain chez le fournisseur, traitement long dans le conteneur `web` | Non        |
 

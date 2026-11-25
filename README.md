@@ -113,4 +113,18 @@ Déploiement : `git push scalingo main`, avec le remote `scalingo` ajouté depui
 - `Procfile` : `postdeploy: npm run db:migrate` applique les migrations Drizzle à chaque déploiement, une fois le build fait et avant la bascule du trafic. Si elles échouent, le déploiement est refusé et l'ancienne version reste en ligne. `drizzle-kit` est donc dans `dependencies`, car Scalingo retire les `devDependencies` après le build. L'addon PostgreSQL fournit `DATABASE_URL` : il doit exister avant le premier déploiement qui contient ce hook.
 - `Procfile` : `web: npm start`, qui lance `node .next/standalone/server.js` sur `0.0.0.0:$PORT`.
 
+### Tâches planifiées
+
+Il n'y a pas de Bun sur Scalingo. Les jobs sont donc écrits en TypeScript sous `src/`, puis compilés au build en un seul fichier JavaScript lancé par Node. La fin du script `build` lance `scripts/build-jobs.mjs`, qui appelle esbuild : `src/ingestion/job.ts` et toutes ses dépendances (`src/db`, `drizzle-orm`, `postgres`) sont regroupés dans `dist/jobs/ingest.mjs`. Le fichier se suffit à lui-même : il tourne sans `node_modules`, donc après le retrait des `devDependencies`. `scripts/build-jobs.test.ts` le vérifie en lançant le job compilé depuis un dossier temporaire. `dist/` est ignoré par git.
+
+`cron.json` déclare les tâches au planificateur de Scalingo, qui les lance chacune dans un conteneur à part, avec la même image que l'app. Les heures sont en UTC et l'intervalle minimal est de 10 minutes. Le job `ingest` tourne toutes les 10 minutes. Pour l'instant, il ouvre la base désignée par `DATABASE_URL`, lance `select 1` et écrit une ligne JSON dans les logs : `{"event":"ingest.run","ok":true,"durationMs":…}`. En cas d'erreur, la ligne porte `"ok":false` et le message, et le code de sortie vaut 1.
+
+En local, après `bun run build` :
+
+```bash
+DATABASE_URL=postgres://localhost:5432/cahiers node dist/jobs/ingest.mjs
+```
+
+### Installation par npm
+
 Le buildpack officiel ne connaît pas Bun. Comme il ne trouve aucun lockfile qu'il sait lire, il installe les dépendances avec `npm install`. C'est pour ça que les scripts de `package.json` n'appellent jamais `bun` directement.

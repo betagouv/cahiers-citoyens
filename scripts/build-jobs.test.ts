@@ -1,0 +1,62 @@
+import { execFile } from "node:child_process";
+import { copyFile, mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+const run = promisify(execFile);
+
+interface ProcessResult {
+  code: number;
+  stdout: string;
+}
+
+async function runNode(file: string, cwd: string): Promise<ProcessResult> {
+  try {
+    const { stdout } = await run("node", [file], {
+      cwd,
+      env: { PATH: process.env.PATH, NODE_ENV: "production" },
+    });
+    return { code: 0, stdout };
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      typeof error.code === "number" &&
+      "stdout" in error &&
+      typeof error.stdout === "string"
+    ) {
+      return { code: error.code, stdout: error.stdout };
+    }
+    throw error;
+  }
+}
+
+describe("build-jobs", () => {
+  let isolated = "";
+
+  beforeAll(async () => {
+    await import("./build-jobs.mjs");
+    isolated = await mkdtemp(join(tmpdir(), "jobs-"));
+    await copyFile("dist/jobs/ingest.mjs", join(isolated, "ingest.mjs"));
+  }, 30_000);
+
+  afterAll(async () => {
+    await rm(isolated, { recursive: true, force: true });
+  });
+
+  it("produit un seul fichier par job", async () => {
+    expect(await readdir("dist/jobs")).toEqual(["ingest.mjs"]);
+  });
+
+  it("tourne sous Node sans node_modules et journalise l'échec en JSON", async () => {
+    const result = await runNode("ingest.mjs", isolated);
+    expect(result.code).toBe(1);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      event: "ingest.run",
+      ok: false,
+      error: "DATABASE_URL est obligatoire",
+    });
+  });
+});
