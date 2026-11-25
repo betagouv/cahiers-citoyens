@@ -1,3 +1,5 @@
+export type Env = Record<string, string | undefined>;
+
 export function parsePositiveInteger(
   name: string,
   value: string | undefined,
@@ -9,4 +11,10 @@ export function parsePositiveInteger(
     throw new Error(`--${name} attend un entier positif (reçu : ${value})`);
   }
   return parsed;
+}
+
+export function requireEnv(env: Env, name: string): string {
+  const value = env[name];
+  if (!value) throw new Error(`${name} est obligatoire`);
+  return value;
 }

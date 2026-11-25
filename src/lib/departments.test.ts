@@ -1,16 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
-  PUBLISHED_AREAS,
   areaHref,
   onlineMetropolitanDepartmentCount,
   publicationStatus,
   publishedAreaOf,
 } from "./departments";
+import { PUBLISHED_AREAS } from "./department-registry";
+
+// Aucun département n'est encore connu comme absent du fonds : on en simule un.
+vi.mock("./department-registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./department-registry")>()),
+  ABSENT_DEPARTMENT_CODES: ["55"],
+}));
 
 describe("publicationStatus", () => {
   it("met en ligne les départements d'une zone publiée, outre-mer compris", () => {
     expect(publicationStatus("25")).toBe("online");
     expect(publicationStatus("974")).toBe("online");
+  });
+
+  it("signale les départements sans cahier dans le fonds", () => {
+    expect(publicationStatus("55")).toBe("absent");
   });
 
   it("annonce à venir tout autre département", () => {

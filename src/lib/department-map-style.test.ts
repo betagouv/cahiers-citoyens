@@ -1,11 +1,17 @@
 import { fr } from "@codegouvfr/react-dsfr";
 import type { OverlayConfig } from "carte-facile";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   departmentsSource,
   mapPalette,
   statusFeatureStates,
 } from "./department-map-style";
+
+// Aucun département n'est encore connu comme absent du fonds : on en simule un.
+vi.mock("./department-registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./department-registry")>()),
+  ABSENT_DEPARTMENT_CODES: ["55"],
+}));
 
 const overlay: OverlayConfig = {
   sources: {
@@ -69,6 +75,13 @@ describe("statusFeatureStates", () => {
     expect(statusFeatureStates()).toContainEqual({
       code: "973",
       status: "online",
+    });
+  });
+
+  it("marque absents les départements sans cahier dans le fonds", () => {
+    expect(statusFeatureStates()).toContainEqual({
+      code: "55",
+      status: "absent",
     });
   });
 });

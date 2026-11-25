@@ -1,4 +1,4 @@
-import { asc, count, eq } from "drizzle-orm";
+import { asc, count, eq, max, min } from "drizzle-orm";
 import { getDatabase } from "../db/client";
 import { chunks, notebooks } from "../db/schema";
 
@@ -22,6 +22,14 @@ export interface Notebook {
   openedOn: string;
   transcription: string;
   chunkCount: number;
+}
+
+export interface CorpusStats {
+  notebookCount: number;
+  chunkCount: number;
+  embeddedChunkCount: number;
+  firstOpenedOn: string | null;
+  lastOpenedOn: string | null;
 }
 
 // `?page=` vient de l'URL : toute valeur autre qu'un entier ≥ 1 ramène à la page 1.
@@ -94,4 +102,24 @@ export async function getScanKey(id: string): Promise<string | undefined> {
     .from(notebooks)
     .where(eq(notebooks.id, id));
   return row?.scanKey;
+}
+
+export async function getCorpusStats(): Promise<CorpusStats> {
+  const db = getDatabase();
+  const [[notebookStats], [chunkStats]] = await Promise.all([
+    db
+      .select({
+        notebookCount: count(),
+        firstOpenedOn: min(notebooks.openedOn),
+        lastOpenedOn: max(notebooks.openedOn),
+      })
+      .from(notebooks),
+    db
+      .select({
+        chunkCount: count(),
+        embeddedChunkCount: count(chunks.embedding),
+      })
+      .from(chunks),
+  ]);
+  return { ...notebookStats, ...chunkStats };
 }

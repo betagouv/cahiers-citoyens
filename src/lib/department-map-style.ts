@@ -7,8 +7,8 @@ import type {
 import {
   ABSENT_DEPARTMENT_CODES,
   PUBLISHED_AREAS,
-  type PublicationStatus,
-} from "./departments";
+} from "./department-registry";
+import type { PublicationStatus } from "./departments";
 
 type ColorDecisions =
   typeof fr.colors.decisions | ReturnType<typeof fr.colors.getHex>["decisions"];

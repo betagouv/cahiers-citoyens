@@ -21,7 +21,9 @@ function splitContribution(contribution: string): string[] {
     current.push(sentence);
     words += n;
   }
-  if (current.length > 0) pieces.push(current.join(" "));
+  // La boucle se termine toujours sur un morceau non vide : la contribution
+  // dépasse MAX_WORDS, donc compte au moins une phrase.
+  pieces.push(current.join(" "));
   return pieces;
 }
 

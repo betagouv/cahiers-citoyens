@@ -1,13 +1,5 @@
 import { GetObjectCommand, NoSuchKey, S3Client } from "@aws-sdk/client-s3";
 
-const S3_VARIABLES = [
-  "S3_ENDPOINT",
-  "S3_REGION",
-  "S3_BUCKET",
-  "S3_ACCESS_KEY_ID",
-  "S3_SECRET_ACCESS_KEY",
-] as const;
-
 export interface S3Settings {
   endpoint: string;
   region: string;
@@ -29,20 +21,26 @@ export class StorageNotConfiguredError extends Error {}
 export function parseS3Settings(
   env: Record<string, string | undefined>,
 ): S3Settings {
-  const missing = S3_VARIABLES.filter((name) => !env[name]);
+  const missing: string[] = [];
+  function required(name: string): string {
+    const value = env[name];
+    if (!value) missing.push(name);
+    return value ?? "";
+  }
+  const settings = {
+    endpoint: required("S3_ENDPOINT"),
+    region: required("S3_REGION"),
+    bucket: required("S3_BUCKET"),
+    prefix: env.S3_PREFIX ?? "",
+    accessKeyId: required("S3_ACCESS_KEY_ID"),
+    secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
+  };
   if (missing.length > 0) {
     throw new StorageNotConfiguredError(
       `variables manquantes : ${missing.join(", ")}`,
     );
   }
-  return {
-    endpoint: env.S3_ENDPOINT ?? "",
-    region: env.S3_REGION ?? "",
-    bucket: env.S3_BUCKET ?? "",
-    prefix: env.S3_PREFIX ?? "",
-    accessKeyId: env.S3_ACCESS_KEY_ID ?? "",
-    secretAccessKey: env.S3_SECRET_ACCESS_KEY ?? "",
-  };
+  return settings;
 }
 
 // Les clés en base (`notebooks/<id>/scan.pdf`) sont relatives au préfixe du bucket.

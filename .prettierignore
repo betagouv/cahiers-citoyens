@@ -6,3 +6,4 @@ public
 scripts/fake-data/fonts
 .claude/skills/verify-notebooks/evidence
 drizzle/meta
+dist

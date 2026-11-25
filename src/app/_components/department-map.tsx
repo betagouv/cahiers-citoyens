@@ -28,41 +28,11 @@ const METROPOLE: LngLatBoundsLike = [
 ];
 
 const OVERSEAS: readonly { name: string; bounds: LngLatBoundsLike }[] = [
-  {
-    name: "Guadeloupe",
-    bounds: [
-      [-61.85, 15.83],
-      [-61.0, 16.52],
-    ],
-  },
-  {
-    name: "Martinique",
-    bounds: [
-      [-61.25, 14.38],
-      [-60.8, 14.89],
-    ],
-  },
-  {
-    name: "Guyane",
-    bounds: [
-      [-54.6, 2.1],
-      [-51.6, 5.8],
-    ],
-  },
-  {
-    name: "La Réunion",
-    bounds: [
-      [55.2, -21.4],
-      [55.85, -20.85],
-    ],
-  },
-  {
-    name: "Mayotte",
-    bounds: [
-      [44.98, -13.0],
-      [45.32, -12.63],
-    ],
-  },
+  { name: "Guadeloupe", bounds: [-61.85, 15.83, -61.0, 16.52] },
+  { name: "Martinique", bounds: [-61.25, 14.38, -60.8, 14.89] },
+  { name: "Guyane", bounds: [-54.6, 2.1, -51.6, 5.8] },
+  { name: "La Réunion", bounds: [55.2, -21.4, 55.85, -20.85] },
+  { name: "Mayotte", bounds: [44.98, -13.0, 45.32, -12.63] },
 ];
 
 const FIT_PADDING = 4;
@@ -80,124 +50,165 @@ interface Tooltip {
   text: string;
 }
 
-function paletteFor(isDark: boolean) {
-  return mapPalette(fr.colors.getHex({ isDark }).decisions);
+interface LoadedMap {
+  map: MapLibreMap;
+  source: DepartmentsSource;
 }
 
-function MapFrame({ bounds }: { bounds: LngLatBoundsLike }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const loadedRef = useRef<{ map: MapLibreMap; source: DepartmentsSource }>(
-    null,
+interface MapCallbacks {
+  isDark: () => boolean;
+  onLoad: (loaded: LoadedMap) => void;
+  onTooltip: (tooltip: Tooltip | null) => void;
+  onNavigate: (href: string) => void;
+}
+
+function styleFor(source: DepartmentsSource, isDark: boolean) {
+  return departmentMapStyle(
+    source,
+    mapPalette(fr.colors.getHex({ isDark }).decisions),
   );
-  const [tooltip, setTooltip] = useState<Tooltip | null>(null);
+}
+
+function stringProperty(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function bindHover(
+  map: MapLibreMap,
+  source: DepartmentsSource,
+  callbacks: MapCallbacks,
+) {
+  function feature(code: string) {
+    return {
+      source: source.id,
+      sourceLayer: DEPARTMENTS_SOURCE_LAYER,
+      id: code,
+    };
+  }
+  let hovered: string | undefined;
+  function setHovered(code: string | undefined) {
+    if (hovered !== undefined)
+      map.setFeatureState(feature(hovered), { hover: false });
+    hovered = code;
+    if (code !== undefined) map.setFeatureState(feature(code), { hover: true });
+  }
+  map.on("mousemove", DEPARTMENTS_FILL_LAYER, (event) => {
+    const properties = event.features?.[0]?.properties;
+    const code = stringProperty(properties?.code);
+    const name = stringProperty(properties?.nom);
+    if (code === undefined || name === undefined) return;
+    setHovered(code);
+    const status = publicationStatus(code);
+    map.getCanvas().style.cursor = status === "online" ? "pointer" : "";
+    callbacks.onTooltip({
+      x: event.point.x,
+      y: event.point.y,
+      text: `${name} (${code}) · ${PUBLICATION_STATUS_LABELS[status]}`,
+    });
+  });
+  map.on("mouseleave", DEPARTMENTS_FILL_LAYER, () => {
+    setHovered(undefined);
+    map.getCanvas().style.cursor = "";
+    callbacks.onTooltip(null);
+  });
+  map.on("load", () => {
+    for (const { code, status } of statusFeatureStates())
+      map.setFeatureState(feature(code), { status });
+  });
+}
+
+function bindEvents(
+  map: MapLibreMap,
+  source: DepartmentsSource,
+  bounds: LngLatBoundsLike,
+  callbacks: MapCallbacks,
+) {
+  bindHover(map, source, callbacks);
+  const createdDark = callbacks.isDark();
+  map.on("load", () => {
+    callbacks.onLoad({ map, source });
+    if (callbacks.isDark() !== createdDark)
+      map.setStyle(styleFor(source, callbacks.isDark()));
+  });
+  map.on("resize", () => {
+    map.fitBounds(bounds, { padding: FIT_PADDING, animate: false });
+  });
+  map.on("click", DEPARTMENTS_FILL_LAYER, (event) => {
+    const code = stringProperty(event.features?.[0]?.properties?.code);
+    const area = code === undefined ? undefined : publishedAreaOf(code);
+    if (area !== undefined) callbacks.onNavigate(areaHref(area));
+  });
+}
+
+// MapLibre touche `window` dès l'import : chargé ici, il ne s'évalue jamais
+// côté serveur. Carte facile l'importe aussi.
+async function createMap(
+  container: HTMLElement,
+  bounds: LngLatBoundsLike,
+  callbacks: MapCallbacks,
+): Promise<MapLibreMap> {
+  const [maplibre, { mapOverlays }] = await Promise.all([
+    import("maplibre-gl"),
+    import("carte-facile"),
+  ]);
+  maplibre.setWorkerUrl(MAPLIBRE_WORKER_URL);
+  const source = departmentsSource(
+    mapOverlays.administrativeBoundaries.neutral,
+  );
+  const map = new maplibre.Map({
+    container,
+    style: styleFor(source, callbacks.isDark()),
+    bounds,
+    fitBoundsOptions: { padding: FIT_PADDING },
+    interactive: false,
+    attributionControl: false,
+    renderWorldCopies: false,
+  });
+  bindEvents(map, source, bounds, callbacks);
+  return map;
+}
+
+function useDepartmentMap(
+  container: HTMLDivElement | null,
+  bounds: LngLatBoundsLike,
+  onTooltip: (tooltip: Tooltip | null) => void,
+) {
   const router = useRouter();
   const { isDark } = useIsDark();
   const isDarkRef = useRef(isDark);
+  const loadedRef = useRef<LoadedMap | null>(null);
 
   useEffect(() => {
     isDarkRef.current = isDark;
     const loaded = loadedRef.current;
-    if (loaded !== null)
-      loaded.map.setStyle(
-        departmentMapStyle(loaded.source, paletteFor(isDark)),
-      );
+    if (loaded !== null) loaded.map.setStyle(styleFor(loaded.source, isDark));
   }, [isDark]);
 
   useEffect(() => {
-    const container = containerRef.current;
     if (container === null) return;
-    let map: MapLibreMap | undefined;
-    let cancelled = false;
-
-    // MapLibre touche `window` dès l'import : chargé ici, il ne s'évalue
-    // jamais côté serveur. Carte facile l'importe aussi.
-    void Promise.all([import("maplibre-gl"), import("carte-facile")]).then(
-      ([maplibre, { mapOverlays }]) => {
-        if (cancelled) return;
-        maplibre.setWorkerUrl(MAPLIBRE_WORKER_URL);
-        const source = departmentsSource(
-          mapOverlays.administrativeBoundaries.neutral,
-        );
-        const instance = new maplibre.Map({
-          container,
-          style: departmentMapStyle(source, paletteFor(isDarkRef.current)),
-          bounds,
-          fitBoundsOptions: { padding: FIT_PADDING },
-          interactive: false,
-          attributionControl: false,
-          renderWorldCopies: false,
-        });
-        map = instance;
-
-        function feature(code: string) {
-          return {
-            source: source.id,
-            sourceLayer: DEPARTMENTS_SOURCE_LAYER,
-            id: code,
-          };
-        }
-
-        let hovered: string | undefined;
-        function setHovered(code: string | undefined) {
-          if (hovered !== undefined)
-            instance.setFeatureState(feature(hovered), { hover: false });
-          hovered = code;
-          if (code !== undefined)
-            instance.setFeatureState(feature(code), { hover: true });
-        }
-
-        const createdDark = isDarkRef.current;
-        instance.on("load", () => {
-          for (const { code, status } of statusFeatureStates())
-            instance.setFeatureState(feature(code), { status });
-          loadedRef.current = { map: instance, source };
-          if (isDarkRef.current !== createdDark)
-            instance.setStyle(
-              departmentMapStyle(source, paletteFor(isDarkRef.current)),
-            );
-        });
-        instance.on("resize", () => {
-          instance.fitBounds(bounds, { padding: FIT_PADDING, animate: false });
-        });
-        instance.on("mousemove", DEPARTMENTS_FILL_LAYER, (event) => {
-          const properties = event.features?.[0]?.properties;
-          const code: unknown = properties?.code;
-          const name: unknown = properties?.nom;
-          if (typeof code !== "string" || typeof name !== "string") return;
-          setHovered(code);
-          const status = publicationStatus(code);
-          instance.getCanvas().style.cursor =
-            status === "online" ? "pointer" : "";
-          setTooltip({
-            x: event.point.x,
-            y: event.point.y,
-            text: `${name} (${code}) · ${PUBLICATION_STATUS_LABELS[status]}`,
-          });
-        });
-        instance.on("mouseleave", DEPARTMENTS_FILL_LAYER, () => {
-          setHovered(undefined);
-          instance.getCanvas().style.cursor = "";
-          setTooltip(null);
-        });
-        instance.on("click", DEPARTMENTS_FILL_LAYER, (event) => {
-          const code: unknown = event.features?.[0]?.properties?.code;
-          const area =
-            typeof code === "string" ? publishedAreaOf(code) : undefined;
-          if (area !== undefined) router.push(areaHref(area));
-        });
+    const created = createMap(container, bounds, {
+      isDark: () => isDarkRef.current,
+      onLoad: (loaded) => {
+        loadedRef.current = loaded;
       },
-    );
-
+      onTooltip,
+      onNavigate: (href) => router.push(href),
+    });
     return () => {
-      cancelled = true;
       loadedRef.current = null;
-      map?.remove();
+      void created.then((map) => map.remove());
     };
-  }, [bounds, router]);
+  }, [bounds, container, onTooltip, router]);
+}
+
+function MapFrame({ bounds }: { bounds: LngLatBoundsLike }) {
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const [tooltip, setTooltip] = useState<Tooltip | null>(null);
+  useDepartmentMap(container, bounds, setTooltip);
 
   return (
     <div className="relative h-full w-full">
-      <div ref={containerRef} className="h-full w-full" />
+      <div ref={setContainer} className="h-full w-full" />
       {tooltip !== null && (
         <p
           className={fr.cx("fr-text--xs", "fr-m-0", "fr-px-1w", "fr-py-1v")}

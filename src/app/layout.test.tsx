@@ -1,0 +1,40 @@
+import { describe, expect, it, vi } from "vitest";
+import { renderToHtml } from "@/test/render";
+import RootLayout, { metadata } from "./layout";
+
+vi.mock("next/navigation", () => ({ useSelectedLayoutSegment: () => null }));
+
+describe("RootLayout", () => {
+  it("encadre la page de l'en-tête et du pied de page DSFR, en français", async () => {
+    const html = await renderToHtml(
+      <RootLayout params={Promise.resolve({})}>
+        <p>Contenu de la page</p>
+      </RootLayout>,
+    );
+
+    expect(metadata.title).toEqual({
+      default: "Cahiers citoyens",
+      template: "%s | Cahiers citoyens",
+    });
+    expect(html).toMatch(/<html[^>]*lang="fr"/);
+    expect(html).toMatch(/<html[^>]*data-fr-scheme="light"/);
+    expect(html).toContain('href="#content"');
+    expect(html).toContain('href="#footer"');
+    expect(html).toMatch(/<header[^>]*class="fr-header"/);
+    expect(html).toContain("Consulter les cahiers du Grand Débat national");
+    expect(html).toMatch(/href="\/understanding"[^>]*>Comprendre les cahiers</);
+    expect(html).toContain("Paramètres d&#x27;affichage");
+    expect(html).toContain("Il est édité par la DITP et la DINUM");
+    for (const href of [
+      "/accessibility",
+      "/legal-notice",
+      "/personal-data",
+      "/site-map",
+    ])
+      expect(html).toContain(`href="${href}"`);
+    expect(html).toContain(
+      '<main id="content" class="flex-1"><p>Contenu de la page</p></main>',
+    );
+    expect(html).toMatch(/<footer[^>]*id="footer"/);
+  });
+});

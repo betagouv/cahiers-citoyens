@@ -1,51 +1,51 @@
-import { sql } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
-import { createDatabase } from "../../db/client";
-import { anyWordQuery } from "./retrieval";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { searchByVector, searchFullText } from "./retrieval";
 
-// Interroge un vrai Postgres (aucune table requise) : lancé seulement si
-// TEST_DATABASE_URL est défini, par exemple la base locale de développement.
-const url = process.env.TEST_DATABASE_URL;
+const fake = await vi.hoisted(async () => {
+  const { createFakePostgres } = await import("../../test/fake-postgres");
+  return createFakePostgres();
+});
+vi.mock("postgres", () => ({ default: fake.connect }));
+vi.stubEnv("DATABASE_URL", "postgres://test/app");
 
-describe.skipIf(url === undefined)("anyWordQuery (Postgres)", () => {
-  const db = createDatabase(url ?? "");
-  afterAll(async () => {
-    await db.$client.end();
-  });
+beforeEach(() => {
+  fake.reset();
+});
 
-  async function matches(document: string, query: string) {
-    const [row] = await db.execute<{ matches: boolean }>(
-      sql`select to_tsvector('french', ${document}) @@ ${anyWordQuery(query)} as matches`,
+describe("searchFullText", () => {
+  it("cherche n'importe quel mot de la question, classé par ts_rank", async () => {
+    fake.reply([["7", "notebook-0002", "Le carburant augmente."]]);
+
+    await expect(searchFullText("prix du carburant", 30)).resolves.toEqual([
+      { id: 7, notebookId: "notebook-0002", content: "Le carburant augmente." },
+    ]);
+    const [query] = fake.queries;
+    expect(query.sql).toContain(
+      `"chunks"."search" @@ replace(plainto_tsquery('french', $1)::text, '&', '|')::tsquery`,
     );
-    return row.matches;
-  }
-
-  const question = "Que disent les habitants du prix du carburant ?";
-  const passage = "Le carburant a encore augmenté ce mois-ci.";
-
-  it("trouve un passage qui ne contient qu'un mot de la question", async () => {
-    await expect(matches(passage, question)).resolves.toBe(true);
-  });
-
-  it("là où la requête en ET ne trouvait rien", async () => {
-    const [row] = await db.execute<{ matches: boolean }>(
-      sql`select to_tsvector('french', ${passage}) @@ websearch_to_tsquery('french', ${question}) as matches`,
+    expect(query.sql).toContain(
+      `order by ts_rank("chunks"."search", replace(plainto_tsquery('french', $2)::text, '&', '|')::tsquery) desc, "chunks"."id" asc limit $3`,
     );
-    expect(row.matches).toBe(false);
+    expect(query.params).toEqual([
+      "prix du carburant",
+      "prix du carburant",
+      30,
+    ]);
   });
+});
 
-  it("ramène les mots à leur racine", async () => {
-    await expect(matches("Les carburants flambent", "carburant")).resolves.toBe(
-      true,
+describe("searchByVector", () => {
+  it("classe les passages vectorisés par distance cosinus croissante", async () => {
+    fake.reply([["3", "notebook-0001", "Plus de médecin."]]);
+
+    await expect(searchByVector([0.25, 0.5], 5)).resolves.toEqual([
+      { id: 3, notebookId: "notebook-0001", content: "Plus de médecin." },
+    ]);
+    const [query] = fake.queries;
+    expect(query.sql).toContain(`where "chunks"."embedding" is not null`);
+    expect(query.sql).toContain(
+      `order by "chunks"."embedding" <=> $1 asc, "chunks"."id" asc limit $2`,
     );
-  });
-
-  it("ne trouve rien sans mot commun ni pour une question de mots vides", async () => {
-    await expect(matches(passage, "médecin village")).resolves.toBe(false);
-    await expect(matches(passage, "le la de")).resolves.toBe(false);
-  });
-
-  it("ne se laisse pas détourner par les opérateurs de la saisie", async () => {
-    await expect(matches(passage, "carburant & ! ( | ')")).resolves.toBe(true);
+    expect(query.params).toEqual(["[0.25,0.5]", 5]);
   });
 });

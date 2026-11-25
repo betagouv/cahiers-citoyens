@@ -6,7 +6,7 @@
     "predev": "react-dsfr update-icons",
     "dev": "sh scripts/dev.sh",
     "prebuild": "react-dsfr update-icons",
-    "build": "next build && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/",
+    "build": "next build && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/ && node scripts/build-jobs.mjs",
     "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "lint": "eslint",
     "check": "next typegen && tsc --noEmit",
@@ -19,6 +19,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.1161.0",
     "@codegouvfr/react-dsfr": "1.36.0",
+    "ajv": "8.20.0",
     "carte-facile": "0.10.2",
     "drizzle-kit": "0.31.11",
     "drizzle-orm": "0.45.4",
@@ -34,8 +35,13 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/yauzl": "^3.4.0",
+    "@types/yazl": "^3.3.1",
+    "@vitest/coverage-v8": "5.1.0",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
+    "happy-dom": "21.0.4",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "pdf-lib": "^1.17.1",
@@ -44,7 +50,9 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "typescript-eslint": "^8.72.1",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "yauzl": "^3.4.0",
+    "yazl": "^3.3.1"
   },
   "engines": {
     "node": "22.x"

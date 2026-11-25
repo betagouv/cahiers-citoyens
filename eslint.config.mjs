@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "dist/**",
+    "coverage/**",
     "next-env.d.ts",
     "data/**",
     ".claude/worktrees/**",
@@ -56,6 +58,25 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-unsafe-member-access": "error",
       "@typescript-eslint/no-unsafe-return": "error",
     },
+  },
+  {
+    files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts"],
+    rules: {
+      "max-lines": [
+        "error",
+        { max: 300, skipBlankLines: true, skipComments: true },
+      ],
+      "max-lines-per-function": [
+        "error",
+        { max: 60, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
+  {
+    // Un `describe` regroupe des cas indépendants : sa longueur ne mesure pas
+    // la complexité d'une fonction.
+    files: ["**/*.test.{ts,tsx}"],
+    rules: { "max-lines-per-function": "off" },
   },
   {
     files: NEXT_DEFAULT_EXPORT_FILES,

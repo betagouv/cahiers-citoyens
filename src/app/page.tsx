@@ -11,10 +11,10 @@ import { mapPalette } from "@/lib/department-map-style";
 import {
   PUBLICATION_STATUSES,
   PUBLICATION_STATUS_LABELS,
-  PUBLISHED_AREAS,
   areaHref,
   onlineMetropolitanDepartmentCount,
 } from "@/lib/departments";
+import { PUBLISHED_AREAS } from "@/lib/department-registry";
 
 const legendPalette = mapPalette(fr.colors.decisions);
 

@@ -1,4 +1,5 @@
 import { getScanKey } from "@/lib/notebooks";
+import { scanResponse } from "@/lib/scan-response";
 import {
   StorageNotConfiguredError,
   openScan,
@@ -37,23 +38,5 @@ export async function GET(
   if (scan === undefined) {
     return new Response("Scan introuvable", { status: 404 });
   }
-
-  const headers = new Headers({
-    "Content-Type": "application/pdf",
-    "Content-Disposition": `inline; filename="${id}.pdf"`,
-    "Accept-Ranges": "bytes",
-    "Cache-Control": "private, max-age=3600",
-    "X-Content-Type-Options": "nosniff",
-  });
-  if (scan.contentLength !== undefined) {
-    headers.set("Content-Length", String(scan.contentLength));
-  }
-  if (scan.contentRange !== undefined) {
-    headers.set("Content-Range", scan.contentRange);
-  }
-  if (scan.etag !== undefined) headers.set("ETag", scan.etag);
-  return new Response(scan.body, {
-    status: scan.contentRange === undefined ? 200 : 206,
-    headers,
-  });
+  return scanResponse(id, scan);
 }
