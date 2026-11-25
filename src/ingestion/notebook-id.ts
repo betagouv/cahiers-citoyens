@@ -14,16 +14,17 @@ function isNotebookId(value: string): value is NotebookId {
   );
 }
 
-export function parseNotebookId(folderName: string): ParseNotebookIdResult {
-  if (isNotebookId(folderName)) {
-    return { ok: true, id: folderName };
+// L'identifiant est le nom du fichier JSON du cahier, sans l'extension `.json`.
+export function parseNotebookId(baseName: string): ParseNotebookIdResult {
+  if (isNotebookId(baseName)) {
+    return { ok: true, id: baseName };
   }
   return {
     ok: false,
     error: {
-      notebook: folderName,
+      notebook: baseName,
       code: "invalid-notebook-id",
-      message: `Nom de dossier invalide : ${NOTEBOOK_ID_MAX_LENGTH} caractères au plus, uniquement des lettres sans accent, des chiffres, « . », « _ » et « - », en commençant par une lettre ou un chiffre.`,
+      message: `Nom de fichier invalide : ${NOTEBOOK_ID_MAX_LENGTH} caractères au plus, uniquement des lettres sans accent, des chiffres, « . », « _ » et « - », en commençant par une lettre ou un chiffre.`,
     },
   };
 }

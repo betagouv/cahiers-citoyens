@@ -16,7 +16,7 @@ Condorcet sait ce qu'est devenu chaque dépôt. L'équipe est prévenue quand qu
   - cron qui ne s'est pas exécuté depuis plus de 15 min ;
   - chunks sans embedding depuis plus de 24 h.
 - **Santé.** `/api/health` ajoute la date du dernier passage du job et le nombre de dépôts en attente, pour que l'outil de supervision puisse alerter sans accès à la base.
-- **Tableau de bord interne.** `/admin/ingestion`, protégé : la liste des dépôts et leur statut, le détail d'un dépôt (erreurs, changements), puis les indicateurs : cahiers publiés et retirés, pages, répartition par `pipeline_release`, publications, remplacements et retraits par période, motifs de retrait, part des cahiers remplacés lors d'un changement de `pipeline_release`.
+- **Tableau de bord interne.** `/admin/ingestion`, protégé : la liste des dépôts et leur statut, le détail d'un dépôt (erreurs, changements), puis les indicateurs : cahiers publiés et retirés, pages, répartition par `schema_version`, publications, remplacements et retraits par période, motifs de retrait, part des cahiers remplacés lors d'un changement de `schema_version`.
 
 ## Données
 

@@ -4,8 +4,11 @@ export const INGEST_ERROR_CODES = [
   "missing-field",
   "unknown-field",
   "invalid-field",
-  "page-out-of-sequence",
-  "duplicate-image",
+  "notebook-id-mismatch",
+  "duplicate-page",
+  "page-out-of-order",
+  "invalid-page-id",
+  "invalid-line-id",
 ] as const;
 
 export type IngestErrorCode = (typeof INGEST_ERROR_CODES)[number];

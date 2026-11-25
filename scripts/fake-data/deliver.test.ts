@@ -36,16 +36,16 @@ describe("deliver.ts", () => {
         await readFile(join(out, "delivery-2026-11-24-0930.zip")),
       );
       const [json, ...images] = records;
-      expect(json.path).toMatch(
-        /^notebooks\/CC_\w+_\d{6}_00001_MD_\d{5}\/notebook\.json$/,
-      );
+      expect(json.path).toMatch(/^CC_\d{5}_\d{6}_\w{5}_MD_10001\.json$/);
+      const id = json.path.slice(0, -".json".length);
       expect(images.length).toBeGreaterThan(1);
       for (const { path, compressionMethod } of images) {
-        expect(path).toMatch(/\/\d{4}\.png$/);
+        expect(path.startsWith(`${id}_`)).toBe(true);
+        expect(path).toMatch(/_\d+\.(png|jpg)$/);
         expect(compressionMethod).toBe(0);
       }
       expect(log.mock.calls.map(([line]) => String(line))).toEqual([
-        expect.stringMatching(/^CC_\w+ : modifié \((text|image)\)$/),
+        expect.stringMatching(/^CC_\w+ : modifié \((text|image|metadata)\)$/),
         expect.stringMatching(
           /^1 cahiers écrits dans .*delivery-2026-11-24-0930\.zip en/,
         ),

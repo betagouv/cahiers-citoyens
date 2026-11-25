@@ -8,15 +8,17 @@ Produire des ZIP conformes au protocole à partir des faux cahiers existants, pl
 
 ## Changements
 
-- Faire évoluer `scripts/fake-data/` : une image PNG par page (le rendu manuscrit existe déjà, il produit aujourd'hui un PDF), un `notebook.json` par cahier, un ZIP nommé `delivery-AAAA-MM-JJ-HHMM.zip`.
-- Options : nombre de cahiers, modification de N cahiers (texte ou image), reconstruction d'un dépôt existant avec d'autres dates (même contenu, octets différents), et une liste de défauts à injecter (`missing-image`, `unlisted-file`, `page-gap`, `duplicate-page`, `invalid-png`, `invalid-json`, `schema-violation`, `path-traversal`, `nested-folder`).
-- Même graine, même sortie, comme aujourd'hui.
+- `scripts/fake-data/` produit des dépôts au format de Condorcet : à la racine du ZIP, un `<id_cahier>.json` par cahier et une image par page nommée `<id_page>.<ext>`. Le ZIP est nommé `delivery-AAAA-MM-JJ-HHMM.zip`.
+- Chaque ligne écrite devient une ligne du JSON, avec son polygone dans la page. L'en-tête de la mairie est `dactylographiee` (zone `non renseigné`), les contributions et les signatures sont `manuscrite`.
+- Images : surtout des JPEG nommés `.png`, comme l'échantillon reçu, mais aussi de vrais PNG et des JPEG nommés `.jpg`.
+- Options : nombre de cahiers, modification de N cahiers (texte, image ou métadonnées), numérotation avec des trous (`--gaps`), reconstruction d'un dépôt existant avec d'autres dates (même contenu, octets différents), et une liste de défauts à injecter (`missing-image`, `unlisted-file`, `duplicate-page`, `decreasing-pages`, `invalid-page-id`, `notebook-id-mismatch`, `invalid-image`, `invalid-json`, `schema-violation`, `path-traversal`, `nested-folder`).
+- Même graine, même sortie.
 
 ## Données
 
-- `DeliverySpec { createdAt; notebooks: NotebookSpec[]; defects: Defect[] }`. `Defect` est une liste fermée déclarée `as const`.
+- `DeliverySpec { seed; createdAt; notebooks: NotebookSpec[] }`. `Defect` est une liste fermée déclarée `as const`.
 
 ## Vérification
 
 - Statique : `check`, `lint`, `test`.
-- Exécution : `unzip -l` sur un ZIP généré. Chaque défaut produit le ZIP attendu (testé).
+- Exécution : `unzip -l` sur un ZIP généré. Chaque défaut produit le ZIP attendu et, pour ceux que voit le parseur de la phase 2, exactement l'erreur attendue (testé).

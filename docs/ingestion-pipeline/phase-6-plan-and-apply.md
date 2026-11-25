@@ -14,7 +14,7 @@ Transformer un `VerifiedDelivery` en changements, puis les appliquer de façon a
   - empreinte différente : remplacé ;
   - cahier retiré : publié de nouveau.
 - `src/ingestion/apply.ts` :
-  1. copie les PNG vers `notebooks/<id>/v<version>/`. La clé est déterministe : une copie interrompue peut être relancée sans risque ;
+  1. copie les images vers `notebooks/<id>/v<version>/`. La clé est déterministe : une copie interrompue peut être relancée sans risque ;
   2. dans une seule transaction, il ajoute les versions, met à jour `notebooks`, remplace `pages` et `chunks`, puis passe le dépôt à `applied` ;
   3. après le commit seulement, il supprime les fichiers des versions remplacées.
 - `withdraw(id, reason)` : passe le cahier à `withdrawn` (il disparaît du site et de la recherche), puis supprime ses fichiers servis. Exposé par la commande `ingest withdraw`.

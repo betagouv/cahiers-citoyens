@@ -9,3 +9,5 @@ export const LINES_PER_PAGE =
   Math.floor((HEIGHT - FIRST_LINE - 1.5 * LINE_SPACING) / LINE_SPACING) + 1;
 export const TEXT_START = LEFT_MARGIN + 18;
 export const TEXT_END = WIDTH - 60;
+// digitize() pose la feuille réduite de 2,5 % au centre du scan.
+export const PAPER_SCALE = 0.975;

@@ -1,62 +1,55 @@
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
+import { parseNotebookId } from "../../src/ingestion/notebook-id";
+import { parseNotebook } from "../../src/ingestion/parse-notebook";
 import { archiveBytes } from "./archive-bytes";
 import { DEFECTS, type Defect } from "./defects";
 import { deliveryEntries } from "./delivery-entries";
-import type { NotebookSpec } from "./delivery-plan";
 import { registerFonts } from "./hands";
 import { type ArchiveRecord, readArchive } from "./read-archive";
-import { shortNotebook } from "./test-notebook";
+import { testSpec } from "./test-notebook";
 
 const AT = new Date("2026-11-24T09:30:00Z");
-const IEND = Buffer.from([0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]);
-
-interface Page {
-  page: number;
-  image: string;
-  text?: string;
-}
-
-function spec(index: number, defects: Defect[]): NotebookSpec {
-  return {
-    index,
-    id: `CC_${index}`,
-    notebook: shortNotebook(),
-    change: "none",
-    defects,
-  };
-}
+const JPEG = Buffer.from([0xff, 0xd8, 0xff]);
+const SOUND = "CC_0";
 
 let records: ArchiveRecord[] = [];
-
-function files(id: string): Map<string, Buffer> {
-  const prefix = `notebooks/${id}/`;
-  return new Map(
-    records
-      .filter(({ path }) => path.startsWith(prefix))
-      .map(({ path, bytes }) => [path.slice(prefix.length), bytes]),
-  );
-}
-
-function pages(id: string): Page[] {
-  const json: unknown = JSON.parse(String(files(id).get("notebook.json")));
-  if (typeof json !== "object" || json === null || !("pages" in json)) {
-    throw new Error("notebook.json sans pages");
-  }
-  const list: unknown = json.pages;
-  if (!Array.isArray(list)) throw new Error("pages n'est pas une liste");
-  return list.map((page: Page) => page);
-}
 
 function idOf(defect: Defect): string {
   return `CC_${DEFECTS.indexOf(defect) + 1}`;
 }
 
+// Fichiers d'un cahier à la racine du ZIP : <id>.json et <id>_<page>.<ext>.
+function files(id: string): Map<string, Buffer> {
+  const own = new RegExp(`^${id}(\\.json|_\\d+\\.(png|jpg))$`);
+  return new Map(
+    records
+      .filter(({ path }) => own.test(path))
+      .map(({ path, bytes }) => [path, bytes]),
+  );
+}
+
+function parse(id: string) {
+  const notebookId = parseNotebookId(id);
+  if (!notebookId.ok) throw new Error(notebookId.error.message);
+  const json = files(id).get(`${id}.json`);
+  return parseNotebook(notebookId.id, String(json));
+}
+
+function errorsOf(id: string) {
+  const result = parse(id);
+  return result.ok
+    ? []
+    : result.errors.map(({ code, page }) => ({ code, page }));
+}
+
 beforeAll(async () => {
   registerFonts(join(import.meta.dirname, "fonts"));
   const notebooks = [
-    ...DEFECTS.map((defect, i) => spec(i + 1, [defect])),
-    spec(10, []),
+    testSpec({ index: 0, id: SOUND }),
+    ...DEFECTS.map((defect, i) =>
+      testSpec({ index: i + 1, id: `CC_${i + 1}`, defects: [defect] }),
+    ),
   ];
   records = await readArchive(
     await archiveBytes(
@@ -66,62 +59,68 @@ beforeAll(async () => {
   );
 }, 60_000);
 
-describe("deliveryEntries, défaut par défaut, vus dans le ZIP", () => {
-  it("un cahier sans défaut annonce exactement ses images, toutes des PNG complets", () => {
-    const sound = files("CC_10");
-    const listed = pages("CC_10").map(({ image }) => image);
-    expect([...sound.keys()].sort()).toEqual(
-      ["notebook.json", ...listed].sort(),
+describe("deliveryEntries, cahier conforme", () => {
+  it("met à plat le JSON et une image JPEG nommée .png par page", () => {
+    const result = parse(SOUND);
+    if (!result.ok) throw new Error(JSON.stringify(result.errors));
+    const images = result.notebook.pages.map(({ id }) => `${id}.png`);
+    expect([...files(SOUND).keys()].sort()).toEqual(
+      [`${SOUND}.json`, ...images].sort(),
     );
-    for (const image of listed) {
-      expect(sound.get(image)?.subarray(-8).equals(IEND)).toBe(true);
+    for (const image of images) {
+      expect(files(SOUND).get(image)?.subarray(0, 3).equals(JPEG)).toBe(true);
     }
   });
+});
 
+describe("deliveryEntries, chaque défaut vu par le parseur", () => {
+  it.each<[Defect, { code: string; page?: number }[]]>([
+    ["duplicate-page", [{ code: "duplicate-page", page: 2 }]],
+    ["decreasing-pages", [{ code: "page-out-of-order", page: 2 }]],
+    ["invalid-page-id", [{ code: "invalid-page-id", page: 1 }]],
+    ["notebook-id-mismatch", [{ code: "notebook-id-mismatch" }]],
+    ["invalid-json", [{ code: "invalid-json" }]],
+    ["schema-violation", [{ code: "missing-field", page: 1 }]],
+    ["missing-image", []],
+    ["unlisted-file", []],
+    ["invalid-image", []],
+    ["path-traversal", []],
+    ["nested-folder", []],
+  ])("%s", (defect, expected) => {
+    expect(errorsOf(idOf(defect))).toEqual(
+      expected.map(({ code, page }) => ({ code, page })),
+    );
+  });
+
+  it("le cahier conforme passe", () => {
+    expect(errorsOf(SOUND)).toEqual([]);
+  });
+});
+
+describe("deliveryEntries, défauts propres à l'archive", () => {
   it("missing-image", () => {
-    const id = idOf("missing-image");
-    const listed = pages(id).map(({ image }) => image);
-    expect(files(id).has(listed[listed.length - 1])).toBe(false);
+    expect([...files(idOf("missing-image")).keys()]).toEqual(["CC_1.json"]);
   });
 
-  it("unlisted-file", () => {
-    expect(files(idOf("unlisted-file")).has("notes.txt")).toBe(true);
+  it("unlisted-file : l'image d'une page 3 que le JSON n'annonce pas", () => {
+    const result = parse(idOf("unlisted-file"));
+    expect(result.ok && result.notebook.pages.length).toBe(2);
+    expect([...files(idOf("unlisted-file")).keys()]).toEqual([
+      "CC_2.json",
+      "CC_2_1.png",
+      "CC_2_2.png",
+      "CC_2_3.png",
+    ]);
   });
 
-  it("page-gap", () => {
-    const numbers = pages(idOf("page-gap")).map(({ page }) => page);
-    expect(numbers[numbers.length - 1]).toBe(numbers.length + 1);
+  it("invalid-image", () => {
+    const image = files(idOf("invalid-image")).get("CC_7_1.png");
+    expect(String(image)).toBe("Ceci n'est pas une image.\n");
   });
 
-  it("duplicate-page", () => {
-    const list = pages(idOf("duplicate-page"));
-    expect(list[list.length - 1].page).toBe(list[list.length - 2].page);
-    expect(files(idOf("duplicate-page")).has(list[list.length - 1].image)).toBe(
-      true,
-    );
-  });
-
-  it("invalid-png", () => {
-    const png = files(idOf("invalid-png")).get("0001.png");
-    expect(png?.subarray(-8).equals(IEND)).toBe(false);
-  });
-
-  it("invalid-json", () => {
-    expect(() => pages(idOf("invalid-json"))).toThrow();
-  });
-
-  it("schema-violation", () => {
-    const [first] = pages(idOf("schema-violation"));
-    expect(first).not.toHaveProperty("text");
-  });
-
-  it("path-traversal", () => {
-    expect(records.map(({ path }) => path)).toContain(
-      `notebooks/${idOf("path-traversal")}/../../../escape.txt`,
-    );
-  });
-
-  it("nested-folder", () => {
-    expect(files(idOf("nested-folder")).has("scans/0001.png")).toBe(true);
+  it("path-traversal et nested-folder", () => {
+    const paths = records.map(({ path }) => path);
+    expect(paths).toContain("../../escape.txt");
+    expect(paths).toContain("scans/CC_11_1.png");
   });
 });

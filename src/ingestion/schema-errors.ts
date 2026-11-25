@@ -4,6 +4,7 @@ import type { PageError } from "./errors";
 const TYPE_LABELS: Record<string, string> = {
   array: "liste",
   integer: "entier",
+  number: "nombre",
   object: "objet",
   string: "texte",
 };
@@ -11,6 +12,11 @@ const TYPE_LABELS: Record<string, string> = {
 function param(params: Record<string, unknown>, key: string): string {
   const value = params[key];
   return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+function allowedValues(params: Record<string, unknown>): string {
+  const values = params.allowedValues;
+  return Array.isArray(values) ? values.map(String).join(", ") : "";
 }
 
 function invalidFieldMessage(
@@ -27,8 +33,12 @@ function invalidFieldMessage(
     }
     case "minLength":
       return `${subject} ne doit pas être vide.`;
+    case "enum":
+      return `${subject} doit valoir l'une des valeurs : ${allowedValues(params)}.`;
     case "minItems":
-      return `${subject} doit contenir au moins ${param(params, "limit")} élément.`;
+      return `${subject} doit contenir au moins ${param(params, "limit")} élément(s).`;
+    case "maxItems":
+      return `${subject} doit contenir au plus ${param(params, "limit")} élément(s).`;
     case "minimum":
       return `${subject} doit être supérieur ou égal à ${param(params, "limit")}.`;
     case "pattern":

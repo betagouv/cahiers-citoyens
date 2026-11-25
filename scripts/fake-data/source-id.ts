@@ -1,14 +1,13 @@
 import type { Notebook } from "./domain";
-import { createRandom } from "./random";
 
-// Forme des noms de l'inventaire : CC_<code INSEE>_<AAMMJJ d'ouverture>_<numéro>_MD_<lot>.
-// Le numéro reprend l'index du cahier, ce qui rend l'identifiant unique dans un dépôt.
+// Forme des identifiants Condorcet :
+// CC_<code postal>_<AAMMJJ d'ouverture>_<code INSEE>_MD_<numéro>.
+// Le numéro dérive de l'index du cahier, ce qui rend l'identifiant unique.
 export function sourceId(
   notebook: Notebook,
+  postalCode: string,
   index: number,
-  seed: string,
 ): string {
   const opened = notebook.openedOn.replaceAll("-", "").slice(2);
-  const batch = createRandom(`${seed}:id:${index}`).int(10000, 99999);
-  return `CC_${notebook.municipality.inseeCode}_${opened}_${String(index).padStart(5, "0")}_MD_${batch}`;
+  return `CC_${postalCode}_${opened}_${notebook.municipality.inseeCode}_MD_${10000 + index}`;
 }

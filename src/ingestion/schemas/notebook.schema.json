@@ -1,24 +1,96 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "notebook.json",
+  "title": "Cahier Condorcet",
   "type": "object",
   "additionalProperties": false,
-  "required": ["format", "source_filename", "pipeline_release", "pages"],
+  "required": ["schema_version", "id_cahier", "metadonnees", "pages"],
   "properties": {
-    "format": { "const": 1 },
-    "source_filename": { "type": "string", "minLength": 1 },
-    "pipeline_release": { "type": "string", "minLength": 1 },
+    "schema_version": { "type": "string", "minLength": 1 },
+    "id_cahier": { "type": "string", "minLength": 1 },
+    "metadonnees": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "departement",
+        "numero_departement",
+        "commune",
+        "code_insee",
+        "code_postal",
+        "type_transcription_dactylographiee",
+        "type_transcription_manuscrite"
+      ],
+      "properties": {
+        "departement": { "type": "string", "minLength": 1 },
+        "numero_departement": {
+          "type": "string",
+          "pattern": "^([0-9]{2}|2[AB]|97[0-9])$"
+        },
+        "commune": { "type": "string", "minLength": 1 },
+        "code_insee": {
+          "type": "string",
+          "pattern": "^([0-9]{2}|2[AB])[0-9]{3}$"
+        },
+        "code_postal": { "type": "string", "pattern": "^[0-9]{5}$" },
+        "type_transcription_dactylographiee": {
+          "enum": ["automatique", "manuelle"]
+        },
+        "type_transcription_manuscrite": { "enum": ["automatique", "manuelle"] }
+      }
+    },
     "pages": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["page", "image", "text"],
+        "required": ["numero_page", "id_page", "largeur", "hauteur", "lignes"],
         "properties": {
-          "page": { "type": "integer", "minimum": 1 },
-          "image": { "type": "string", "pattern": "^[A-Za-z0-9._-]+\\.png$" },
-          "text": { "type": "string" }
+          "numero_page": { "type": "integer", "minimum": 1 },
+          "id_page": { "type": "string", "minLength": 1 },
+          "largeur": { "type": "integer", "minimum": 1 },
+          "hauteur": { "type": "integer", "minimum": 1 },
+          "lignes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id_ligne",
+                "type_ligne",
+                "type_zone",
+                "transcription",
+                "polygone"
+              ],
+              "properties": {
+                "id_ligne": { "type": "string", "minLength": 1 },
+                "type_ligne": { "enum": ["manuscrite", "dactylographiee"] },
+                "type_zone": { "type": "string" },
+                "transcription": { "type": "string" },
+                "polygone": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["type", "coordinates"],
+                  "properties": {
+                    "type": { "const": "Polygon" },
+                    "coordinates": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "array",
+                        "minItems": 4,
+                        "items": {
+                          "type": "array",
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "items": { "type": "number", "minimum": 0 }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

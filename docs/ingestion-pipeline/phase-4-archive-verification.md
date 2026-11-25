@@ -8,14 +8,14 @@
 
 ## Changements
 
-- Créer `src/ingestion/archive.ts` : lit le ZIP64 depuis un fichier local, avec yauzl (accès direct à chaque fichier, ZIP64 et CRC32 pris en charge). Refuse tout ce qui sort de `notebooks/<id>/`, les sous-dossiers, les liens symboliques et les noms interdits.
-- Créer `src/ingestion/verify.ts`, qui contrôle chaque dossier de cahier. Il lit `notebook.json` (phase 2), vérifie que chaque image annoncée existe, qu'aucun fichier n'est en trop et que chaque PNG est lisible (signature et en-tête : largeur et hauteur). Il calcule aussi l'empreinte de chaque image pendant l'extraction.
+- Créer `src/ingestion/archive.ts` : lit le ZIP64 depuis un fichier local, avec yauzl (accès direct à chaque fichier, ZIP64 et CRC32 pris en charge). Refuse tout ce qui n'est pas à la racine (sous-dossiers, chemins en `..`), les liens symboliques et les noms interdits.
+- Créer `src/ingestion/verify.ts`, qui regroupe les fichiers par cahier d'après leur nom (`X.json`, `X_<numero_page>.<ext>`) et contrôle chaque cahier. Il parse le JSON (phase 2), vérifie que chaque page a son image (`.png`, `.jpg` ou `.jpeg`), une seule, qu'aucun fichier n'est en trop et que chaque image est un JPEG ou un PNG lisible. Le type se lit dans les premiers octets, jamais dans l'extension : l'échantillon reçu contient des JPEG nommés `.png`. Il lit la largeur et la hauteur dans l'en-tête et calcule l'empreinte de chaque image pendant l'extraction.
 - Tout ou rien : on collecte toutes les erreurs, et une seule suffit à refuser le dépôt.
 
 ## Données
 
 - `VerifiedDelivery { name; notebooks: VerifiedNotebook[] }`.
-- `VerifiedNotebook { id; manifest; fingerprint; images: { page; sha256; bytes; width; height }[] }`.
+- `VerifiedNotebook { notebook; fingerprint; images: { page; type: "jpeg" | "png"; sha256; bytes; width; height }[] }`.
 - `VerificationResult = { ok: true; delivery } | { ok: false; errors: IngestError[] }`.
 
 ## Vérification
