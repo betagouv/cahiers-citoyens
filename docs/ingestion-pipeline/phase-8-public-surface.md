@@ -13,11 +13,12 @@ Le site affiche chaque page en image, à côté de sa transcription. Un cahier r
 - `src/proxy.ts`, la liste et la recherche ne voient que les cahiers `published`. Un cahier retiré répond 404.
 - Les images d'une version sont immuables, puisque leur clé contient la version : `Cache-Control` long, avec l'URL versionnée. Un retrait les rend introuvables, car la route vérifie le statut à chaque requête.
 - Les citations de la recherche renvoient à la page (`/notebooks/<id>#page-3`).
+- Supprimer `scan_key`, `transcription_key` et `transcription` de `notebooks`, gardées par la phase 5 tant que le site les lisait, avec la route `/notebooks/[id]/scan`.
 - Mettre à jour les fiches `verify-notebooks` concernées (`notebooks.md`, `search.md`).
 
 ## Données
 
-Aucune nouvelle donnée : on lit `notebooks.status` et `pages`.
+On lit `notebooks.status` et `pages`. Migration qui retire les trois colonnes de l'ancien chargement.
 
 ## Vérification
 
