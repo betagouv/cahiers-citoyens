@@ -100,6 +100,16 @@ aws --region <region> --endpoint-url <endpoint> \
   s3 sync data/fake-data s3://<bucket>/fake-data/
 ```
 
+### Référentiel géographique
+
+`departments`, `municipalities` et `municipality_code_history` décrivent toutes les communes de France et rattachent un code INSEE de 2019 (celui des cahiers) à la commune actuelle. Sources : geo.api.gouv.fr et le Code officiel géographique de l'Insee (détail dans [la phase 5](docs/ingestion-pipeline/phase-5-database-schema.md)). Le chargement remplace les trois tables dans une transaction ; le relancer donne le même état.
+
+```bash
+DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/load-geography.ts [--movements-url <csv du COG>]
+```
+
+Sur Scalingo, après le build : `npm run geo:load` (lance `dist/jobs/load-geography.mjs`).
+
 ## Consulter les cahiers
 
 L'accueil (`/`) présente le projet, propose la barre de recherche et affiche les chiffres du corpus lus en base à chaque requête : nombre de cahiers et de contributions (chunks), période d'ouverture des cahiers, part des contributions vectorisées pour la recherche.
@@ -153,7 +163,7 @@ Déploiement : `git push scalingo main`, avec le remote `scalingo` ajouté depui
 
 ### Tâches planifiées
 
-Il n'y a pas de Bun sur Scalingo. Les jobs sont donc écrits en TypeScript sous `src/`, puis compilés au build en un seul fichier JavaScript lancé par Node. La fin du script `build` lance `scripts/build-jobs.mjs`, qui appelle esbuild : `src/ingestion/job.ts` et toutes ses dépendances (`src/db`, `drizzle-orm`, `postgres`) sont regroupés dans `dist/jobs/ingest.mjs`. Le fichier se suffit à lui-même : il tourne sans `node_modules`, donc après le retrait des `devDependencies`. `scripts/build-jobs.test.ts` le vérifie en lançant le job compilé depuis un dossier temporaire. `dist/` est ignoré par git.
+Il n'y a pas de Bun sur Scalingo. Les jobs sont donc écrits en TypeScript sous `src/`, puis compilés au build en un seul fichier JavaScript lancé par Node. La fin du script `build` lance `scripts/build-jobs.mjs`, qui appelle esbuild : `src/ingestion/job.ts` et toutes ses dépendances (`src/db`, `drizzle-orm`, `postgres`) sont regroupés dans `dist/jobs/ingest.mjs`. De même, `scripts/load-geography.ts` devient `dist/jobs/load-geography.mjs`. Le fichier se suffit à lui-même : il tourne sans `node_modules`, donc après le retrait des `devDependencies`. `scripts/build-jobs.test.ts` le vérifie en lançant le job compilé depuis un dossier temporaire. `dist/` est ignoré par git.
 
 `cron.json` déclare les tâches au planificateur de Scalingo, qui les lance chacune dans un conteneur à part, avec la même image que l'app. Les heures sont en UTC et l'intervalle minimal est de 10 minutes. Le job `ingest` tourne toutes les 10 minutes. Pour l'instant, il ouvre la base désignée par `DATABASE_URL`, lance `select 1` et écrit une ligne JSON dans les logs : `{"event":"ingest.run","ok":true,"durationMs":…}`. En cas d'erreur, la ligne porte `"ok":false` et le message, et le code de sortie vaut 1.
 
