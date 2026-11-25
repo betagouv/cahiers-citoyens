@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  AlbertError,
   EMBEDDING_DIMENSIONS,
   createAlbertClient,
   parseChatResponse,
   parseRerankResponse,
 } from "./albert";
+import { AlbertError } from "./albert-http";
 
 function vector(fill: number, dimensions = EMBEDDING_DIMENSIONS): number[] {
   return Array.from({ length: dimensions }, () => fill);
@@ -117,38 +117,24 @@ describe("createAlbertClient().embed", () => {
     );
   });
 
-  it("explique un refus de clé (401) sans retenter", async () => {
-    const { client, requests } = clientReplying(
-      jsonResponse({ detail: "Invalid API key" }, 401),
-    );
+  it.each([
+    [null, "champ data absent"],
+    [{ data: "x" }, "champ data absent"],
+    [{ data: [3] }, "élément de data non objet"],
+    [{ data: [{ index: "0", embedding: [] }] }, "index invalide (0)"],
+    [{ data: [{ index: 0.5, embedding: [] }] }, "index invalide (0.5)"],
+    [{ data: [{ index: -1, embedding: [] }] }, "index invalide (-1)"],
+    [{ data: [{ index: 1, embedding: [] }] }, "index invalide (1)"],
+    [
+      { data: [{ index: 0, embedding: ["0.1"] }] },
+      "embedding 0 n'est pas un tableau de nombres",
+    ],
+  ])("refuse la réponse d'embeddings %j", async (body, reason) => {
+    const { client } = clientReplying(jsonResponse(body));
 
     await expect(client.embed(["a"])).rejects.toThrow(
-      "Albert a refusé la clé d'API (401) : vérifier ALBERT_API_KEY",
+      new AlbertError(`Réponse d'embeddings Albert invalide : ${reason}`),
     );
-    expect(requests).toHaveLength(1);
-  });
-
-  it("retente après un 503 puis renvoie le vecteur", async () => {
-    const { client, requests } = clientReplying(
-      jsonResponse({ detail: "indisponible" }, 503),
-      jsonResponse({ data: [{ index: 0, embedding: vector(0.5) }] }),
-    );
-
-    await expect(client.embed(["a"])).resolves.toEqual([vector(0.5)]);
-    expect(requests).toHaveLength(2);
-  });
-
-  it("abandonne après trois 429", async () => {
-    const { client, requests } = clientReplying(
-      jsonResponse({}, 429),
-      jsonResponse({}, 429),
-      jsonResponse({}, 429),
-    );
-
-    await expect(client.embed(["a"])).rejects.toThrow(
-      "Albert /embeddings a répondu 429 après 3 essai(s)",
-    );
-    expect(requests).toHaveLength(3);
   });
 
   it("découpe en requêtes de 64 textes au plus", async () => {
@@ -225,6 +211,24 @@ describe("parseRerankResponse", () => {
     expect(() => parseRerankResponse({ results: [{ index: 0 }] }, 1)).toThrow(
       "score de l'index 0 invalide",
     );
+    expect(() =>
+      parseRerankResponse({ results: [{ index: 0, relevance_score: NaN }] }, 1),
+    ).toThrow("score de l'index 0 invalide");
+  });
+
+  it("refuse un élément qui n'est pas un objet ou un index non entier", () => {
+    expect(() => parseRerankResponse({ results: ["0"] }, 1)).toThrow(
+      "élément de results non objet",
+    );
+    expect(() =>
+      parseRerankResponse({ results: [{ index: "0", relevance_score: 1 }] }, 1),
+    ).toThrow("index invalide (0)");
+    expect(() =>
+      parseRerankResponse({ results: [{ index: 0.5, relevance_score: 1 }] }, 1),
+    ).toThrow("index invalide (0.5)");
+    expect(() =>
+      parseRerankResponse({ results: [{ index: -1, relevance_score: 1 }] }, 1),
+    ).toThrow("index invalide (-1)");
   });
 });
 
@@ -306,23 +310,5 @@ describe("createAlbertClient().rerank et .chat", () => {
         },
       },
     ]);
-  });
-
-  it("transforme une panne réseau persistante en AlbertError", async () => {
-    let calls = 0;
-    const client = createAlbertClient({
-      apiKey: "test-key",
-      async fetch() {
-        calls++;
-        throw new TypeError("fetch failed");
-      },
-    });
-
-    await expect(client.chat([{ role: "user", content: "x" }])).rejects.toThrow(
-      new AlbertError(
-        "Albert /chat/completions injoignable après 3 essai(s) : fetch failed",
-      ),
-    );
-    expect(calls).toBe(3);
   });
 });
