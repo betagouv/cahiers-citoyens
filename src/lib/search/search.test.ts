@@ -24,7 +24,12 @@ const QUESTION = "plus de médecin";
 const VECTOR = [0.1, 0.2];
 
 function passage(id: number) {
-  return { id, notebookId: `notebook-${id}`, content: `Passage ${id}` };
+  return {
+    id,
+    notebookId: `notebook-${id}`,
+    page: id,
+    content: `Passage ${id}`,
+  };
 }
 
 function fakeAlbert() {

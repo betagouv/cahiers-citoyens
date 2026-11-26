@@ -26,17 +26,3 @@ export function splitContribution(contribution: string): string[] {
   pieces.push(current.join(" "));
   return pieces;
 }
-
-// Transcription d'un bloc des cahiers de `scripts/load.ts`, supprimée avec lui
-// en phase 7. Un chunk par contribution, soit un paragraphe séparé par une ligne vide,
-// en-tête exclu (voir fake-data/transcription.ts). Une contribution ne mêle
-// qu'un thème : la recherche renvoie ainsi des passages qui répondent à la
-// question, sans contributions voisines hors sujet.
-export function chunkTranscription(transcription: string): string[] {
-  return transcription
-    .split(/\n\s*\n/)
-    .slice(1)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-    .flatMap(splitContribution);
-}

@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   NOTEBOOKS_PAGE_SIZE,
-  getCorpusStats,
   getNotebook,
-  getScanKey,
   listNotebooks,
   notebookExists,
   notebookIdFromPath,
@@ -59,12 +57,18 @@ describe("notebookIdFromPath", () => {
 });
 
 describe("listNotebooks", () => {
-  it("renvoie la page demandée, avec son nombre de passages par cahier", async () => {
-    fake.reply([["45"]], [["notebook-0021", "2019-01-10", "3"]]);
+  it("renvoie la page demandée, avec le lieu et le nombre de pages de chaque cahier", async () => {
+    fake.reply([["45"]], [["CC_21", "Exempleville", "Ain", "01", "3"]]);
 
     await expect(listNotebooks(2)).resolves.toEqual({
       notebooks: [
-        { id: "notebook-0021", openedOn: "2019-01-10", chunkCount: 3 },
+        {
+          id: "CC_21",
+          municipalityName: "Exempleville",
+          departmentName: "Ain",
+          departmentCode: "01",
+          pageCount: 3,
+        },
       ],
       page: 2,
       pageCount: 3,
@@ -102,34 +106,38 @@ describe("listNotebooks", () => {
 });
 
 describe("getNotebook", () => {
-  it("renvoie le cahier, sa transcription et son nombre de passages", async () => {
-    fake.reply([
-      ["notebook-0001", "2019-01-10", "Texte", "notebooks/x/scan.pdf", "13"],
-    ]);
-
-    await expect(getNotebook("notebook-0001")).resolves.toEqual({
-      id: "notebook-0001",
-      openedOn: "2019-01-10",
-      transcription: "Texte",
-      hasScan: true,
-      chunkCount: 13,
-    });
-    expect(fake.queries[0].params).toEqual(["notebook-0001", "published"]);
-  });
-
-  it("signale l'absence de scan d'un cahier venu d'un dépôt", async () => {
-    fake.reply([["CC_1", null, null, null, "2"]]);
+  it("renvoie le cahier publié et ses pages dans l'ordre", async () => {
+    fake.reply(
+      [["CC_1", "2", "Exempleville", "Ain", "01"]],
+      [
+        ["1", "1200", "1700", "Première ligne\nSeconde ligne"],
+        ["3", "1200", "1700", ""],
+      ],
+    );
 
     await expect(getNotebook("CC_1")).resolves.toEqual({
       id: "CC_1",
-      openedOn: null,
-      transcription: null,
-      hasScan: false,
-      chunkCount: 2,
+      onlineVersion: 2,
+      municipalityName: "Exempleville",
+      departmentName: "Ain",
+      departmentCode: "01",
+      pages: [
+        {
+          number: 1,
+          width: 1200,
+          height: 1700,
+          text: "Première ligne\nSeconde ligne",
+        },
+        { number: 3, width: 1200, height: 1700, text: "" },
+      ],
     });
+    const [notebookQuery, pagesQuery] = fake.queries;
+    expect(notebookQuery.params).toEqual(["CC_1", "published"]);
+    expect(pagesQuery.sql).toContain('order by "pages"."number" asc');
+    expect(pagesQuery.params).toEqual(["CC_1", "published"]);
   });
 
-  it("renvoie undefined pour un cahier inconnu", async () => {
+  it("renvoie undefined pour un cahier inconnu ou retiré", async () => {
     await expect(getNotebook("inconnu")).resolves.toBeUndefined();
   });
 });
@@ -147,40 +155,5 @@ describe("notebookExists", () => {
 
   it("faux sinon", async () => {
     await expect(notebookExists("inconnu")).resolves.toBe(false);
-  });
-});
-
-describe("getScanKey", () => {
-  it("renvoie la clé du scan du cahier", async () => {
-    fake.reply([["notebooks/notebook-0001/scan.pdf"]]);
-
-    await expect(getScanKey("notebook-0001")).resolves.toBe(
-      "notebooks/notebook-0001/scan.pdf",
-    );
-    expect(fake.queries[0].params).toEqual(["notebook-0001", "published"]);
-  });
-
-  it("renvoie undefined pour un cahier sans scan", async () => {
-    fake.reply([[null]]);
-
-    await expect(getScanKey("CC_1")).resolves.toBeUndefined();
-  });
-
-  it("renvoie undefined pour un cahier inconnu", async () => {
-    await expect(getScanKey("inconnu")).resolves.toBeUndefined();
-  });
-});
-
-describe("getCorpusStats", () => {
-  it("réunit les chiffres des cahiers et des passages", async () => {
-    fake.reply([["2", "2018-12-10", "2019-02-20"]], [["30", "29"]]);
-
-    await expect(getCorpusStats()).resolves.toEqual({
-      notebookCount: 2,
-      firstOpenedOn: "2018-12-10",
-      lastOpenedOn: "2019-02-20",
-      chunkCount: 30,
-      embeddedChunkCount: 29,
-    });
   });
 });

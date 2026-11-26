@@ -4,7 +4,7 @@ import {
   type S3Settings,
   createS3Client,
   prefixedKey,
-} from "../lib/scan-storage";
+} from "../lib/s3-storage";
 import type { ImageContentType } from "./notebook";
 
 export interface StoredImage {

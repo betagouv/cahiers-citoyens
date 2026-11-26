@@ -17,9 +17,8 @@ export default function NotebooksPage({
       />
       <h1>Les cahiers</h1>
       <p className="fr-text--lead">
-        Chaque cahier rassemble les contributions déposées dans une mairie. La
-        recherche les découpe en passages. Ouvrez-en un pour lire son scan et sa
-        transcription côte à côte.
+        Chaque cahier rassemble les contributions déposées dans une mairie.
+        Ouvrez-en un pour lire chaque page en image, à côté de sa transcription.
       </p>
       <Suspense fallback={<p role="status">Chargement des cahiers…</p>}>
         <NotebookTable searchParams={searchParams} />

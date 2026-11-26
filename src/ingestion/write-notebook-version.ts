@@ -15,7 +15,7 @@ import type { WriteChange } from "./plan";
 // version doit exister avant que `notebooks.online_version` la désigne (clé
 // étrangère) : la ligne du cahier est créée d'abord si besoin, puis mise à
 // jour. Supprimer les pages supprime leurs lignes et leurs chunks ; les
-// chunks sans page viennent de `scripts/load.ts`.
+// chunks sans page viennent de l’ancien `scripts/load.ts`.
 export async function writeNotebookVersion(
   tx: Transaction,
   change: WriteChange,

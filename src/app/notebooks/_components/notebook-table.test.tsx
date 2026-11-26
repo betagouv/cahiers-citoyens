@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { NotebookPage } from "@/lib/notebooks";
+import type { NotebookList } from "@/lib/notebooks";
 import { renderToHtml } from "@/test/render";
 import { NotebookTable } from "./notebook-table";
 
 const listNotebooks = vi.hoisted(() =>
-  vi.fn<(page: number) => Promise<NotebookPage>>(),
+  vi.fn<(page: number) => Promise<NotebookList>>(),
 );
 
 vi.mock("@/lib/notebooks", async (importOriginal) => ({
@@ -12,7 +12,13 @@ vi.mock("@/lib/notebooks", async (importOriginal) => ({
   listNotebooks,
 }));
 
-const NOTEBOOK = { id: "notebook-0001", openedOn: "2019-01-15", chunkCount: 7 };
+const NOTEBOOK = {
+  id: "CC_1",
+  municipalityName: "Exempleville",
+  departmentName: "Ain",
+  departmentCode: "01",
+  pageCount: 7,
+};
 
 function render(page?: string): Promise<string> {
   return renderToHtml(
@@ -37,16 +43,14 @@ describe("NotebookTable", () => {
 
     expect(listNotebooks).toHaveBeenCalledWith(1);
     expect(html).toContain("<p>1 cahiers, page 1 sur 1.</p>");
-    expect(html).toContain(
-      '<a href="/notebooks/notebook-0001">notebook-0001</a>',
-    );
-    expect(html).toContain("15 janvier 2019");
+    expect(html).toContain('<a href="/notebooks/CC_1">CC_1</a>');
+    expect(html).toContain("Exempleville (01)");
     expect(html).not.toContain("fr-pagination");
   });
 
-  it("signale la date d'ouverture d'un cahier venu d'un dépôt", async () => {
+  it("signale un cahier sans commune renseignée", async () => {
     listNotebooks.mockResolvedValue({
-      notebooks: [{ ...NOTEBOOK, openedOn: null }],
+      notebooks: [{ ...NOTEBOOK, municipalityName: null }],
       page: 1,
       pageCount: 1,
       total: 1,

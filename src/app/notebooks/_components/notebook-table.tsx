@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Pagination } from "@codegouvfr/react-dsfr/Pagination";
 import { Table } from "@codegouvfr/react-dsfr/Table";
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
+import { notebookHref } from "@/lib/notebook-links";
+import { notebookPlaceLabel } from "@/lib/notebook-place";
 import { listNotebooks, parsePageNumber } from "@/lib/notebooks";
 
 export async function NotebookTable({
@@ -22,15 +24,13 @@ export async function NotebookTable({
       <Table
         caption="Cahiers numérisés"
         noCaption
-        headers={["Cahier", "Ouvert le", "Passages indexés"]}
+        headers={["Cahier", "Commune", "Pages"]}
         data={notebooks.map((notebook) => [
-          <Link key="id" href={`/notebooks/${notebook.id}`}>
+          <Link key="id" href={notebookHref(notebook.id)}>
             {notebook.id}
           </Link>,
-          notebook.openedOn === null
-            ? "Non renseignée"
-            : formatDate(notebook.openedOn),
-          formatNumber(notebook.chunkCount),
+          notebookPlaceLabel(notebook) ?? "Non renseignée",
+          formatNumber(notebook.pageCount),
         ])}
         bordered
         fixed

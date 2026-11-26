@@ -5,7 +5,7 @@ description: Piloter l'application web Cahiers citoyens (Next.js 16 standalone, 
 
 # Vérifier Cahiers citoyens
 
-Cahiers citoyens rend consultables les cahiers de doléances ouverts dans les mairies pendant l'hiver 2018-2019 : un accueil avec les chiffres du corpus, la liste des cahiers, une visionneuse scan + transcription et une recherche en langage courant qui rédige une réponse sourcée. Pas d'authentification. Les pages lisent une base Postgres (`DATABASE_URL`), les scans un bucket S3 privé, la recherche l'API Albert. Les cahiers chargés aujourd'hui sont fictifs (`scripts/fake-data/generate.ts`).
+Cahiers citoyens rend consultables les cahiers de doléances ouverts dans les mairies pendant l'hiver 2018-2019 : un accueil avec une recherche par lieu et mot-clé, la liste des cahiers, la page d'un cahier (chaque page en image à côté de sa transcription) et une recherche en langage courant qui rédige une réponse sourcée. Pas d'authentification. Les pages lisent une base Postgres (`DATABASE_URL`), les images un bucket S3 privé (ou `LOCAL_BUCKET_DIR` en local), la recherche l'API Albert. Les cahiers chargés aujourd'hui sont fictifs : des faux dépôts (`scripts/fake-data/deliver.ts`) publiés par `scripts/ingest-local.ts`.
 
 La surface est une **application web** servie par Next.js sur `http://localhost:<port>`. **Lis d'abord [`features/README.md`](./features/README.md)**, puis la fiche de la feature concernée.
 

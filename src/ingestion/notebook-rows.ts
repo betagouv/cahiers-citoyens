@@ -45,8 +45,7 @@ function lineRows({ verified }: WriteChange): NotebookRows["lines"] {
 }
 
 // Lignes à écrire pour la nouvelle version d'un cahier. Le cahier repasse
-// `published`, sans trace de retrait, et perd les colonnes de `scripts/load.ts` :
-// ses pages les remplacent. Les chunks partent sans embedding : la
+// `published`, sans trace de retrait. Les chunks partent sans embedding : la
 // vectorisation les reprend ensuite (`embedPendingChunks`).
 export function notebookRows(
   change: WriteChange,
@@ -68,10 +67,6 @@ export function notebookRows(
       onlineVersion: change.version,
       withdrawalReason: null,
       withdrawnAt: null,
-      openedOn: null,
-      scanKey: null,
-      transcriptionKey: null,
-      transcription: null,
       departmentName: metadata.department,
       departmentCode: metadata.departmentCode,
       municipalityName: metadata.municipality,

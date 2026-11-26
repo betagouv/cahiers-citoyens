@@ -1,23 +1,9 @@
 import { describe, expect, it } from "vitest";
-import {
-  excerpt,
-  formatDate,
-  formatMonth,
-  formatMonthRange,
-  formatNumber,
-  formatShare,
-} from "./format";
+import { excerpt, formatNumber } from "./format";
 
 describe("formatNumber", () => {
   it("sépare les milliers à la française", () => {
     expect(formatNumber(12345)).toBe("12 345");
-  });
-});
-
-describe("formatDate et formatMonth", () => {
-  it("écrivent une date AAAA-MM-JJ en français, sans décalage de fuseau", () => {
-    expect(formatDate("2019-02-08")).toBe("8 février 2019");
-    expect(formatMonth("2019-01-01")).toBe("janvier 2019");
   });
 });
 
@@ -34,29 +20,5 @@ describe("excerpt", () => {
 
   it("coupe au milieu d'un mot unique trop long", () => {
     expect(excerpt("Anticonstitutionnellement", 6)).toBe("Antico…");
-  });
-});
-
-describe("formatMonthRange", () => {
-  it("écrit la période du premier au dernier mois", () => {
-    expect(formatMonthRange("2018-12-06", "2019-02-24")).toBe(
-      "décembre 2018 – février 2019",
-    );
-  });
-
-  it("n'écrit qu'un mois quand les deux dates y tombent", () => {
-    expect(formatMonthRange("2019-01-03", "2019-01-28")).toBe("janvier 2019");
-  });
-});
-
-describe("formatShare", () => {
-  it("écrit une part en pourcentage, arrondie à l'inférieur", () => {
-    expect(formatShare(258, 258)).toBe("100\u00a0%");
-    expect(formatShare(257, 258)).toBe("99\u00a0%");
-    expect(formatShare(1, 3)).toBe("33\u00a0%");
-  });
-
-  it("vaut 0 % sans rien à compter", () => {
-    expect(formatShare(0, 0)).toBe("0\u00a0%");
   });
 });

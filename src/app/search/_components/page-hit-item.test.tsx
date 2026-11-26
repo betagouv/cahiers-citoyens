@@ -17,7 +17,7 @@ describe("PageHitItem", () => {
     );
 
     expect(html).toContain(
-      '<a href="/notebooks/nb%201">Charolles (71), page 12</a>',
+      '<a href="/notebooks/nb%201#page-12">Charolles (71), page 12</a>',
     );
     expect(html).toContain("Cahier nb 1");
     expect(html).toMatch(/La <mark[^>]*>retraite<\/mark> à &lt;60&gt; ans/);

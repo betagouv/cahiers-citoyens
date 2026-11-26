@@ -7,6 +7,7 @@ const SOURCE: Source = {
   id: 10,
   number: 1,
   notebookId: "notebook-0001",
+  page: 2,
   content: "Plus de médecin au village.",
 };
 

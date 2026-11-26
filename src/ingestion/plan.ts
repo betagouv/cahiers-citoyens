@@ -10,7 +10,7 @@ import type { VerifiedNotebook } from "./verify-notebook";
 // entre-temps, et le plan n'est plus valable.
 export interface NotebookState {
   status: NotebookStatus;
-  // Vide pour un cahier chargé par `scripts/load.ts`.
+  // Vide pour un cahier chargé avant les dépôts (ancien `scripts/load.ts`).
   onlineVersion: number | null;
   // Empreinte de la version en ligne, vide sans version.
   fingerprint: string | null;

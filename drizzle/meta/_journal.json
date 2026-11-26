@@ -50,6 +50,13 @@
       "when": 1795681374787,
       "tag": "0006_delivery-attempts",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795689021994,
+      "tag": "0007_drop-legacy-columns",
+      "breakpoints": true
     }
   ]
 }

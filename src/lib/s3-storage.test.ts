@@ -3,10 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   StorageNotConfiguredError,
   createS3Client,
-  parseByteRange,
   parseS3Settings,
   prefixedKey,
-} from "./scan-storage";
+} from "./s3-storage";
 
 const completeEnv = {
   S3_ENDPOINT: "https://s3.example",
@@ -53,33 +52,18 @@ describe("parseS3Settings", () => {
 
 describe("prefixedKey", () => {
   it("place la clé sous le préfixe, avec un seul séparateur", () => {
-    expect(prefixedKey("fake-data/", "notebooks/n-1/scan.pdf")).toBe(
-      "fake-data/notebooks/n-1/scan.pdf",
+    expect(prefixedKey("fake-data/", "notebooks/n-1/v1/1.jpg")).toBe(
+      "fake-data/notebooks/n-1/v1/1.jpg",
     );
-    expect(prefixedKey("/fake-data", "/notebooks/n-1/scan.pdf")).toBe(
-      "fake-data/notebooks/n-1/scan.pdf",
+    expect(prefixedKey("/fake-data", "/notebooks/n-1/v1/1.jpg")).toBe(
+      "fake-data/notebooks/n-1/v1/1.jpg",
     );
   });
 
   it("laisse la clé telle quelle sans préfixe", () => {
-    expect(prefixedKey("", "notebooks/n-1/scan.pdf")).toBe(
-      "notebooks/n-1/scan.pdf",
+    expect(prefixedKey("", "notebooks/n-1/v1/1.jpg")).toBe(
+      "notebooks/n-1/v1/1.jpg",
     );
-  });
-});
-
-describe("parseByteRange", () => {
-  it("relaie une plage simple", () => {
-    expect(parseByteRange("bytes=0-1023")).toBe("bytes=0-1023");
-    expect(parseByteRange("bytes=1024-")).toBe("bytes=1024-");
-    expect(parseByteRange("bytes=-500")).toBe("bytes=-500");
-  });
-
-  it("ignore l'absence d'en-tête, les plages multiples et le reste", () => {
-    expect(parseByteRange(null)).toBeUndefined();
-    expect(parseByteRange("bytes=0-1,5-9")).toBeUndefined();
-    expect(parseByteRange("items=0-1")).toBeUndefined();
-    expect(parseByteRange("bytes=-")).toBeUndefined();
   });
 });
 
@@ -104,7 +88,7 @@ describe("createS3Client", () => {
 
 async function loadStorage() {
   vi.resetModules();
-  return import("./scan-storage");
+  return import("./s3-storage");
 }
 
 function sendResolving(output: unknown) {
@@ -119,21 +103,28 @@ function sendRejecting(error: Error) {
     .mockImplementation(vi.fn().mockRejectedValue(error));
 }
 
-describe("openScan", () => {
+describe("openObject", () => {
+  it("lit le dossier local quand LOCAL_BUCKET_DIR est défini", async () => {
+    vi.stubEnv("LOCAL_BUCKET_DIR", "/dossier/absent");
+    const send = sendResolving({});
+    const { openObject } = await loadStorage();
+
+    await expect(
+      openObject("notebooks/n-1/v1/1.jpg", AbortSignal.abort()),
+    ).resolves.toBeUndefined();
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it("échoue sans configuration du stockage", async () => {
     vi.stubEnv("S3_BUCKET", "");
     const storage = await loadStorage();
 
     await expect(
-      storage.openScan(
-        "notebooks/n-1/scan.pdf",
-        undefined,
-        AbortSignal.abort(),
-      ),
+      storage.openObject("notebooks/n-1/v1/1.jpg", AbortSignal.abort()),
     ).rejects.toThrow(storage.StorageNotConfiguredError);
   });
 
-  it("lit l'objet sous le préfixe, avec la plage demandée", async () => {
+  it("lit l'objet sous le préfixe", async () => {
     for (const [name, value] of Object.entries(completeEnv)) {
       vi.stubEnv(name, value);
     }
@@ -141,30 +132,27 @@ describe("openScan", () => {
     const send = sendResolving({
       Body: { transformToWebStream: () => body },
       ContentLength: 10,
-      ContentRange: "bytes 0-9/100",
       ETag: '"etag"',
     });
     const signal = new AbortController().signal;
-    const { openScan } = await loadStorage();
+    const { openObject } = await loadStorage();
 
-    await expect(
-      openScan("notebooks/n-1/scan.pdf", "bytes=0-9", signal),
-    ).resolves.toEqual({
-      body,
-      contentLength: 10,
-      contentRange: "bytes 0-9/100",
-      etag: '"etag"',
-    });
+    await expect(openObject("notebooks/n-1/v1/1.jpg", signal)).resolves.toEqual(
+      {
+        body,
+        contentLength: 10,
+        etag: '"etag"',
+      },
+    );
     const [command, options] = send.mock.calls[0];
     expect(command).toBeInstanceOf(GetObjectCommand);
     expect(command.input).toEqual({
       Bucket: "bucket",
-      Key: "fake-data/notebooks/n-1/scan.pdf",
-      Range: "bytes=0-9",
+      Key: "fake-data/notebooks/n-1/v1/1.jpg",
     });
     expect(options).toEqual({ abortSignal: signal });
 
-    await openScan("notebooks/n-2/scan.pdf", undefined, signal);
+    await openObject("notebooks/n-2/v1/1.jpg", signal);
     expect(send).toHaveBeenCalledTimes(2);
   });
 
@@ -172,16 +160,16 @@ describe("openScan", () => {
     for (const [name, value] of Object.entries(completeEnv)) {
       vi.stubEnv(name, value);
     }
-    const { openScan } = await loadStorage();
+    const { openObject } = await loadStorage();
 
     sendRejecting(new NoSuchKey({ message: "absent", $metadata: {} }));
     await expect(
-      openScan("notebooks/n-1/scan.pdf", undefined, AbortSignal.abort()),
+      openObject("notebooks/n-1/v1/1.jpg", AbortSignal.abort()),
     ).resolves.toBeUndefined();
 
     sendResolving({ Body: undefined });
     await expect(
-      openScan("notebooks/n-1/scan.pdf", undefined, AbortSignal.abort()),
+      openObject("notebooks/n-1/v1/1.jpg", AbortSignal.abort()),
     ).resolves.toBeUndefined();
   });
 
@@ -189,11 +177,11 @@ describe("openScan", () => {
     for (const [name, value] of Object.entries(completeEnv)) {
       vi.stubEnv(name, value);
     }
-    const { openScan } = await loadStorage();
+    const { openObject } = await loadStorage();
     sendRejecting(new Error("réseau"));
 
     await expect(
-      openScan("notebooks/n-1/scan.pdf", undefined, AbortSignal.abort()),
+      openObject("notebooks/n-1/v1/1.jpg", AbortSignal.abort()),
     ).rejects.toThrow("réseau");
   });
 });

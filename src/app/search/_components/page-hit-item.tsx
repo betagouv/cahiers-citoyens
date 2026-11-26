@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { fr } from "@codegouvfr/react-dsfr";
 import { excerpt } from "@/lib/format";
+import { notebookHref } from "@/lib/notebook-links";
+import { notebookPlaceLabel } from "@/lib/notebook-place";
 import { splitHighlights } from "@/lib/page-search/highlight";
 import type { PageHit } from "@/lib/page-search/list-pages";
 
@@ -38,14 +40,11 @@ export function PageHitItem({
   hit: PageHit;
   keyword: string;
 }) {
-  const place =
-    hit.municipalityName === null
-      ? "Commune non renseignée"
-      : `${hit.municipalityName}${hit.departmentCode === null ? "" : ` (${hit.departmentCode})`}`;
+  const place = notebookPlaceLabel(hit) ?? "Commune non renseignée";
   return (
     <li className="fr-py-3w border-b border-[var(--border-default-grey)]">
       <h3 className={fr.cx("fr-h6", "fr-mb-1v")}>
-        <Link href={`/notebooks/${encodeURIComponent(hit.notebookId)}`}>
+        <Link href={notebookHref(hit.notebookId, hit.number)}>
           {place}, page {hit.number}
         </Link>
       </h3>

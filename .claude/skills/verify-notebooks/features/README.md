@@ -4,9 +4,9 @@ Ce dossier est la source maintenue pour vérifier le comportement visible de Cah
 
 ## Le domaine en quelques phrases
 
-Pendant l'hiver 2018-2019, en réponse au mouvement des Gilets jaunes, des mairies ont ouvert des **cahiers de doléances** (ou cahiers citoyens) où les habitants ont écrit des **contributions**. Chaque cahier est numérisé (scan PDF) et transcrit ; chaque contribution devient un **passage** (chunk) indexé pour la recherche, en plein texte et par vecteur.
+Pendant l'hiver 2018-2019, en réponse au mouvement des Gilets jaunes, des mairies ont ouvert des **cahiers de doléances** (ou cahiers citoyens) où les habitants ont écrit des **contributions**. Chaque cahier est livré par Condorcet page par page : une image et sa transcription ligne à ligne ; chaque contribution devient un **passage** (chunk) indexé pour la recherche, en plein texte et par vecteur.
 
-Aujourd'hui : accueil (recherche par lieu et mot-clé, carte des départements publiés), liste des cahiers, visionneuse, recherche, et des pages provisoires au texte fictif (`/understanding`, `/publication`, `/faq`, `/accessibility`, `/legal-notice`, `/personal-data`) plus le plan du site (`/site-map`). Pas de compte. Les cahiers chargés sont fictifs.
+Aujourd'hui : accueil (recherche par lieu et mot-clé, carte des départements publiés), liste des cahiers, page d'un cahier (images et transcriptions), recherche, et des pages provisoires au texte fictif (`/understanding`, `/publication`, `/faq`, `/accessibility`, `/legal-notice`, `/personal-data`) plus le plan du site (`/site-map`). Pas de compte. Les cahiers chargés sont fictifs.
 
 ## Préconditions de base
 
@@ -34,7 +34,7 @@ Un titre H1, un paragraphe de comportement visible, puis exactement quatre H2 : 
 ## Features
 
 - [Gabarit DSFR](./dsfr-layout.md) — en-tête, navigation, paramètres d'affichage, pied de page, liens d'évitement, titre de page, communs à toutes les pages.
-- [Cahiers : liste et visionneuse](./notebooks.md) — tableau paginé, scan PDF et transcription côte à côte, 404.
+- [Cahiers : liste et page d'un cahier](./notebooks.md) — tableau paginé, pages en image à côté de leur transcription, route des images, retrait, 404.
 - [Recherche](./search.md) — pages d'un lieu et d'un mot-clé (liste paginée, extraits surlignés) ; question en langage courant, réponse sourcée, replis quand Albert est indisponible.
 - [Accueil](./home.md) — recherche par lieu et mot-clé avec suggestions et nombre de pages, carte MapLibre des départements publiés, étiquettes par zone, tuiles de lecture.
 
@@ -45,6 +45,8 @@ Un titre H1, un paragraphe de comportement visible, puis exactement quatre H2 : 
 **Vérifié le 2026-11-25, en dev et en `--prod`, sans base :** `home-hero`, `home-search`, `home-online-text`, `home-online-tags`, `home-map` (départements colorés, survol, clic vers `/search?place=25`, thème sombre en direct), `home-map-legend`, `home-tiles`, captures 1280 px et 375 px ; `layout-nav` (rubrique active sur `/`, `/understanding`, `/publication`, `/faq`, aucune sur `/search`, `/notebooks` et la 404), `layout-display`, menu mobile.
 
 **Vérifié en `--prod` le 2026-11-11, base de 30 faux cahiers vectorisés :** `notebooks-list`, `notebook-viewer`, `notebook-scan`, `notebook-not-found` (404 aussi en dev), `search-answer`, `search-sources`, `search-degraded` (standalone lancé avec `ALBERT_BASE_URL=http://127.0.0.1:9`). Preuves dans `../evidence/`.
+
+**Vérifié en `--prod` le 2026-11-26, Postgres 16 sans pgvector, 2 faux cahiers de `deliver.ts` publiés par `ingest-local.ts`, `LOCAL_BUCKET_DIR` absolu :** `notebooks-list`, `notebook-viewer` (1280 et 375 px), `notebook-anchors`, `notebook-lazy-images` (pages 1 et 2 seules chargées à l'ouverture), `notebook-page-image` (200, 404 sans `v` ou avec une autre version), `search-pages` (liens `#page-<n>`), puis après `withdraw` : page et images en 404, cahier absent de la liste et de la recherche par mot-clé. `search-sources` non exercé : pas de clé Albert.
 
 **Vérifié de bout en bout le 2026-11-06, en dev et en `--prod` :** `layout-header`, `layout-footer`.
 

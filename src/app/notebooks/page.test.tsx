@@ -7,7 +7,13 @@ vi.mock("@/lib/notebooks", async (importOriginal) => ({
   listNotebooks: () =>
     Promise.resolve({
       notebooks: [
-        { id: "notebook-0001", openedOn: "2019-01-15", chunkCount: 7 },
+        {
+          id: "CC_1",
+          municipalityName: null,
+          departmentName: null,
+          departmentCode: null,
+          pageCount: 7,
+        },
       ],
       page: 1,
       pageCount: 1,
@@ -27,7 +33,7 @@ describe("NotebooksPage", () => {
     expect(metadata).toEqual({ title: "Les cahiers" });
     expect(html).toContain("fr-breadcrumb");
     expect(html).toContain("<h1>Les cahiers</h1>");
-    expect(html).toContain('href="/notebooks/notebook-0001"');
+    expect(html).toContain('href="/notebooks/CC_1"');
     expect(html).not.toContain("Chargement des cahiers");
   });
 });
