@@ -43,6 +43,13 @@
       "when": 1795680121378,
       "tag": "0005_legacy-columns-optional",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795681374787,
+      "tag": "0006_delivery-attempts",
+      "breakpoints": true
     }
   ]
 }
