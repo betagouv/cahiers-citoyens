@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCodeHistory } from "./code-history";
+import { departmentOfCode, resolveCodeHistory } from "./code-history";
 import type { Movement } from "./movements";
 
 function movement(
@@ -13,6 +13,7 @@ function movement(
     effectiveOn,
     typeBefore: "COM",
     codeBefore,
+    nameBefore: `Commune ${codeBefore}`,
     typeAfter: "COM",
     codeAfter,
     ...overrides,
@@ -31,7 +32,15 @@ describe("resolveCodeHistory", () => {
     );
 
     expect(history).toEqual({
-      changes: [{ oldCode: "01002", currentCode: "01001" }],
+      changes: [
+        {
+          oldCode: "01002",
+          currentCode: "01001",
+          name: "Commune 01002",
+          departmentCode: "01",
+          searchName: "commune 01002",
+        },
+      ],
       unresolved: [],
     });
   });
@@ -45,9 +54,11 @@ describe("resolveCodeHistory", () => {
       new Set(["02100"]),
     );
 
-    expect(history.changes).toEqual([
-      { oldCode: "02200", currentCode: "02100" },
-      { oldCode: "02300", currentCode: "02100" },
+    expect(
+      history.changes.map(({ oldCode, currentCode }) => [oldCode, currentCode]),
+    ).toEqual([
+      ["02200", "02100"],
+      ["02300", "02100"],
     ]);
   });
 
@@ -62,6 +73,31 @@ describe("resolveCodeHistory", () => {
     );
 
     expect(history).toEqual({ changes: [], unresolved: [] });
+  });
+
+  it("garde le nom de 2019, même renommée avant sa fusion", () => {
+    const history = resolveCodeHistory(
+      [
+        movement("06002", "06001", "2024-01-01", {
+          nameBefore: "Nom Récent",
+        }),
+        movement("06002", "06002", "2021-01-01", {
+          kind: "10",
+          nameBefore: "L'Ancien Nom-Fictif",
+        }),
+      ],
+      new Set(["06001"]),
+    );
+
+    expect(history.changes).toEqual([
+      {
+        oldCode: "06002",
+        currentCode: "06001",
+        name: "L'Ancien Nom-Fictif",
+        departmentCode: "06",
+        searchName: "l ancien nom fictif",
+      },
+    ]);
   });
 
   it("ne reprend pas un code encore actuel", () => {
@@ -87,5 +123,14 @@ describe("resolveCodeHistory", () => {
       changes: [],
       unresolved: ["05002", "05003", "05004"],
     });
+  });
+});
+
+describe("departmentOfCode", () => {
+  it("lit deux caractères en métropole et en Corse, trois outre-mer", () => {
+    expect(departmentOfCode("01039")).toBe("01");
+    expect(departmentOfCode("2A004")).toBe("2A");
+    expect(departmentOfCode("97411")).toBe("974");
+    expect(departmentOfCode("98735")).toBe("987");
   });
 });

@@ -26,6 +26,12 @@ interface PlaceFieldProps {
   onSelect: (place: SelectedPlace) => void;
 }
 
+// Le nom accessible d'une option est la suite de ses textes : sans ces
+// virgules, un lecteur d'écran lirait « BéonAncienne commune ».
+const SPOKEN_SEPARATOR = <span className="fr-sr-only">, </span>;
+
+// « Béon, Ancienne commune · Ain (01) · aujourd’hui Culoz-Béon, 3 pages » au
+// lecteur d'écran.
 function PlaceOption({
   place,
   typed,
@@ -43,6 +49,7 @@ function PlaceOption({
             typed={typed}
             normalize={toSearchName}
           />
+          {SPOKEN_SEPARATOR}
         </span>
         <span
           className={`${fr.cx("fr-text--xs", "fr-mb-0")} text-[var(--text-mention-grey)]`}
@@ -50,6 +57,7 @@ function PlaceOption({
           {placeDescription(place)}
         </span>
       </span>
+      {SPOKEN_SEPARATOR}
       {place.pageCount > 0 ? (
         <span
           className={`${fr.cx("fr-text--xs", "fr-mb-0")} whitespace-nowrap font-bold`}

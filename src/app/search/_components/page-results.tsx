@@ -41,7 +41,7 @@ export async function PageResults({
   return (
     <section aria-labelledby="results-title" className="fr-mt-6w">
       <h2 id="results-title" className={fr.cx("fr-h4")}>
-        {resultsSummary(total, keyword, place?.label)}
+        {resultsSummary(total, keyword, place?.displayName)}
       </h2>
       {total === 0 ? (
         <NoPages />

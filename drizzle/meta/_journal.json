@@ -64,6 +64,13 @@
       "when": 1795690047530,
       "tag": "0008_drop-legacy-columns",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795694839038,
+      "tag": "0009_former-municipality-names",
+      "breakpoints": true
     }
   ]
 }

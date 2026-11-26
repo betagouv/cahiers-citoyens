@@ -7,7 +7,8 @@ Le formulaire de l'accueil (`src/app/_components/home-search-form.tsx`) a deux c
 Une page compte si son cahier est `published`. Le lieu filtre `notebooks` (`publishedIn`, `src/lib/page-search/published-in.ts`) :
 
 - département : `notebooks.department_code` ;
-- commune : `notebooks.insee_code` vaut le code actuel, ou un ancien code que `municipality_code_history` ramène à lui. Les cahiers portent le code INSEE de 2019.
+- commune actuelle : `notebooks.insee_code` vaut le code actuel, ou un ancien code que `municipality_code_history` ramène à lui. Les cahiers portent le code INSEE de 2019.
+- ancienne commune (code de 2019 disparu depuis) : `notebooks.insee_code` vaut ce seul code. « Culoz-Béon (01) » compte les pages de Culoz et de Béon, « Béon (ancienne commune) » celles de Béon seulement.
 
 Un mot-clé se cherche tel qu'il est écrit, sans racine : « retraite », « retraites » et « retraité » sont trois mots. `pages.words` (`to_tsvector('simple', text)`) garde chaque mot en minuscules avec ses accents, et une page correspond si elle contient chaque mot du mot-clé (`words @@ plainto_tsquery('simple', q)`). La suggestion « retraite — 7 pages », le bouton et la liste de résultats donnent donc le même nombre.
 
@@ -22,9 +23,16 @@ Seule la saisie d'une suggestion ignore les accents et les majuscules : « retr 
 | `word_page_counts` (vue matérialisée)                 | `(scope, word, search_word, page_count)`, `scope` = département ou `FR` | suggestions de mots, compte d'un mot      |
 | `word_page_counts_scope_search_word_idx`              | btree `(scope, search_word text_pattern_ops)`                           | `search_word LIKE 'retr%'` par lieu       |
 | `word_page_counts_scope_word_idx` (unique)            | `(scope, word)`                                                         | compte d'un mot, `REFRESH … CONCURRENTLY` |
-| `place_page_counts` (vue matérialisée) + index unique | pages par département et par commune actuelle                           | suggestions de lieux, bouton sans mot-clé |
+| `place_page_counts` (vue matérialisée) + index unique | pages par département, par commune actuelle et par ancien code          | suggestions de lieux, bouton sans mot-clé |
+| `municipality_code_history_search_name_idx`           | btree `(search_name text_pattern_ops)` des anciennes communes           | ancien nom saisi                          |
 
 Les suggestions de lieu lisent toutes les communes et tous les départements, y compris ceux sans page (« À venir ») : nom normalisé (`municipalities.search_name`, btree `text_pattern_ops`), code postal (GIN, recouvrement avec les 10 codes qui complètent 4 chiffres), code INSEE (clé primaire), département (`municipalities.department_code`). Les 101 départements sont lus en entier. D'abord le département dont le code ou le nom est la saisie, puis par nombre de pages, puis par population.
+
+### Anciennes communes
+
+Une commune de 2019 fusionnée depuis reste trouvable sous son nom de 2019 : « béon » propose « Béon · Ancienne commune · Ain (01) · aujourd’hui Culoz-Béon », puis « Béon · Commune · Yonne (89) », une autre commune. `municipality_code_history` garde le nom (`name`, libellé « avant » de son premier événement postérieur au 1er janvier 2019 dans le fichier des mouvements de l'Insee), le département (`department_code`, lu dans le code) et le nom normalisé (`search_name`). Elles se cherchent comme les communes actuelles (nom, département saisi, code INSEE à 5 chiffres) mais n'ont pas de code postal ni de population : à nombre de pages égal, elles passent après les communes actuelles. Une ancienne commune qui porte le nom de sa commune actuelle (changement de code seul, MOD 41 ou 50) n'est pas proposée, la commune actuelle l'est déjà.
+
+Choisir une ancienne commune envoie son code de 2019 (`?place=01039`) : la suggestion, le bouton, les mots proposés et la liste comptent ses seules pages, celles que `publishedIn` retient pour ce code, et `place_page_counts` a une ligne par ancien code. Le champ affiche « Béon (01) », que la recherche sans JavaScript reconnaît. Les titres de la page de résultats disent « Béon (ancienne commune, aujourd’hui Culoz-Béon) » (`ResolvedPlace.displayName`), pour ne pas la confondre avec Béon (89).
 
 ### Pourquoi des comptes précalculés
 

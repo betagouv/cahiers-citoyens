@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
+import { eq } from "drizzle-orm";
 import { type Database, createDatabase } from "../../src/db/client";
-import { departments } from "../../src/db/schema";
+import { departments, municipalityCodeHistory } from "../../src/db/schema";
 import { errorMessage } from "../../src/ingestion/error-message";
 import { type Env, requireEnv } from "../args";
 import { resolveCodeHistory } from "./code-history";
@@ -89,12 +90,23 @@ async function withDatabase(
   }
 }
 
-async function hasDepartments(db: Database): Promise<boolean> {
-  const rows = await db
-    .select({ code: departments.code })
-    .from(departments)
-    .limit(1);
-  return rows.length > 0;
+async function hasRows(query: Promise<unknown[]>): Promise<boolean> {
+  return (await query).length > 0;
+}
+
+// Pourquoi le référentiel en place doit être rechargé, ou `undefined` s'il est
+// complet. Les anciens codes chargés avant la migration 0009 n'ont pas de nom.
+async function reloadReason(db: Database): Promise<string | undefined> {
+  const loaded = db.select({ code: departments.code }).from(departments);
+  if (!(await hasRows(loaded.limit(1)))) return "departments est vide";
+  const unnamed = db
+    .select({ code: municipalityCodeHistory.oldCode })
+    .from(municipalityCodeHistory)
+    .where(eq(municipalityCodeHistory.name, ""));
+  if (await hasRows(unnamed.limit(1))) {
+    return "des anciens codes n'ont pas encore de nom";
+  }
+  return undefined;
 }
 
 interface Loggers {
@@ -102,19 +114,22 @@ interface Loggers {
   warn: (message: string) => void;
 }
 
-// Postdeploy : une base déjà remplie est laissée telle quelle, et une source
-// indisponible n'empêche pas le déploiement. Le référentiel reste vide
-// jusqu'au prochain `db:seed`, l'erreur dans les logs l'annonce.
+// Postdeploy : une base déjà remplie est laissée telle quelle, sauf si des
+// anciens codes attendent leur nom, et une source indisponible n'empêche pas
+// le déploiement. Le référentiel reste tel quel jusqu'au prochain `db:seed`,
+// l'erreur dans les logs l'annonce.
 async function loadIfEmpty(
   { databaseUrl, movementsUrl }: LoadGeographyOptions,
   fetchImpl: Fetch,
   { log, warn }: Loggers,
 ): Promise<void> {
   await withDatabase(databaseUrl, async (db) => {
-    if (await hasDepartments(db)) {
-      log("departments contient déjà des lignes : rien à charger (--if-empty)");
+    const reason = await reloadReason(db);
+    if (reason === undefined) {
+      log("référentiel déjà chargé : rien à charger (--if-empty)");
       return;
     }
+    log(`${reason} : chargement du référentiel (--if-empty)`);
     let summary: Summary;
     try {
       summary = await fetchGeography(fetchImpl, movementsUrl);

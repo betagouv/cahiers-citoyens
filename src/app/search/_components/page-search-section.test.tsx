@@ -30,6 +30,7 @@ describe("PageSearchSection", () => {
       place: {
         codes: { kind: "departments", codes: ["971", "972"] },
         label: "Guadeloupe, Martinique",
+        displayName: "Guadeloupe, Martinique",
         pageCount: 50,
       },
     });

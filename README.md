@@ -111,7 +111,7 @@ aws --region <region> --endpoint-url <endpoint> s3 ls s3://<bucket>/
 
 ### Référentiel géographique
 
-`departments`, `municipalities` et `municipality_code_history` décrivent toutes les communes de France et rattachent un code INSEE de 2019 (celui des cahiers) à la commune actuelle. Sources : geo.api.gouv.fr et le Code officiel géographique de l'Insee (détail dans [la phase 5](docs/ingestion-pipeline/phase-5-database-schema.md)). Le chargement remplace les trois tables dans une transaction ; le relancer donne le même état.
+`departments`, `municipalities` et `municipality_code_history` décrivent toutes les communes de France et rattachent un code INSEE de 2019 (celui des cahiers) à la commune actuelle. Une commune fusionnée depuis 2019 y garde son nom et son département de 2019 : « Béon (01) », aujourd'hui dans Culoz-Béon, se trouve encore par son nom dans la recherche. Sources : geo.api.gouv.fr et le Code officiel géographique de l'Insee (détail dans [la phase 5](docs/ingestion-pipeline/phase-5-database-schema.md)). Le chargement remplace les trois tables dans une transaction ; le relancer donne le même état.
 
 ### Remplir la base
 
@@ -128,9 +128,9 @@ DATABASE_URL=postgres://localhost:5432/cahiers bun run db:seed -- --with-fake-no
 scalingo run npm run db:seed
 ```
 
-- `--if-empty` ne charge rien si `departments` a déjà des lignes. Dans ce mode, une source indisponible (geo.api.gouv.fr ou le CSV de l'Insee) est écrite dans les logs et la commande sort en code 0 ; sans l'option, elle échoue en code 1.
+- `--if-empty` ne charge rien si le référentiel est complet : `departments` a des lignes et tous les anciens codes de `municipality_code_history` ont un nom. Des anciens codes sans nom (chargés avant la migration `0009`) font recharger tout le référentiel. Dans ce mode, une source indisponible (geo.api.gouv.fr ou le CSV de l'Insee) est écrite dans les logs et la commande sort en code 0 ; sans l'option, elle échoue en code 1.
 - `--with-fake-notebooks` demande Bun et refuse `NODE_ENV=production` : il ne tourne jamais sur Scalingo. Sans `ALBERT_API_KEY`, les cahiers sont publiés mais le rapport d'ingestion signale les chunks non vectorisés et la commande sort en code 1.
-- Le `postdeploy` du `Procfile` lance `npm run db:migrate && npm run db:seed -- --if-empty` : un nouvel environnement (recette, review app) a son référentiel dès le premier déploiement, les suivants n'y touchent pas. Pour passer au millésime suivant, relancer `db:seed` sans `--if-empty`.
+- Le `postdeploy` du `Procfile` lance `npm run db:migrate && npm run db:seed -- --if-empty` : un nouvel environnement (recette, review app) a son référentiel dès le premier déploiement, les suivants n'y touchent pas, sauf pour nommer les anciennes communes au premier déploiement qui suit la migration `0009`. Pour passer au millésime suivant, ou si ce rechargement a échoué (source indisponible, écrit dans les logs), relancer `db:seed` sans `--if-empty`.
 
 ## Consulter les cahiers
 
