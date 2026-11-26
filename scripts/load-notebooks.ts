@@ -5,7 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { type Database, createDatabase } from "../src/db/client";
 import { chunks, notebooks } from "../src/db/schema";
 import { type Env, requireEnv } from "./args";
-import { chunkTranscription } from "./chunk";
+import { chunkTranscription } from "../src/ingestion/chunk-text";
 
 export interface NotebookMetadata {
   id: string;

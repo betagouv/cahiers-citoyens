@@ -6,7 +6,7 @@ function countWords(text: string): number {
 
 // Coupe entre deux phrases dès que le morceau dépasserait MAX_WORDS. Une
 // phrase seule plus longue reste entière.
-function splitContribution(contribution: string): string[] {
+export function splitContribution(contribution: string): string[] {
   if (countWords(contribution) <= MAX_WORDS) return [contribution];
   const pieces: string[] = [];
   let current: string[] = [];
@@ -27,7 +27,8 @@ function splitContribution(contribution: string): string[] {
   return pieces;
 }
 
-// Un chunk par contribution, soit un paragraphe séparé par une ligne vide,
+// Transcription d'un bloc des cahiers de `scripts/load.ts`, supprimée avec lui
+// en phase 7. Un chunk par contribution, soit un paragraphe séparé par une ligne vide,
 // en-tête exclu (voir fake-data/transcription.ts). Une contribution ne mêle
 // qu'un thème : la recherche renvoie ainsi des passages qui répondent à la
 // question, sans contributions voisines hors sujet.

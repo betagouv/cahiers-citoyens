@@ -70,9 +70,10 @@ describe("listNotebooks", () => {
       pageCount: 3,
       total: 45,
     });
-    const [, pageQuery] = fake.queries;
+    const [countQuery, pageQuery] = fake.queries;
+    expect(countQuery.sql).toContain('where "notebooks"."status" = $1');
     expect(pageQuery.sql).toContain('order by "notebooks"."id" asc');
-    expect(pageQuery.params).toEqual([NOTEBOOKS_PAGE_SIZE, 20]);
+    expect(pageQuery.params).toEqual(["published", NOTEBOOKS_PAGE_SIZE, 20]);
   });
 
   it("ramène une page trop grande à la dernière page", async () => {
@@ -81,7 +82,11 @@ describe("listNotebooks", () => {
     const result = await listNotebooks(9);
 
     expect(result.page).toBe(3);
-    expect(fake.queries[1].params).toEqual([NOTEBOOKS_PAGE_SIZE, 40]);
+    expect(fake.queries[1].params).toEqual([
+      "published",
+      NOTEBOOKS_PAGE_SIZE,
+      40,
+    ]);
   });
 
   it("compte une page même sans cahier", async () => {
@@ -98,15 +103,30 @@ describe("listNotebooks", () => {
 
 describe("getNotebook", () => {
   it("renvoie le cahier, sa transcription et son nombre de passages", async () => {
-    fake.reply([["notebook-0001", "2019-01-10", "Texte", "13"]]);
+    fake.reply([
+      ["notebook-0001", "2019-01-10", "Texte", "notebooks/x/scan.pdf", "13"],
+    ]);
 
     await expect(getNotebook("notebook-0001")).resolves.toEqual({
       id: "notebook-0001",
       openedOn: "2019-01-10",
       transcription: "Texte",
+      hasScan: true,
       chunkCount: 13,
     });
-    expect(fake.queries[0].params).toEqual(["notebook-0001"]);
+    expect(fake.queries[0].params).toEqual(["notebook-0001", "published"]);
+  });
+
+  it("signale l'absence de scan d'un cahier venu d'un dépôt", async () => {
+    fake.reply([["CC_1", null, null, null, "2"]]);
+
+    await expect(getNotebook("CC_1")).resolves.toEqual({
+      id: "CC_1",
+      openedOn: null,
+      transcription: null,
+      hasScan: false,
+      chunkCount: 2,
+    });
   });
 
   it("renvoie undefined pour un cahier inconnu", async () => {
@@ -119,8 +139,10 @@ describe("notebookExists", () => {
     fake.reply([["notebook-0001"]]);
 
     await expect(notebookExists("notebook-0001")).resolves.toBe(true);
-    expect(fake.queries[0].sql).toContain('where "notebooks"."id" = $1');
-    expect(fake.queries[0].params).toEqual(["notebook-0001", 1]);
+    expect(fake.queries[0].sql).toContain(
+      'where ("notebooks"."id" = $1 and "notebooks"."status" = $2)',
+    );
+    expect(fake.queries[0].params).toEqual(["notebook-0001", "published", 1]);
   });
 
   it("faux sinon", async () => {
@@ -135,7 +157,13 @@ describe("getScanKey", () => {
     await expect(getScanKey("notebook-0001")).resolves.toBe(
       "notebooks/notebook-0001/scan.pdf",
     );
-    expect(fake.queries[0].params).toEqual(["notebook-0001"]);
+    expect(fake.queries[0].params).toEqual(["notebook-0001", "published"]);
+  });
+
+  it("renvoie undefined pour un cahier sans scan", async () => {
+    fake.reply([[null]]);
+
+    await expect(getScanKey("CC_1")).resolves.toBeUndefined();
   });
 
   it("renvoie undefined pour un cahier inconnu", async () => {

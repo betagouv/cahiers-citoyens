@@ -44,6 +44,17 @@ describe("NotebookTable", () => {
     expect(html).not.toContain("fr-pagination");
   });
 
+  it("signale la date d'ouverture d'un cahier venu d'un dépôt", async () => {
+    listNotebooks.mockResolvedValue({
+      notebooks: [{ ...NOTEBOOK, openedOn: null }],
+      page: 1,
+      pageCount: 1,
+      total: 1,
+    });
+
+    expect(await render()).toContain("Non renseignée");
+  });
+
   it("demande la page de l'URL et pagine quand il y en a plusieurs", async () => {
     listNotebooks.mockResolvedValue({
       notebooks: [NOTEBOOK],

@@ -40,17 +40,18 @@ const tsvector = customType<{ data: string }>({
   },
 });
 
-// `scan_key`, `transcription_key` et `transcription` servent encore au site et à
-// `scripts/load.ts`. Les pages les remplacent ; leur suppression attend les
-// phases 7 et 8.
+// `opened_on`, `scan_key`, `transcription_key` et `transcription` viennent de
+// `scripts/load.ts` et servent encore au site. Un cahier venu d'un dépôt les
+// laisse vides : ses pages les remplacent. Leur suppression attend les phases 7
+// et 8.
 export const notebooks = pgTable(
   "notebooks",
   {
     id: text("id").primaryKey(),
-    openedOn: date("opened_on", { mode: "string" }).notNull(),
-    scanKey: text("scan_key").notNull(),
-    transcriptionKey: text("transcription_key").notNull(),
-    transcription: text("transcription").notNull(),
+    openedOn: date("opened_on", { mode: "string" }),
+    scanKey: text("scan_key"),
+    transcriptionKey: text("transcription_key"),
+    transcription: text("transcription"),
     importedAt: timestamp("imported_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -35,16 +35,21 @@ export default async function NotebookPage({
       />
       <h1>Cahier {notebook.id}</h1>
       <p className="fr-text--lead">
-        Ouvert le {formatDate(notebook.openedOn)} ·{" "}
+        {notebook.openedOn !== null &&
+          `Ouvert le ${formatDate(notebook.openedOn)} · `}
         {formatNumber(notebook.chunkCount)} passages indexés pour la recherche
       </p>
 
+      {/* Un cahier venu d'un dépôt n'a ni scan ni transcription d'un bloc :
+          ses pages s'afficheront en phase 8. */}
       <div className="fr-grid-row fr-grid-row--gutters">
-        <ScanPanel notebookId={notebook.id} />
-        <TranscriptionPanel
-          notebookId={notebook.id}
-          transcription={notebook.transcription}
-        />
+        {notebook.hasScan && <ScanPanel notebookId={notebook.id} />}
+        {notebook.transcription !== null && (
+          <TranscriptionPanel
+            notebookId={notebook.id}
+            transcription={notebook.transcription}
+          />
+        )}
       </div>
     </div>
   );

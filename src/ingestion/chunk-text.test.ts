@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_WORDS, chunkTranscription } from "./chunk";
+import { MAX_WORDS, chunkTranscription } from "./chunk-text";
 
 const HEADER =
   "Cahier de doléances et de propositions\nCommune de Exemple (00)\nOuvert le 1er janvier 2019";

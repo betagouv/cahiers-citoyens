@@ -20,7 +20,7 @@ Tout le nommage du code est en anglais : fichiers, dossiers, identifiants, table
 ## Fichiers
 
 - Dossiers en minuscules avec tirets.
-- Les tests sont colocalisés : `chunk.ts` et `chunk.test.ts`.
+- Les tests sont colocalisés : `chunk-text.ts` et `chunk-text.test.ts`.
 - Le schéma de la base vit dans `src/db/schema.ts`. `drizzle-kit generate` en tire les migrations de `drizzle/`, `drizzle-kit migrate` les applique. La recherche plein texte et vectorielle passe par le constructeur de requêtes ou par `sql` typé.
 
 ## Scripts
