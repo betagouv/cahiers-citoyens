@@ -1,17 +1,11 @@
 import { fr } from "@codegouvfr/react-dsfr";
 import type { OverlayConfig } from "carte-facile";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   departmentsSource,
   mapPalette,
   statusFeatureStates,
 } from "./department-map-style";
-
-// Aucun département n'est encore connu comme absent du fonds : on en simule un.
-vi.mock("./department-registry", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./department-registry")>()),
-  ABSENT_DEPARTMENT_CODES: ["55"],
-}));
 
 const overlay: OverlayConfig = {
   sources: {
@@ -71,17 +65,15 @@ describe("mapPalette", () => {
 });
 
 describe("statusFeatureStates", () => {
-  it("marque en ligne chaque code des zones publiées", () => {
-    expect(statusFeatureStates()).toContainEqual({
-      code: "973",
-      status: "online",
-    });
-  });
-
-  it("marque absents les départements sans cahier dans le fonds", () => {
-    expect(statusFeatureStates()).toContainEqual({
-      code: "55",
-      status: "absent",
-    });
+  it("marque en ligne chaque département qui a un cahier publié", () => {
+    expect(
+      statusFeatureStates([
+        { code: "04", name: "Alpes-de-Haute-Provence", notebookCount: 1 },
+        { code: "973", name: "Guyane", notebookCount: 2 },
+      ]),
+    ).toEqual([
+      { code: "04", status: "online" },
+      { code: "973", status: "online" },
+    ]);
   });
 });

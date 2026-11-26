@@ -21,7 +21,7 @@ export async function SearchSection({
   const question = parseQuestion(params.q);
   return (
     <>
-      <SearchForm id="search-page" defaultValue={question} big />
+      <SearchForm key={question} id="search-page" defaultValue={question} big />
       {question === "" ? (
         <EmptyQuestion />
       ) : (

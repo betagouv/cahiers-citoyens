@@ -49,7 +49,9 @@ describe("parseLoadGeographyOptions", () => {
     expect(parseLoadGeographyOptions([], ENV)).toEqual({
       databaseUrl: "postgres://test/app",
       movementsUrl: MOVEMENTS_URL,
+      ifEmpty: false,
     });
+    expect(parseLoadGeographyOptions(["--if-empty"], ENV).ifEmpty).toBe(true);
     expect(
       parseLoadGeographyOptions(
         ["--movements-url", "https://exemple.test/m.csv"],
@@ -107,6 +109,65 @@ describe("runLoadGeography", () => {
 
     await expect(
       runLoadGeography([], ENV, fakeFetch(MOVEMENTS_HEADER)),
+    ).rejects.toThrow("panne");
+    expect(fake.ended).toBe(true);
+  });
+});
+
+describe("runLoadGeography --if-empty", () => {
+  const movements = `${MOVEMENTS_HEADER}\n`;
+
+  it("ne télécharge rien si departments a déjà des lignes", async () => {
+    const log = vi.fn();
+    const fetchImpl = fakeFetch(movements);
+    fake.reply([["01"]]);
+
+    await runLoadGeography(["--if-empty"], ENV, fetchImpl, log);
+
+    expect(fake.queries).toHaveLength(1);
+    expect(fake.queries[0]?.sql).toBe(
+      'select "code" from "departments" limit $1',
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(fake.ended).toBe(true);
+    expect(log).toHaveBeenCalledWith(
+      "departments contient déjà des lignes : rien à charger (--if-empty)",
+    );
+  });
+
+  it("charge le référentiel si departments est vide", async () => {
+    const log = vi.fn();
+
+    await runLoadGeography(["--if-empty"], ENV, fakeFetch(movements), log);
+
+    expect(fake.queries.at(-1)?.sql).toBe("select refresh_search_counts()");
+    expect(fake.ended).toBe(true);
+    expect(log).toHaveBeenCalledWith(
+      "0 départements, 1 communes, 0 anciens codes chargés",
+    );
+  });
+
+  it("journalise une source indisponible sans échouer ni écrire", async () => {
+    const log = vi.fn();
+    const warn = vi.fn();
+    const down = vi.fn(async () => new Response("", { status: 503 }));
+
+    await runLoadGeography(["--if-empty"], ENV, down, log, warn);
+
+    expect(fake.queries).toHaveLength(1);
+    expect(fake.ended).toBe(true);
+    expect(log).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      `Référentiel géographique non chargé, source indisponible : ${DEPARTMENTS_URL} a répondu 503. Relancer db:seed plus tard.`,
+    );
+  });
+
+  it("reste fatal si l'écriture échoue", async () => {
+    const db = await import("./store-geography");
+    vi.spyOn(db, "replaceGeography").mockRejectedValueOnce(new Error("panne"));
+
+    await expect(
+      runLoadGeography(["--if-empty"], ENV, fakeFetch(movements)),
     ).rejects.toThrow("panne");
     expect(fake.ended).toBe(true);
   });

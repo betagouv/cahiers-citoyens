@@ -24,7 +24,7 @@
 
 ## Driving it with agent-browser
 
-Recherche par lieu et mot-clé — préconditions : base migrée, `geo:load`, pages fictives publiées, `select refresh_search_counts()`. Aucune clé Albert.
+Recherche par lieu et mot-clé — préconditions : base migrée, `db:seed`, pages fictives publiées, `select refresh_search_counts()`. Aucune clé Albert.
 
 - **Liste.** `notebooks-verify shot search-pages "/search?place=71106&q=retraite"` : le `snapshot` a le `heading` de niveau 2 `<n> pages à Charolles (71) contiennent « retraite »`, puis des `heading` de niveau 3 `Charolles (71), page <n>`. Confronter `<n>` à `select count(*) from pages p join notebooks n on n.id = p.notebook_id where n.status = 'published' and n.insee_code = '71106' and p.words @@ plainto_tsquery('simple', 'retraite')`.
 - **Sans JavaScript.** `curl -s "$NOTEBOOKS_BASE_URL/search?place=Charolles&q=retraite" | grep -o '<h2[^>]*>[^<]*'` : la liste est dans le HTML.

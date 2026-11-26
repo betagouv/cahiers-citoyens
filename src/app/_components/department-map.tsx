@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fr } from "@codegouvfr/react-dsfr";
 import { useIsDark } from "@codegouvfr/react-dsfr/useIsDark";
@@ -15,12 +15,8 @@ import {
   mapPalette,
   statusFeatureStates,
 } from "@/lib/department-map-style";
-import {
-  PUBLICATION_STATUS_LABELS,
-  areaHref,
-  publicationStatus,
-  publishedAreaOf,
-} from "@/lib/departments";
+import { type OnlineDepartment, departmentTooltip } from "@/lib/departments";
+import { areaHrefByCode, publishedAreas } from "@/lib/published-areas";
 
 const METROPOLE: LngLatBoundsLike = [
   [-5.2, 41.3],
@@ -55,7 +51,25 @@ interface LoadedMap {
   source: DepartmentsSource;
 }
 
+// Ce que la carte sait des départements en ligne, indexé par code.
+interface OnlineIndex {
+  departments: readonly OnlineDepartment[];
+  byCode: ReadonlyMap<string, OnlineDepartment>;
+  hrefByCode: ReadonlyMap<string, string>;
+}
+
+function onlineIndex(departments: readonly OnlineDepartment[]): OnlineIndex {
+  return {
+    departments,
+    byCode: new Map(
+      departments.map((department) => [department.code, department]),
+    ),
+    hrefByCode: areaHrefByCode(publishedAreas(departments)),
+  };
+}
+
 interface MapCallbacks {
+  online: OnlineIndex;
   isDark: () => boolean;
   onLoad: (loaded: LoadedMap) => void;
   onTooltip: (tooltip: Tooltip | null) => void;
@@ -98,12 +112,12 @@ function bindHover(
     const name = stringProperty(properties?.nom);
     if (code === undefined || name === undefined) return;
     setHovered(code);
-    const status = publicationStatus(code);
-    map.getCanvas().style.cursor = status === "online" ? "pointer" : "";
+    const online = callbacks.online.byCode.get(code);
+    map.getCanvas().style.cursor = online === undefined ? "" : "pointer";
     callbacks.onTooltip({
       x: event.point.x,
       y: event.point.y,
-      text: `${name} (${code}) · ${PUBLICATION_STATUS_LABELS[status]}`,
+      text: departmentTooltip(name, code, online),
     });
   });
   map.on("mouseleave", DEPARTMENTS_FILL_LAYER, () => {
@@ -112,7 +126,9 @@ function bindHover(
     callbacks.onTooltip(null);
   });
   map.on("load", () => {
-    for (const { code, status } of statusFeatureStates())
+    for (const { code, status } of statusFeatureStates(
+      callbacks.online.departments,
+    ))
       map.setFeatureState(feature(code), { status });
   });
 }
@@ -135,8 +151,9 @@ function bindEvents(
   });
   map.on("click", DEPARTMENTS_FILL_LAYER, (event) => {
     const code = stringProperty(event.features?.[0]?.properties?.code);
-    const area = code === undefined ? undefined : publishedAreaOf(code);
-    if (area !== undefined) callbacks.onNavigate(areaHref(area));
+    const href =
+      code === undefined ? undefined : callbacks.online.hrefByCode.get(code);
+    if (href !== undefined) callbacks.onNavigate(href);
   });
 }
 
@@ -171,6 +188,7 @@ async function createMap(
 function useDepartmentMap(
   container: HTMLDivElement | null,
   bounds: LngLatBoundsLike,
+  online: OnlineIndex,
   onTooltip: (tooltip: Tooltip | null) => void,
 ) {
   const router = useRouter();
@@ -187,6 +205,7 @@ function useDepartmentMap(
   useEffect(() => {
     if (container === null) return;
     const created = createMap(container, bounds, {
+      online,
       isDark: () => isDarkRef.current,
       onLoad: (loaded) => {
         loadedRef.current = loaded;
@@ -198,13 +217,18 @@ function useDepartmentMap(
       loadedRef.current = null;
       void created.then((map) => map.remove());
     };
-  }, [bounds, container, onTooltip, router]);
+  }, [bounds, container, online, onTooltip, router]);
 }
 
-function MapFrame({ bounds }: { bounds: LngLatBoundsLike }) {
+interface MapFrameProps {
+  bounds: LngLatBoundsLike;
+  online: OnlineIndex;
+}
+
+function MapFrame({ bounds, online }: MapFrameProps) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
-  useDepartmentMap(container, bounds, setTooltip);
+  useDepartmentMap(container, bounds, online, setTooltip);
 
   return (
     <div className="relative h-full w-full">
@@ -232,7 +256,12 @@ function MapFrame({ bounds }: { bounds: LngLatBoundsLike }) {
 
 // Carte à la souris seulement : clavier et lecteurs d'écran passent par la
 // liste d'étiquettes voisine, qui mène aux mêmes pages.
-export function DepartmentMap() {
+export function DepartmentMap({
+  departments,
+}: {
+  departments: readonly OnlineDepartment[];
+}) {
+  const online = useMemo(() => onlineIndex(departments), [departments]);
   return (
     <div
       aria-hidden="true"
@@ -240,10 +269,10 @@ export function DepartmentMap() {
     >
       <div className="grid grid-rows-5 gap-1">
         {OVERSEAS.map(({ name, bounds }) => (
-          <MapFrame key={name} bounds={bounds} />
+          <MapFrame key={name} bounds={bounds} online={online} />
         ))}
       </div>
-      <MapFrame bounds={METROPOLE} />
+      <MapFrame bounds={METROPOLE} online={online} />
     </div>
   );
 }

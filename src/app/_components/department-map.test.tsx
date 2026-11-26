@@ -2,7 +2,14 @@
 import { act } from "react";
 import { type Root, createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { OnlineDepartment } from "@/lib/departments";
 import { DepartmentMap } from "./department-map";
+
+const ONLINE: OnlineDepartment[] = [
+  { code: "25", name: "Doubs", notebookCount: 3 },
+  { code: "972", name: "Martinique", notebookCount: 1 },
+  { code: "974", name: "La Réunion", notebookCount: 2 },
+];
 
 type Listener = (event?: unknown) => void;
 
@@ -122,7 +129,7 @@ let root: Root;
 
 async function render() {
   await act(async () => {
-    root.render(<DepartmentMap />);
+    root.render(<DepartmentMap departments={ONLINE} />);
     await Promise.resolve();
   });
   await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
@@ -168,7 +175,7 @@ describe("DepartmentMap", () => {
       fire(metropole(), "mousemove:departments-fill", hover("25")),
     );
 
-    expect(container.textContent).toContain("Doubs (25) · Cahiers en ligne");
+    expect(container.textContent).toContain("Doubs (25) · 3 cahiers en ligne");
     expect(metropole().canvas.style.cursor).toBe("pointer");
     expect(metropole().featureStates.get("25")).toEqual({ hover: true });
 
@@ -205,7 +212,7 @@ describe("DepartmentMap", () => {
     fire(metropole(), "click:departments-fill", { features: [] });
     fire(metropole(), "click:departments-fill", { features: [{}] });
 
-    expect(state.pushed).toEqual(["/search?place=971,972,973,974,976"]);
+    expect(state.pushed).toEqual(["/search?place=972,974"]);
   });
 
   it("recadre la carte quand son conteneur change de taille", async () => {
@@ -230,7 +237,7 @@ describe("DepartmentMap", () => {
 
   it("détruit les cartes au démontage, même chargées après coup", async () => {
     await act(async () => {
-      root.render(<DepartmentMap />);
+      root.render(<DepartmentMap departments={ONLINE} />);
     });
     act(() => root.unmount());
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
