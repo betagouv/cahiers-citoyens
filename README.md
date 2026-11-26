@@ -93,9 +93,10 @@ Le schéma de la base est décrit dans `src/db/schema.ts` (Drizzle) et s'appliqu
 ```bash
 createdb cahiers
 DATABASE_URL=postgres://localhost:5432/cahiers bun run db:migrate
-bun scripts/fake-data/deliver.ts --count 10 --out data/bucket/incoming
-DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/ingest-local.ts run
+DATABASE_URL=postgres://localhost:5432/cahiers bun run db:seed -- --with-fake-notebooks
 ```
+
+La dernière commande charge le référentiel géographique puis publie 10 faux cahiers (voir « Remplir la base »).
 
 Après une modification de `src/db/schema.ts`, `bun run db:generate` écrit la migration correspondante dans `drizzle/`, puis `bun run db:migrate` l'applique. `drizzle-kit` ne crée pas les extensions Postgres : la migration personnalisée `drizzle/0000_enable-vector.sql` (créée par `bunx drizzle-kit generate --custom`) active `vector` avant toute table.
 
@@ -112,11 +113,24 @@ aws --region <region> --endpoint-url <endpoint> s3 ls s3://<bucket>/
 
 `departments`, `municipalities` et `municipality_code_history` décrivent toutes les communes de France et rattachent un code INSEE de 2019 (celui des cahiers) à la commune actuelle. Sources : geo.api.gouv.fr et le Code officiel géographique de l'Insee (détail dans [la phase 5](docs/ingestion-pipeline/phase-5-database-schema.md)). Le chargement remplace les trois tables dans une transaction ; le relancer donne le même état.
 
+### Remplir la base
+
+`db:seed` charge le référentiel géographique, partout avec la même commande. `scripts/seed.sh` lance `bun scripts/load-geography.ts` si Bun est présent, sinon le job compilé `dist/jobs/load-geography.mjs` sous Node.
+
 ```bash
-DATABASE_URL=postgres://localhost:5432/cahiers bun scripts/load-geography.ts [--movements-url <csv du COG>]
+# En local
+DATABASE_URL=postgres://localhost:5432/cahiers bun run db:seed [-- --movements-url <csv du COG>]
+
+# En local, avec en plus 10 faux cahiers déposés dans data/bucket/incoming puis publiés par ingest-local
+DATABASE_URL=postgres://localhost:5432/cahiers bun run db:seed -- --with-fake-notebooks
+
+# Sur Scalingo, après le build
+scalingo run npm run db:seed
 ```
 
-Sur Scalingo, après le build : `npm run geo:load` (lance `dist/jobs/load-geography.mjs`).
+- `--if-empty` ne charge rien si `departments` a déjà des lignes. Dans ce mode, une source indisponible (geo.api.gouv.fr ou le CSV de l'Insee) est écrite dans les logs et la commande sort en code 0 ; sans l'option, elle échoue en code 1.
+- `--with-fake-notebooks` demande Bun et refuse `NODE_ENV=production` : il ne tourne jamais sur Scalingo. Sans `ALBERT_API_KEY`, les cahiers sont publiés mais le rapport d'ingestion signale les chunks non vectorisés et la commande sort en code 1.
+- Le `postdeploy` du `Procfile` lance `npm run db:migrate && npm run db:seed -- --if-empty` : un nouvel environnement (recette, review app) a son référentiel dès le premier déploiement, les suivants n'y touchent pas. Pour passer au millésime suivant, relancer `db:seed` sans `--if-empty`.
 
 ## Consulter les cahiers
 
@@ -167,7 +181,7 @@ Déploiement : `git push scalingo main`, avec le remote `scalingo` ajouté depui
 
 - `.buildpacks` fixe le buildpack Node.js officiel de Scalingo.
 - `output: "standalone"` dans `next.config.ts`. Le script `build` lance `next build`, puis copie `public/` et `.next/static/` dans `.next/standalone/`.
-- `Procfile` : `postdeploy: npm run db:migrate` applique les migrations Drizzle à chaque déploiement, une fois le build fait et avant la bascule du trafic. Si elles échouent, le déploiement est refusé et l'ancienne version reste en ligne. `drizzle-kit` est donc dans `dependencies`, car Scalingo retire les `devDependencies` après le build. L'addon PostgreSQL fournit `DATABASE_URL` : il doit exister avant le premier déploiement qui contient ce hook.
+- `Procfile` : `postdeploy: npm run db:migrate && npm run db:seed -- --if-empty` applique les migrations Drizzle à chaque déploiement, une fois le build fait et avant la bascule du trafic, puis charge le référentiel géographique si la base n'en a pas (voir « Remplir la base »). Si les migrations échouent, le déploiement est refusé et l'ancienne version reste en ligne. `drizzle-kit` est donc dans `dependencies`, car Scalingo retire les `devDependencies` après le build. L'addon PostgreSQL fournit `DATABASE_URL` : il doit exister avant le premier déploiement qui contient ce hook.
 - `Procfile` : `web: npm start`, qui lance `node .next/standalone/server.js` sur `0.0.0.0:$PORT`.
 
 ### Tâches planifiées

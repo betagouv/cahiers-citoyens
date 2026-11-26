@@ -42,7 +42,7 @@ Taille mesurée sur 40 000 pages fictives au vocabulaire synthétique : 1,2 mill
 select refresh_search_counts();
 ```
 
-À appeler après chaque transaction qui change les pages publiées : dépôt appliqué, cahier retiré ou republié (phase 6). `geo:load` l'appelle déjà, car la correspondance des anciens codes change les comptes par commune. `CONCURRENTLY` laisse les suggestions répondre pendant le calcul, qui reprend toutes les pages (≈ 20 s pour 40 000 pages en local). Entre l'application d'un dépôt et la fin du rafraîchissement, une suggestion peut annoncer l'ancien nombre ; la liste de résultats, elle, est toujours en direct.
+À appeler après chaque transaction qui change les pages publiées : dépôt appliqué, cahier retiré ou republié (phase 6). `db:seed` l'appelle déjà, car la correspondance des anciens codes change les comptes par commune. `CONCURRENTLY` laisse les suggestions répondre pendant le calcul, qui reprend toutes les pages (≈ 20 s pour 40 000 pages en local). Entre l'application d'un dépôt et la fin du rafraîchissement, une suggestion peut annoncer l'ancien nombre ; la liste de résultats, elle, est toujours en direct.
 
 ## Routes
 

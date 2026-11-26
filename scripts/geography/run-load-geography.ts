@@ -1,5 +1,7 @@
 import { parseArgs } from "node:util";
-import { createDatabase } from "../../src/db/client";
+import { type Database, createDatabase } from "../../src/db/client";
+import { departments } from "../../src/db/schema";
+import { errorMessage } from "../../src/ingestion/error-message";
 import { type Env, requireEnv } from "../args";
 import { resolveCodeHistory } from "./code-history";
 import { type Fetch, fetchJson, fetchText } from "./fetch-source";
@@ -19,6 +21,7 @@ export const MOVEMENTS_URL =
 export interface LoadGeographyOptions {
   databaseUrl: string;
   movementsUrl: string;
+  ifEmpty: boolean;
 }
 
 export function parseLoadGeographyOptions(
@@ -27,11 +30,15 @@ export function parseLoadGeographyOptions(
 ): LoadGeographyOptions {
   const { values } = parseArgs({
     args,
-    options: { "movements-url": { type: "string" } },
+    options: {
+      "movements-url": { type: "string" },
+      "if-empty": { type: "boolean", default: false },
+    },
   });
   return {
     databaseUrl: requireEnv(env, "DATABASE_URL"),
     movementsUrl: values["movements-url"] ?? MOVEMENTS_URL,
+    ifEmpty: values["if-empty"],
   };
 }
 
@@ -70,6 +77,58 @@ function describeSummary({ geography, unresolved }: Summary): string {
   return `${counts} chargés ; sans commune actuelle : ${unresolved.join(", ")}`;
 }
 
+async function withDatabase(
+  url: string,
+  work: (db: Database) => Promise<void>,
+): Promise<void> {
+  const db = createDatabase(url);
+  try {
+    await work(db);
+  } finally {
+    await db.$client.end();
+  }
+}
+
+async function hasDepartments(db: Database): Promise<boolean> {
+  const rows = await db
+    .select({ code: departments.code })
+    .from(departments)
+    .limit(1);
+  return rows.length > 0;
+}
+
+interface Loggers {
+  log: (message: string) => void;
+  warn: (message: string) => void;
+}
+
+// Postdeploy : une base déjà remplie est laissée telle quelle, et une source
+// indisponible n'empêche pas le déploiement. Le référentiel reste vide
+// jusqu'au prochain `db:seed`, l'erreur dans les logs l'annonce.
+async function loadIfEmpty(
+  { databaseUrl, movementsUrl }: LoadGeographyOptions,
+  fetchImpl: Fetch,
+  { log, warn }: Loggers,
+): Promise<void> {
+  await withDatabase(databaseUrl, async (db) => {
+    if (await hasDepartments(db)) {
+      log("departments contient déjà des lignes : rien à charger (--if-empty)");
+      return;
+    }
+    let summary: Summary;
+    try {
+      summary = await fetchGeography(fetchImpl, movementsUrl);
+    } catch (error) {
+      warn(
+        `Référentiel géographique non chargé, source indisponible : ${errorMessage(error)}. Relancer db:seed plus tard.`,
+      );
+      return;
+    }
+    await replaceGeography(db, summary.geography);
+    log(describeSummary(summary));
+  });
+}
+
 // Tout est téléchargé et vérifié avant d'ouvrir la base : une source invalide
 // laisse le référentiel en place.
 export async function runLoadGeography(
@@ -77,14 +136,16 @@ export async function runLoadGeography(
   env: Env,
   fetchImpl: Fetch,
   log: (message: string) => void = console.log,
+  warn: (message: string) => void = console.error,
 ): Promise<void> {
-  const { databaseUrl, movementsUrl } = parseLoadGeographyOptions(args, env);
-  const summary = await fetchGeography(fetchImpl, movementsUrl);
-  const db = createDatabase(databaseUrl);
-  try {
-    await replaceGeography(db, summary.geography);
-  } finally {
-    await db.$client.end();
+  const options = parseLoadGeographyOptions(args, env);
+  if (options.ifEmpty) {
+    await loadIfEmpty(options, fetchImpl, { log, warn });
+    return;
   }
+  const summary = await fetchGeography(fetchImpl, options.movementsUrl);
+  await withDatabase(options.databaseUrl, (db) =>
+    replaceGeography(db, summary.geography),
+  );
   log(describeSummary(summary));
 }

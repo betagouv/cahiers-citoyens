@@ -64,12 +64,12 @@ Pour une recherche par lieu qui propose toutes les communes, y compris celles sa
 - `municipalities` : `insee_code`, `name`, `department_code`, `population` (facultative), `postal_codes` (`text[]`), `search_name`, depuis `https://geo.api.gouv.fr/communes` (environ 35 000 communes actuelles). `search_name` est le nom en minuscules, sans accents ni ponctuation (`toSearchName`, `src/geography/search-name.ts`). Un index btree `text_pattern_ops` sert la recherche par préfixe (`search_name like 'saint et%'`) sans extension : ni `pg_trgm` ni `unaccent` ne sont activées. La saisie passe par le même `toSearchName`. Les collectivités d'outre-mer (975, 984, 986…) ont des communes mais ne sont pas des départements : `department_code` n'a donc pas de clé étrangère.
 - `municipality_code_history` : `old_code` → `current_code`. Les cahiers portent le code INSEE de 2019, geo.api les communes actuelles. Source : fichier des événements survenus aux communes du Code officiel géographique de l'Insee, millésime 2026 (`v_mvt_commune_2026.csv`, référencé sur data.gouv.fr). On garde les fusions et changements de code (MOD 31, 32, 33, 41, 50) d'une commune vers une commune, postérieurs au 1er janvier 2019, et on suit chaque chaîne jusqu'à une commune actuelle. Un code encore actuel n'y figure pas. Au premier chargement : 108 anciens codes, tous rattachés.
 
-Chargement : `scripts/load-geography.ts`, compilé au build dans `dist/jobs/load-geography.mjs`, lancé par `npm run geo:load` (Scalingo) ou `bun scripts/load-geography.ts` (local), avec `DATABASE_URL`. Tout est téléchargé et vérifié avant d'ouvrir la base. Les trois tables sont remplacées dans une seule transaction : relancer donne le même état, et une commune disparue d'une année sur l'autre disparaît aussi. `--movements-url` permet de passer au millésime suivant du COG sans changer le code.
+Chargement : `scripts/load-geography.ts`, compilé au build dans `dist/jobs/load-geography.mjs`, lancé par `db:seed` (`scripts/seed.sh` : `bun scripts/load-geography.ts` en local, le job compilé sous Node sur Scalingo), avec `DATABASE_URL`. Tout est téléchargé et vérifié avant d'ouvrir la base. Les trois tables sont remplacées dans une seule transaction : relancer donne le même état, et une commune disparue d'une année sur l'autre disparaît aussi. `--movements-url` permet de passer au millésime suivant du COG sans changer le code.
 
 ## Vérification
 
 - Statique : `check`, `lint`, `test`, `build`, et `db:generate` ne produit aucun écart.
-- Exécution : `db:migrate` sur une base vide, puis sur une copie de la base de recette (les cahiers existants passent `published`, sans version). `geo:load` deux fois de suite : mêmes comptes.
+- Exécution : `db:migrate` sur une base vide, puis sur une copie de la base de recette (les cahiers existants passent `published`, sans version). `db:seed` deux fois de suite : mêmes comptes.
 
 ## Questions ouvertes
 
