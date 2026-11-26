@@ -12,7 +12,11 @@ export async function PageSearchSection({ search }: { search: PageSearch }) {
   return (
     <>
       <div className="fr-p-4w bg-[var(--background-alt-grey)]">
+        {/* Next garde la page en mémoire d'une navigation à l'autre : sans clé
+            propre à la recherche, les champs gardent les valeurs de la visite
+            précédente au lieu de celles de l'URL. */}
         <HomeSearchForm
+          key={`${search.place}|${search.keyword}`}
           id="search-pages"
           initialPlace={
             place === undefined
