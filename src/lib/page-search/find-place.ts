@@ -1,15 +1,30 @@
 import { eq, inArray, sql } from "drizzle-orm";
 import { getDatabase } from "@/db/client";
-import { departments, municipalities, placePageCounts } from "@/db/schema";
+import {
+  departments,
+  municipalities,
+  municipalityCodeHistory,
+  placePageCounts,
+} from "@/db/schema";
 import { type PlaceCodes, parsePlaceCodes } from "./place-codes";
-import { placeLabel } from "./place-label";
+import {
+  type PlaceSuggestion,
+  formerMunicipalityName,
+  placeDisplayName,
+  placeLabel,
+} from "./place-label";
 import { suggestPlaces } from "./suggest-places";
 
-// Un lieu reconnu : ses codes pour filtrer, son nom pour l'afficher, et son
-// nombre de pages publiées.
+// Un lieu reconnu : ses codes pour filtrer, son étiquette pour le champ
+// « Lieu », son nom pour les titres, et son nombre de pages publiées.
 export interface ResolvedPlace {
   codes: PlaceCodes;
+  // « Béon (01) » : le texte du champ, que la recherche sans JavaScript
+  // reconnaît.
   label: string;
+  // « Béon (ancienne commune, aujourd’hui Culoz-Béon) » ; l'étiquette pour
+  // tout autre lieu.
+  displayName: string;
   pageCount: number;
 }
 
@@ -33,23 +48,54 @@ async function findDepartments(
     rows.filter((row) => row.code === code),
   );
   if (found.length === 0) return undefined;
+  const label =
+    found.length === 1
+      ? placeLabel({ name: found[0].name, departmentCode: found[0].code })
+      : found.map((row) => row.name).join(", ");
   return {
     codes: { kind: "departments", codes: found.map((row) => row.code) },
-    label:
-      found.length === 1
-        ? placeLabel({ name: found[0].name, departmentCode: found[0].code })
-        : found.map((row) => row.name).join(", "),
+    label,
+    displayName: label,
     pageCount: found.reduce((sum, row) => sum + row.pageCount, 0),
   };
 }
 
-// Un ancien code INSEE (celui d'un cahier) mène à la commune actuelle.
-async function findMunicipality(
+// Un code de 2019 disparu depuis : l'ancienne commune, et ses seules pages
+// (`publishedIn` ne retient pour ce code que les cahiers qui le portent).
+async function findFormerMunicipality(
   code: string,
 ): Promise<ResolvedPlace | undefined> {
   const [row] = await getDatabase()
     .select({
-      code: municipalities.inseeCode,
+      name: municipalityCodeHistory.name,
+      departmentCode: municipalityCodeHistory.departmentCode,
+      currentName: municipalities.name,
+      pageCount,
+    })
+    .from(municipalityCodeHistory)
+    .innerJoin(
+      municipalities,
+      eq(municipalities.inseeCode, municipalityCodeHistory.currentCode),
+    )
+    .leftJoin(
+      placePageCounts,
+      eq(placePageCounts.place, municipalityCodeHistory.oldCode),
+    )
+    .where(eq(municipalityCodeHistory.oldCode, code));
+  if (row === undefined) return undefined;
+  return {
+    codes: { kind: "municipality", code },
+    label: placeLabel(row),
+    displayName: formerMunicipalityName(row),
+    pageCount: row.pageCount,
+  };
+}
+
+async function findCurrentMunicipality(
+  code: string,
+): Promise<ResolvedPlace | undefined> {
+  const [row] = await getDatabase()
+    .select({
       name: municipalities.name,
       departmentCode: municipalities.departmentCode,
       pageCount,
@@ -59,17 +105,32 @@ async function findMunicipality(
       placePageCounts,
       eq(placePageCounts.place, municipalities.inseeCode),
     )
-    .where(
-      eq(
-        municipalities.inseeCode,
-        sql`coalesce((select current_code from municipality_code_history where old_code = ${code}), ${code})`,
-      ),
-    );
+    .where(eq(municipalities.inseeCode, code));
   if (row === undefined) return undefined;
+  const label = placeLabel(row);
   return {
-    codes: { kind: "municipality", code: row.code },
-    label: placeLabel(row),
+    codes: { kind: "municipality", code },
+    label,
+    displayName: label,
     pageCount: row.pageCount,
+  };
+}
+
+async function findMunicipality(
+  code: string,
+): Promise<ResolvedPlace | undefined> {
+  return (await findFormerMunicipality(code)) ?? findCurrentMunicipality(code);
+}
+
+function fromSuggestion(suggestion: PlaceSuggestion): ResolvedPlace {
+  return {
+    codes:
+      suggestion.kind === "department"
+        ? { kind: "departments", codes: [suggestion.code] }
+        : { kind: "municipality", code: suggestion.code },
+    label: placeLabel(suggestion),
+    displayName: placeDisplayName(suggestion),
+    pageCount: suggestion.pageCount,
   };
 }
 
@@ -96,15 +157,5 @@ export async function resolvePlace(value: string): Promise<PlaceResolution> {
   }
   const [first] = await suggestPlaces(input);
   if (first === undefined) return { status: "unknown", input };
-  return {
-    status: "found",
-    place: {
-      codes:
-        first.kind === "department"
-          ? { kind: "departments", codes: [first.code] }
-          : { kind: "municipality", code: first.code },
-      label: placeLabel(first),
-      pageCount: first.pageCount,
-    },
-  };
+  return { status: "found", place: fromSuggestion(first) };
 }

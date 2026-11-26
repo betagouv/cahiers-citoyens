@@ -21,6 +21,7 @@ describe("findPlace", () => {
     ).resolves.toEqual({
       codes: { kind: "departments", codes: ["25"] },
       label: "Doubs (25)",
+      displayName: "Doubs (25)",
       pageCount: 700,
     });
     expect(fake.queries[0].sql).toContain(
@@ -40,6 +41,7 @@ describe("findPlace", () => {
     ).resolves.toEqual({
       codes: { kind: "departments", codes: ["971", "972"] },
       label: "Guadeloupe, Martinique",
+      displayName: "Guadeloupe, Martinique",
       pageCount: 50,
     });
   });
@@ -50,19 +52,36 @@ describe("findPlace", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("ramène un ancien code INSEE à la commune actuelle", async () => {
-    fake.reply([["01138", "Culoz-Béon", "01", 20]]);
+  it("nomme une ancienne commune et ne compte que ses pages", async () => {
+    fake.reply([["Béon", "01", "Culoz-Béon", 3]]);
 
     await expect(
       findPlace({ kind: "municipality", code: "01039" }),
     ).resolves.toEqual({
+      codes: { kind: "municipality", code: "01039" },
+      label: "Béon (01)",
+      displayName: "Béon (ancienne commune, aujourd’hui Culoz-Béon)",
+      pageCount: 3,
+    });
+    expect(fake.queries).toHaveLength(1);
+    expect(fake.queries[0].sql).toContain(
+      'left join "place_page_counts" on "place_page_counts"."place" = "municipality_code_history"."old_code"',
+    );
+    expect(fake.queries[0].params).toEqual(["01039"]);
+  });
+
+  it("cherche une commune actuelle quand le code n'est pas ancien", async () => {
+    fake.reply([], [["Culoz-Béon", "01", 20]]);
+
+    await expect(
+      findPlace({ kind: "municipality", code: "01138" }),
+    ).resolves.toEqual({
       codes: { kind: "municipality", code: "01138" },
       label: "Culoz-Béon (01)",
+      displayName: "Culoz-Béon (01)",
       pageCount: 20,
     });
-    expect(fake.queries[0].sql).toContain(
-      "coalesce((select current_code from municipality_code_history where old_code = $1), $2)",
-    );
+    expect(fake.queries[1].params).toEqual(["01138"]);
   });
 
   it("ignore une commune inconnue", async () => {
@@ -79,13 +98,14 @@ describe("resolvePlace", () => {
   });
 
   it("lit des codes", async () => {
-    fake.reply([["71106", "Charolles", "71", 286]]);
+    fake.reply([], [["Charolles", "71", 286]]);
 
     await expect(resolvePlace("71106")).resolves.toEqual({
       status: "found",
       place: {
         codes: { kind: "municipality", code: "71106" },
         label: "Charolles (71)",
+        displayName: "Charolles (71)",
         pageCount: 286,
       },
     });
@@ -125,6 +145,7 @@ describe("resolvePlace", () => {
       place: {
         codes: { kind: "municipality", code: "71106" },
         label: "Charolles (71)",
+        displayName: "Charolles (71)",
         pageCount: 286,
       },
     });
@@ -133,7 +154,32 @@ describe("resolvePlace", () => {
       place: {
         codes: { kind: "departments", codes: ["16"] },
         label: "Charente (16)",
+        displayName: "Charente (16)",
         pageCount: 286,
+      },
+    });
+  });
+
+  it("reconnaît l'ancien nom d'une commune dans un texte libre", async () => {
+    fake.reply([
+      {
+        kind: "formerMunicipality",
+        code: "01039",
+        name: "Béon",
+        department_code: "01",
+        department_name: "Ain",
+        page_count: 3,
+        current_name: "Culoz-Béon",
+      },
+    ]);
+
+    await expect(resolvePlace("beon")).resolves.toEqual({
+      status: "found",
+      place: {
+        codes: { kind: "municipality", code: "01039" },
+        label: "Béon (01)",
+        displayName: "Béon (ancienne commune, aujourd’hui Culoz-Béon)",
+        pageCount: 3,
       },
     });
   });

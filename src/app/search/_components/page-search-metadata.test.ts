@@ -9,6 +9,7 @@ const found = {
   place: {
     codes: { kind: "municipality", code: "71106" },
     label: "Charolles (71)",
+    displayName: "Charolles (71)",
     pageCount: 286,
   },
 } as const;
@@ -27,6 +28,28 @@ describe("pageSearchMetadata", () => {
         "Les pages des cahiers citoyens de Charolles (71), ouverts en mairie en 2019, transcrites et consultables.",
       robots: undefined,
     });
+  });
+
+  it("titre une ancienne commune par son nom de 2019 et sa commune actuelle", async () => {
+    vi.mocked(resolvePlaceForRequest).mockResolvedValueOnce({
+      status: "found",
+      place: {
+        codes: { kind: "municipality", code: "01039" },
+        label: "Béon (01)",
+        displayName: "Béon (ancienne commune, aujourd’hui Culoz-Béon)",
+        pageCount: 3,
+      },
+    });
+
+    const metadata = await pageSearchMetadata({
+      place: "01039",
+      keyword: "",
+      pageIndex: 1,
+    });
+
+    expect(metadata.title).toBe(
+      "Cahiers de Béon (ancienne commune, aujourd’hui Culoz-Béon)",
+    );
   });
 
   it("n'indexe pas une recherche par mot-clé", async () => {

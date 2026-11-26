@@ -9,10 +9,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function hasPlaceKind(value: Record<string, unknown>): boolean {
+  if (value.kind === "formerMunicipality") {
+    return typeof value.currentName === "string";
+  }
+  return value.kind === "department" || value.kind === "municipality";
+}
+
 function isPlaceSuggestion(value: unknown): value is PlaceSuggestion {
   return (
     isRecord(value) &&
-    (value.kind === "department" || value.kind === "municipality") &&
+    hasPlaceKind(value) &&
     typeof value.code === "string" &&
     typeof value.name === "string" &&
     typeof value.departmentCode === "string" &&

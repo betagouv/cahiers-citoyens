@@ -18,12 +18,23 @@ const charolles = {
 describe("parsePlaceSuggestions", () => {
   it("garde les propositions bien formées", () => {
     const outreMer = { ...charolles, departmentName: null, kind: "department" };
+    const former = {
+      ...charolles,
+      kind: "formerMunicipality",
+      currentName: "Commune Actuelle",
+    };
 
     expect(
       parsePlaceSuggestions({
-        suggestions: [charolles, outreMer, { ...charolles, kind: "region" }],
+        suggestions: [
+          charolles,
+          outreMer,
+          former,
+          { ...charolles, kind: "region" },
+          { ...charolles, kind: "formerMunicipality" },
+        ],
       }),
-    ).toEqual([charolles, outreMer]);
+    ).toEqual([charolles, outreMer, former]);
   });
 
   it.each([

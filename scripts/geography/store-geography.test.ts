@@ -35,7 +35,15 @@ describe("replaceGeography", () => {
           searchName: "commune fictive",
         },
       ],
-      codeChanges: [{ oldCode: "01002", currentCode: "01001" }],
+      codeChanges: [
+        {
+          oldCode: "01002",
+          currentCode: "01001",
+          name: "Ancienne-Fictive",
+          departmentCode: "01",
+          searchName: "ancienne fictive",
+        },
+      ],
     });
 
     expect(
@@ -54,7 +62,7 @@ describe("replaceGeography", () => {
     expect(fake.queries.slice(4, 7).map(({ params }) => params)).toEqual([
       ["01", "Département fictif", "84"],
       ["01001", "Commune-Fictive", "01", 12, '{"01400"}', "commune fictive"],
-      ["01002", "01001"],
+      ["01002", "01001", "Ancienne-Fictive", "01", "ancienne fictive"],
     ]);
   });
 });

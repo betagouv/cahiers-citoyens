@@ -14,6 +14,7 @@ describe("parseMovements", () => {
         effectiveOn: "2025-01-01",
         typeBefore: "COM",
         codeBefore: "01330",
+        nameBefore: "Ancienne, fictive",
         typeAfter: "COM",
         codeAfter: "01187",
       },

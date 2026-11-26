@@ -14,7 +14,7 @@ export async function pageSearchMetadata(
 ): Promise<Metadata> {
   const resolution = await resolvePlaceForRequest(search.place);
   const label =
-    resolution.status === "found" ? resolution.place.label : undefined;
+    resolution.status === "found" ? resolution.place.displayName : undefined;
   const indexable = resolution.status === "found" && search.keyword === "";
   return {
     title: searchTitle(search.keyword, label, search.pageIndex),

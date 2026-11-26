@@ -16,6 +16,7 @@ vi.mock("@/lib/page-search/list-pages", async (importOriginal) => ({
 const charolles = {
   codes: { kind: "municipality", code: "71106" },
   label: "Charolles (71)",
+  displayName: "Charolles (71)",
   pageCount: 286,
 } as const;
 

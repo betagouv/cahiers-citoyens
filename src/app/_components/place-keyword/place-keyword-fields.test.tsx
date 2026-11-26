@@ -118,10 +118,41 @@ describe("PlaceKeywordFields", () => {
     expect(requested).toEqual(["/api/suggestions/places?q=Char"]);
     const options = [...mounted.container.querySelectorAll('[role="option"]')];
     expect(options.map((option) => option.textContent)).toEqual([
-      "Charente (16)DépartementÀ venir",
-      "CharollesCommune · Saône-et-Loire (71)286 pages",
+      "Charente (16), Département, À venir",
+      "Charolles, Commune · Saône-et-Loire (71), 286 pages",
     ]);
     expect(options[1].querySelector(".font-bold")?.textContent).toBe("Char");
+  });
+
+  it("propose une ancienne commune et envoie son code de 2019", async () => {
+    routes.set("/api/suggestions/places", {
+      suggestions: [
+        {
+          kind: "formerMunicipality",
+          code: "01039",
+          name: "Béon",
+          departmentCode: "01",
+          departmentName: "Ain",
+          pageCount: 3,
+          currentName: "Culoz-Béon",
+        },
+      ],
+    });
+    mounted = await render();
+    await typeInto(field("t-place"), "béon");
+    await settle();
+
+    const [option] = mounted.container.querySelectorAll('[role="option"]');
+    expect(option.textContent).toBe(
+      "Béon, Ancienne commune · Ain (01) · aujourd’hui Culoz-Béon, 3 pages",
+    );
+    await press(field("t-place"), "ArrowDown");
+    await press(field("t-place"), "Enter");
+
+    expect(field("t-place").value).toBe("Béon (01)");
+    const hidden = mounted.container.querySelector('input[type="hidden"]');
+    expect(hidden?.getAttribute("value")).toBe("01039");
+    expect(buttonText()).toBe("Voir les 3 pages");
   });
 
   it("envoie le code du lieu choisi et annonce ses pages", async () => {

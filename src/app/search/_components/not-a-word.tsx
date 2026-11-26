@@ -37,7 +37,7 @@ export async function NotAWord({
     return (
       <section aria-labelledby="results-title" className="fr-mt-6w">
         <h2 id="results-title" className={fr.cx("fr-h4")}>
-          {resultsSummary(0, keyword, place?.label)}
+          {resultsSummary(0, keyword, place?.displayName)}
         </h2>
         <NoPages />
       </section>
@@ -47,7 +47,7 @@ export async function NotAWord({
     <>
       <section aria-labelledby="word-notice-title" className="fr-mt-6w">
         <h2 id="word-notice-title" className={fr.cx("fr-h4")}>
-          {notAWordTitle(keyword, place?.label)}
+          {notAWordTitle(keyword, place?.displayName)}
         </h2>
         <WordAlternatives
           suggestions={suggestions}
@@ -58,7 +58,7 @@ export async function NotAWord({
       {placeHasPages && (
         <section aria-labelledby="results-title" className="fr-mt-6w">
           <h2 id="results-title" className={fr.cx("fr-h4")}>
-            {placePagesTitle(place.pageCount, place.label)}
+            {placePagesTitle(place.pageCount, place.displayName)}
           </h2>
           <HitList
             hits={hits}

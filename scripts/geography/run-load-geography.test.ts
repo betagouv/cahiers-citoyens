@@ -15,7 +15,7 @@ vi.mock("postgres", () => ({ default: fake.connect }));
 
 const ENV = { DATABASE_URL: "postgres://test/app" };
 const MOVEMENTS_HEADER =
-  '"MOD","DATE_EFF","TYPECOM_AV","COM_AV","TYPECOM_AP","COM_AP"';
+  '"MOD","DATE_EFF","TYPECOM_AV","COM_AV","LIBELLE_AV","TYPECOM_AP","COM_AP"';
 
 function fakeFetch(movements: string, departments: unknown = []) {
   const bodies = new Map<string, Response>([
@@ -70,14 +70,20 @@ describe("parseLoadGeographyOptions", () => {
 describe("runLoadGeography", () => {
   it("charge départements, communes et anciens codes puis ferme la connexion", async () => {
     const log = vi.fn();
-    const movements = `${MOVEMENTS_HEADER}\n"32","2025-01-01","COM","01002","COM","01001"\n`;
+    const movements = `${MOVEMENTS_HEADER}\n"32","2025-01-01","COM","01002","Ancienne-Fictive","COM","01001"\n`;
 
     await runLoadGeography([], ENV, fakeFetch(movements), log);
 
     expect(fake.queries.map(({ sql }) => sql.split(" ")[0])).toContain(
       "insert",
     );
-    expect(fake.queries.at(-3)?.params).toEqual(["01002", "01001"]);
+    expect(fake.queries.at(-3)?.params).toEqual([
+      "01002",
+      "01001",
+      "Ancienne-Fictive",
+      "01",
+      "ancienne fictive",
+    ]);
     expect(fake.queries.at(-1)?.sql).toBe("select refresh_search_counts()");
     expect(fake.ended).toBe(true);
     expect(log).toHaveBeenCalledWith(
@@ -87,7 +93,7 @@ describe("runLoadGeography", () => {
 
   it("liste les anciens codes partis vers une commune disparue", async () => {
     const log = vi.fn();
-    const movements = `${MOVEMENTS_HEADER}\n"32","2025-01-01","COM","01003","COM","01009"\n`;
+    const movements = `${MOVEMENTS_HEADER}\n"32","2025-01-01","COM","01003","Disparue","COM","01009"\n`;
 
     await runLoadGeography([], ENV, fakeFetch(movements), log);
 
@@ -117,21 +123,24 @@ describe("runLoadGeography", () => {
 describe("runLoadGeography --if-empty", () => {
   const movements = `${MOVEMENTS_HEADER}\n`;
 
-  it("ne télécharge rien si departments a déjà des lignes", async () => {
+  it("ne télécharge rien si le référentiel est complet", async () => {
     const log = vi.fn();
     const fetchImpl = fakeFetch(movements);
-    fake.reply([["01"]]);
+    fake.reply([["01"]], []);
 
     await runLoadGeography(["--if-empty"], ENV, fetchImpl, log);
 
-    expect(fake.queries).toHaveLength(1);
-    expect(fake.queries[0]?.sql).toBe(
-      'select "code" from "departments" limit $1',
-    );
+    expect(fake.queries.map(({ sql, params }) => [sql, params])).toEqual([
+      ['select "code" from "departments" limit $1', [1]],
+      [
+        'select "old_code" from "municipality_code_history" where "municipality_code_history"."name" = $1 limit $2',
+        ["", 1],
+      ],
+    ]);
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(fake.ended).toBe(true);
     expect(log).toHaveBeenCalledWith(
-      "departments contient déjà des lignes : rien à charger (--if-empty)",
+      "référentiel déjà chargé : rien à charger (--if-empty)",
     );
   });
 
@@ -142,8 +151,21 @@ describe("runLoadGeography --if-empty", () => {
 
     expect(fake.queries.at(-1)?.sql).toBe("select refresh_search_counts()");
     expect(fake.ended).toBe(true);
+    expect(log.mock.calls).toEqual([
+      ["departments est vide : chargement du référentiel (--if-empty)"],
+      ["0 départements, 1 communes, 0 anciens codes chargés"],
+    ]);
+  });
+
+  it("recharge le référentiel si des anciens codes n'ont pas de nom", async () => {
+    const log = vi.fn();
+    fake.reply([["01"]], [["01002"]]);
+
+    await runLoadGeography(["--if-empty"], ENV, fakeFetch(movements), log);
+
+    expect(fake.queries.at(-1)?.sql).toBe("select refresh_search_counts()");
     expect(log).toHaveBeenCalledWith(
-      "0 départements, 1 communes, 0 anciens codes chargés",
+      "des anciens codes n'ont pas encore de nom : chargement du référentiel (--if-empty)",
     );
   });
 
@@ -156,7 +178,7 @@ describe("runLoadGeography --if-empty", () => {
 
     expect(fake.queries).toHaveLength(1);
     expect(fake.ended).toBe(true);
-    expect(log).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
       `Référentiel géographique non chargé, source indisponible : ${DEPARTMENTS_URL} a répondu 503. Relancer db:seed plus tard.`,
     );

@@ -9,6 +9,9 @@ export interface Movement {
   effectiveOn: string;
   typeBefore: string;
   codeBefore: string;
+  // Nom de la commune juste avant l'événement (LIBELLE_AV), avec article et
+  // accents : « Béon », « L'Abergement-Clémenciat ». Vide avant une création.
+  nameBefore: string;
   typeAfter: string;
   codeAfter: string;
 }
@@ -27,6 +30,7 @@ const COLUMNS: Record<keyof Movement, Column> = {
   effectiveOn: { name: "DATE_EFF", pattern: /^\d{4}-\d{2}-\d{2}$/ },
   typeBefore: { name: "TYPECOM_AV", pattern: COMMUNE_TYPE },
   codeBefore: { name: "COM_AV", pattern: COMMUNE_CODE },
+  nameBefore: { name: "LIBELLE_AV", pattern: /^[^\n]*$/ },
   typeAfter: { name: "TYPECOM_AP", pattern: COMMUNE_TYPE },
   codeAfter: { name: "COM_AP", pattern: COMMUNE_CODE },
 };
@@ -54,6 +58,7 @@ export function parseMovements(csv: string): Movement[] {
   const effectiveOn = columnReader(header, COLUMNS.effectiveOn);
   const typeBefore = columnReader(header, COLUMNS.typeBefore);
   const codeBefore = columnReader(header, COLUMNS.codeBefore);
+  const nameBefore = columnReader(header, COLUMNS.nameBefore);
   const typeAfter = columnReader(header, COLUMNS.typeAfter);
   const codeAfter = columnReader(header, COLUMNS.codeAfter);
   return rows.map((row, i) => {
@@ -68,6 +73,7 @@ export function parseMovements(csv: string): Movement[] {
       effectiveOn: effectiveOn(row, lineNumber),
       typeBefore: typeBefore(row, lineNumber),
       codeBefore: codeBefore(row, lineNumber),
+      nameBefore: nameBefore(row, lineNumber),
       typeAfter: typeAfter(row, lineNumber),
       codeAfter: codeAfter(row, lineNumber),
     };

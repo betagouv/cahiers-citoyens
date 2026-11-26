@@ -100,4 +100,54 @@ describe("suggestPlaces", () => {
     expect(params[2]).toBe(false);
     expect(params[6]).toBe("71");
   });
+
+  it("propose une ancienne commune sous son nom de 2019", async () => {
+    fake.reply([
+      {
+        kind: "formerMunicipality",
+        code: "01039",
+        name: "Béon",
+        department_code: "01",
+        department_name: "Ain",
+        page_count: 3,
+        current_name: "Culoz-Béon",
+      },
+    ]);
+
+    await expect(suggestPlaces("béon")).resolves.toEqual([
+      {
+        kind: "formerMunicipality",
+        code: "01039",
+        name: "Béon",
+        departmentCode: "01",
+        departmentName: "Ain",
+        pageCount: 3,
+        currentName: "Culoz-Béon",
+      },
+    ]);
+    const { sql, params } = query();
+    expect(sql).toContain(
+      "from municipality_code_history h join municipalities cur on cur.insee_code = h.current_code",
+    );
+    expect(sql).toContain(
+      "where (h.search_name like $7) and true and h.name <> '' and h.search_name <> cur.search_name",
+    );
+    expect(params[6]).toBe("beon%");
+  });
+
+  it("cherche une ancienne commune par son code de 2019, sans code postal", async () => {
+    await suggestPlaces("01039");
+
+    expect(query().sql).toContain(
+      "where (h.search_name like $9 or h.old_code = $10) and true",
+    );
+  });
+
+  it("restreint aussi les anciennes communes au département d'une étiquette", async () => {
+    await suggestPlaces("Béon (01)");
+
+    const { sql, params } = query();
+    expect(sql).toContain("(h.search_name like $8) and h.department_code = $9");
+    expect(params.slice(7, 9)).toEqual(["beon%", "01"]);
+  });
 });

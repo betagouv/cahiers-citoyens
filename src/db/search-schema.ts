@@ -15,8 +15,9 @@ export const wordPageCounts = pgMaterializedView("word_page_counts", {
   pageCount: integer("page_count").notNull(),
 }).existing();
 
-// Nombre de pages publiées par département et par commune actuelle (code INSEE
-// de 2019 ramené au code actuel par `municipality_code_history`).
+// Nombre de pages publiées par département, par commune actuelle (code INSEE
+// de 2019 ramené au code actuel par `municipality_code_history`) et par ancien
+// code seul (migration `0009_former-municipality-names.sql`).
 export const placePageCounts = pgMaterializedView("place_page_counts", {
   place: text("place").notNull(),
   pageCount: integer("page_count").notNull(),
