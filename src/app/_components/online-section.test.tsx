@@ -29,8 +29,15 @@ const ONLINE: OnlineDepartment[] = [
 
 vi.mock("next/server", () => ({ connection: async () => undefined }));
 
+const listOnline = vi.hoisted(() => ({
+  fail: false,
+}));
+
 vi.mock("@/lib/online-departments", () => ({
-  listOnlineDepartments: async () => ONLINE,
+  listOnlineDepartments: async () => {
+    if (listOnline.fail) throw new Error("base injoignable");
+    return ONLINE;
+  },
 }));
 
 function tagLabels(html: string): string[] {
@@ -48,6 +55,24 @@ describe("OnlineSection", () => {
     expect(html).toContain(
       "5 cahiers sont consultables aujourd&#x27;hui, dans 2 départements et les outre-mer.",
     );
+  });
+});
+
+describe("OnlineSection sans base", () => {
+  it("garde l'accueil debout et le dit dans la section", async () => {
+    listOnline.fail = true;
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const html = await renderToHtml(await OnlineSection());
+
+      expect(html).toContain("Ce qui est en ligne");
+      expect(html).toContain("momentanément indisponible");
+      expect(html).not.toContain("base injoignable");
+      expect(log).toHaveBeenCalledOnce();
+    } finally {
+      listOnline.fail = false;
+      log.mockRestore();
+    }
   });
 });
 

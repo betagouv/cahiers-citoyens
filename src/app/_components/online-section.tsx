@@ -131,8 +131,39 @@ export function OnlineSectionFallback() {
 
 // `connection` garde la lecture hors du prérendu de `next build`, qui tourne
 // sans base : la section arrive à la requête, servie par le cache.
+// Base injoignable : seule cette section le dit, le reste de l'accueil
+// s'affiche. Le détail de l'erreur reste dans les logs du serveur.
 export async function OnlineSection() {
   await connection();
-  const departments = await listOnlineDepartments();
-  return <OnlineSectionView departments={departments} />;
+  const departments = await readOnlineDepartments();
+  return departments === undefined ? (
+    <OnlineSectionUnavailable />
+  ) : (
+    <OnlineSectionView departments={departments} />
+  );
+}
+
+async function readOnlineDepartments(): Promise<
+  OnlineDepartment[] | undefined
+> {
+  try {
+    return await listOnlineDepartments();
+  } catch (error) {
+    console.error("Accueil : départements en ligne illisibles", error);
+    return undefined;
+  }
+}
+
+export function OnlineSectionUnavailable() {
+  return (
+    <OnlineLayout
+      intro={
+        <p className="fr-mb-0">
+          La liste des départements en ligne est momentanément indisponible.
+        </p>
+      }
+      map={<DepartmentMap departments={[]} />}
+      areas={<PublicationLink />}
+    />
+  );
 }
