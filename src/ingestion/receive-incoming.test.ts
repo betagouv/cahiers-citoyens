@@ -1,9 +1,12 @@
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDatabase } from "../db/client";
+import type { SendAlert } from "./alert";
 import { claimDelivery } from "./delivery-rows";
 import { createFileBucket } from "./file-bucket";
+import type { ObjectStore } from "./object-store";
 import { incomingNames, receiveIncoming } from "./receive-incoming";
 import { type TempDir, tempDir } from "./test-zip";
 
@@ -12,6 +15,13 @@ vi.mock("./delivery-rows", () => ({ claimDelivery: vi.fn() }));
 const db = createDatabase("postgres://test/app");
 const A = "delivery-2026-11-24-0930.zip";
 const B = "delivery-2026-11-25-0930.zip";
+
+const NOW = new Date("2026-11-26T08:00:00Z");
+const alert = vi.fn<SendAlert>(() => Promise.resolve());
+
+function deps(store: ObjectStore) {
+  return { db, store, alert, now: () => NOW };
+}
 
 let dir: TempDir;
 
@@ -22,6 +32,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await dir.remove();
   vi.mocked(claimDelivery).mockReset();
+  alert.mockClear();
 });
 
 function claimed(
@@ -59,9 +70,10 @@ describe("receiveIncoming", () => {
     const store = await bucketWith(`incoming/${B}`, `incoming/${A}`);
     vi.mocked(claimDelivery).mockResolvedValue(claimed("received", true));
 
-    await expect(receiveIncoming({ db, store })).resolves.toEqual({
+    await expect(receiveIncoming(deps(store))).resolves.toEqual({
       errors: [],
       left: [],
+      duplicates: [],
     });
     expect(vi.mocked(claimDelivery).mock.calls.map(([, name]) => name)).toEqual(
       [A, B],
@@ -76,33 +88,58 @@ describe("receiveIncoming", () => {
     const store = await bucketWith(`incoming/${A}`, `deliveries/${A}`);
     vi.mocked(claimDelivery).mockResolvedValue(claimed("received", false));
 
-    await receiveIncoming({ db, store });
+    await receiveIncoming(deps(store));
 
     expect(await store.list("")).toEqual([`deliveries/${A}`]);
   });
 
-  it("supprime sans le traiter le renvoi d'un dépôt déjà terminé", async () => {
-    const store = await bucketWith(`incoming/${A}`, `incoming/${B}`);
+  it("refuse le renvoi d'un dépôt terminé avec un rapport à part", async () => {
+    const store = await bucketWith(
+      `incoming/${A}`,
+      `incoming/${B}`,
+      "reports/delivery-2026-11-24-0930.json",
+    );
     vi.mocked(claimDelivery)
       .mockResolvedValueOnce(claimed("applied", false))
       .mockResolvedValueOnce(claimed("rejected", false));
 
-    const result = await receiveIncoming({ db, store });
+    const result = await receiveIncoming(deps(store));
 
-    expect(result.errors.map(({ scope }) => scope)).toEqual([A, B]);
-    expect(result.errors[0].message).toBe(
-      `${A} a déjà été traité (applied) : renvoi supprimé de incoming/ sans traitement. Un nouveau dépôt prend un nouvel horodatage.`,
+    expect(result).toEqual({ errors: [], left: [], duplicates: [A, B] });
+    expect(await store.list("")).toEqual([
+      "reports/delivery-2026-11-24-0930.duplicate.json",
+      "reports/delivery-2026-11-24-0930.json",
+      "reports/delivery-2026-11-25-0930.duplicate.json",
+    ]);
+    const report: unknown = JSON.parse(
+      await readFile(
+        join(
+          dir.path,
+          "bucket/reports/delivery-2026-11-24-0930.duplicate.json",
+        ),
+        "utf8",
+      ),
     );
-    expect(await store.list("")).toEqual([]);
+    expect(report).toMatchObject({
+      delivery: A,
+      received_at: NOW.toISOString(),
+      status: "rejected",
+      errors: [{ file: A, code: "duplicate-delivery-name" }],
+    });
+    expect(alert.mock.calls.map(([sent]) => sent.details.delivery)).toEqual([
+      A,
+      B,
+    ]);
   });
 
   it("laisse dans incoming/ un dépôt qu'il n'a pas pu enregistrer", async () => {
     const store = await bucketWith(`incoming/${A}`);
     vi.mocked(claimDelivery).mockRejectedValue(new Error("base injoignable"));
 
-    await expect(receiveIncoming({ db, store })).resolves.toEqual({
+    await expect(receiveIncoming(deps(store))).resolves.toEqual({
       errors: [{ scope: A, message: "base injoignable" }],
       left: [A],
+      duplicates: [],
     });
     expect(await store.list("")).toEqual([`incoming/${A}`]);
   });

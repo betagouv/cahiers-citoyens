@@ -5,7 +5,9 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
+  PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import {
   type S3Settings,
@@ -14,7 +16,7 @@ import {
 } from "../lib/scan-storage";
 
 // Les ZIP du bucket : `incoming/` où Condorcet dépose, `deliveries/` où le job
-// les garde. Clés relatives au préfixe du bucket, comme pour les images.
+// les garde, et les rapports de `reports/` que Condorcet lit. Clés relatives au préfixe du bucket, comme pour les images.
 export interface ObjectStore {
   // Clés qui commencent par `prefix`, dans l'ordre du stockage.
   list(prefix: string): Promise<string[]>;
@@ -24,13 +26,19 @@ export interface ObjectStore {
   remove(key: string): Promise<void>;
   // Écrit l'objet dans le fichier `path`, en flux.
   download(key: string, path: string): Promise<void>;
+  // Date de dernière écriture de l'objet.
+  modifiedAt(key: string): Promise<Date>;
+  // Écrit un document JSON, en écrasant l'objet s'il existe.
+  writeJson(key: string, json: string): Promise<void>;
 }
 
 export type S3Command =
   | ListObjectsV2Command
   | CopyObjectCommand
   | DeleteObjectCommand
-  | GetObjectCommand;
+  | GetObjectCommand
+  | HeadObjectCommand
+  | PutObjectCommand;
 
 export interface S3Sender {
   send(command: S3Command): Promise<unknown>;
@@ -64,9 +72,40 @@ function parseBody(output: unknown, key: string): Readable {
   throw new Error(`Objet S3 sans contenu lisible : ${key}`);
 }
 
+function parseModified(output: unknown, key: string): Date {
+  if (isObject(output) && output.LastModified instanceof Date) {
+    return output.LastModified;
+  }
+  throw new Error(`Objet S3 sans date de modification : ${key}`);
+}
+
 // `CopySource` est encodé comme une URL, barres obliques comprises entre les segments.
 function copySource(bucket: string, key: string): string {
   return [bucket, ...key.split("/")].map(encodeURIComponent).join("/");
+}
+
+// Clés complètes sous `prefix`, page après page.
+async function listKeys(
+  client: S3Sender,
+  bucket: string,
+  prefix: string,
+): Promise<string[]> {
+  const keys: string[] = [];
+  let token: string | undefined;
+  do {
+    const page = parseListPage(
+      await client.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: prefix,
+          ContinuationToken: token,
+        }),
+      ),
+    );
+    keys.push(...page.keys);
+    token = page.next;
+  } while (token !== undefined);
+  return keys;
 }
 
 export function createS3ObjectStore(
@@ -82,22 +121,8 @@ export function createS3ObjectStore(
   }
   return {
     async list(listed) {
-      const keys: string[] = [];
-      let token: string | undefined;
-      do {
-        const page = parseListPage(
-          await client.send(
-            new ListObjectsV2Command({
-              Bucket: bucket,
-              Prefix: fullKey(listed),
-              ContinuationToken: token,
-            }),
-          ),
-        );
-        keys.push(...page.keys.map(relativeKey));
-        token = page.next;
-      } while (token !== undefined);
-      return keys;
+      const keys = await listKeys(client, bucket, fullKey(listed));
+      return keys.map(relativeKey);
     },
     async copy(from, to) {
       await client.send(
@@ -118,6 +143,22 @@ export function createS3ObjectStore(
         new GetObjectCommand({ Bucket: bucket, Key: fullKey(key) }),
       );
       await pipeline(parseBody(output, key), createWriteStream(path));
+    },
+    async modifiedAt(key) {
+      const output = await client.send(
+        new HeadObjectCommand({ Bucket: bucket, Key: fullKey(key) }),
+      );
+      return parseModified(output, key);
+    },
+    async writeJson(key, json) {
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: fullKey(key),
+          Body: json,
+          ContentType: "application/json",
+        }),
+      );
     },
   };
 }

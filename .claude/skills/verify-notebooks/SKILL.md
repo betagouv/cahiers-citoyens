@@ -21,7 +21,7 @@ eval "$(.claude/skills/verify-notebooks/scripts/notebooks-verify env)"
 
 **Le port n'est pas fixe.** Le checkout principal prend 3000, chaque worktree un port stable entre 3100 et 3899 dérivé de son chemin (`scripts/dev-port.sh`, partagé avec `bun dev`). `NOTEBOOKS_PORT` force un autre port. La ligne `eval` exporte `NOTEBOOKS_PORT`, `NOTEBOOKS_BASE_URL` et `AGENT_BROWSER_SESSION`, pour que les appels directs à `agent-browser` visent la même session que le script.
 
-`launch` démarre le serveur en arrière-plan, écrit son PID dans `/tmp/notebooks-verify/$NOTEBOOKS_PORT/server.pid` et attend que `GET /api/health` réponde `{"status":"ok"}` (≈ 5 s en dev, ≈ 15 s en `--prod` avec le build). Un serveur déjà lancé par ce harnais dans le même mode est réutilisé. Un serveur de cet arbre lancé à la main est réutilisé en dev, sans écrire de PID : le cleanup ne le tuera pas. Un serveur d'un autre arbre fait refuser `launch`, car il servirait l'autre code.
+`launch` démarre le serveur en arrière-plan, écrit son PID dans `/tmp/notebooks-verify/$NOTEBOOKS_PORT/server.pid` et attend que `GET /api/health` réponde 200 avec `"status":"ok"` ou `"status":"degraded"` (le job d'ingestion n'a pas tourné depuis 15 min, normal en local ; la base doit être migrée) (≈ 5 s en dev, ≈ 15 s en `--prod` avec le build). Un serveur déjà lancé par ce harnais dans le même mode est réutilisé. Un serveur de cet arbre lancé à la main est réutilisé en dev, sans écrire de PID : le cleanup ne le tuera pas. Un serveur d'un autre arbre fait refuser `launch`, car il servirait l'autre code.
 
 Prendre `--prod` pour tout ce qui touche au build, au standalone (`public/`, `.next/static`), au rendu statique ou au déploiement : c'est le binaire que Scalingo exécute. Prendre le dev pour le reste.
 

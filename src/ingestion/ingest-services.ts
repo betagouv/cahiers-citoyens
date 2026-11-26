@@ -1,6 +1,7 @@
 import { embedPendingChunks } from "../../scripts/embed-chunks";
 import { type Database, createDatabase } from "../db/client";
 import { createAlbertClient } from "../lib/albert";
+import { type SendAlert, createAlerter } from "./alert";
 import { parseS3Settings } from "../lib/scan-storage";
 import { parseDatabaseUrl } from "./database-url";
 import { type ImageStorage, createS3ImageStorage } from "./image-storage";
@@ -20,6 +21,7 @@ export interface IngestServices extends Storage {
   db: Database;
   lock: RunLock;
   embedPending: EmbedPending | undefined;
+  alert: SendAlert;
   close(): Promise<void>;
 }
 
@@ -64,6 +66,8 @@ export function openIngestServices(
     db,
     lock: createAdvisoryLock(url),
     embedPending: albertEmbedder(db, env, log),
+    // Webhook optionnel : sans lui, les alertes ne vont qu'aux logs.
+    alert: createAlerter({ webhookUrl: env.ALERT_WEBHOOK_URL, fetch, log }),
     close: () => db.$client.end(),
   };
 }

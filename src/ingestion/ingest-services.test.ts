@@ -39,6 +39,8 @@ describe("openS3Storage", () => {
       "copy",
       "remove",
       "download",
+      "modifiedAt",
+      "writeJson",
     ]);
     expect(Object.keys(storage.images)).toEqual(["put", "remove"]);
   });
@@ -67,6 +69,23 @@ describe("openIngestServices", () => {
     expect(logged).toBe(log);
     await services.close();
     expect(fake.ended).toBe(true);
+  });
+
+  it("poste les alertes au webhook de ALERT_WEBHOOK_URL", async () => {
+    const fetch = vi.fn(() => Promise.resolve(new Response(null)));
+    vi.stubGlobal("fetch", fetch);
+    const log = vi.fn();
+    const services = openIngestServices(
+      { DATABASE_URL: URL, ALERT_WEBHOOK_URL: "http://hook.test/" },
+      fileStorage,
+      log,
+    );
+
+    await services.alert({ event: "incoming.stale", text: "t", details: {} });
+
+    expect(fetch).toHaveBeenCalledWith("http://hook.test/", expect.anything());
+    expect(log).toHaveBeenCalledOnce();
+    vi.unstubAllGlobals();
   });
 
   it("ne vectorise pas sans clé Albert", () => {
