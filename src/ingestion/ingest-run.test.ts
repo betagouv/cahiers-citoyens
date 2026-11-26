@@ -2,12 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDatabase } from "../db/client";
 import { listPendingDeliveries } from "./delivery-rows";
 import { type IngestDependencies, runIngest } from "./ingest-run";
+import { recordJobRun } from "./job-runs";
+import { monitorRun } from "./monitor-run";
 import { processDelivery } from "./process-delivery";
 import { receiveIncoming } from "./receive-incoming";
 
 vi.mock("./delivery-rows", () => ({ listPendingDeliveries: vi.fn() }));
 vi.mock("./process-delivery", () => ({ processDelivery: vi.fn() }));
 vi.mock("./receive-incoming", () => ({ receiveIncoming: vi.fn() }));
+vi.mock("./monitor-run", () => ({ monitorRun: vi.fn() }));
+vi.mock("./job-runs", () => ({ INGEST_JOB: "ingest", recordJobRun: vi.fn() }));
 
 const A = "delivery-2026-11-24-0930.zip";
 const B = "delivery-2026-11-25-0930.zip";
@@ -24,9 +28,17 @@ function deps(overrides: Partial<IngestDependencies> = {}): IngestDependencies {
       tryAcquire: vi.fn(async () => true),
       release: vi.fn(async () => {}),
     },
-    store: { list: vi.fn(), copy: vi.fn(), remove: vi.fn(), download: vi.fn() },
+    store: {
+      list: vi.fn(),
+      copy: vi.fn(),
+      remove: vi.fn(),
+      download: vi.fn(),
+      modifiedAt: vi.fn(),
+      writeJson: vi.fn(),
+    },
     images: { put: vi.fn(), remove: vi.fn() },
     embedPending: vi.fn(async () => 12),
+    alert: vi.fn(),
     now: clock(),
     log: vi.fn(),
     ...overrides,
@@ -39,7 +51,13 @@ const ROWS = [
 ];
 
 beforeEach(() => {
-  vi.mocked(receiveIncoming).mockResolvedValue({ errors: [], left: [] });
+  vi.mocked(receiveIncoming).mockResolvedValue({
+    errors: [],
+    left: [],
+    duplicates: [],
+  });
+  vi.mocked(monitorRun).mockResolvedValue([]);
+  vi.mocked(recordJobRun).mockResolvedValue();
   vi.mocked(listPendingDeliveries).mockResolvedValue(ROWS);
   vi.mocked(processDelivery).mockImplementation(async (_, row) => ({
     move: { name: row.name, from: row.status, to: "applied" },
@@ -52,8 +70,13 @@ afterEach(() => {
 });
 
 describe("runIngest", () => {
-  it("reçoit, traite chaque dépôt en attente par ordre de nom, puis vectorise", async () => {
+  it("reçoit, traite chaque dépôt en attente par ordre de nom, vectorise, rapporte et note son passage", async () => {
     const d = deps();
+    vi.mocked(receiveIncoming).mockResolvedValue({
+      errors: [],
+      left: [],
+      duplicates: ["delivery-2026-11-20-0930.zip"],
+    });
 
     await expect(runIngest(d)).resolves.toEqual({
       event: "ingest.run",
@@ -64,10 +87,33 @@ describe("runIngest", () => {
         { name: A, from: "failed", to: "applied" },
         { name: B, from: "received", to: "applied" },
       ],
+      duplicates: ["delivery-2026-11-20-0930.zip"],
       embedded: 12,
       errors: [],
     });
     expect(d.lock.release).toHaveBeenCalledOnce();
+    expect(monitorRun).toHaveBeenCalledWith(d);
+    expect(recordJobRun).toHaveBeenCalledWith(d.db, {
+      job: "ingest",
+      startedAt: new Date("2026-11-26T10:00:00.000Z"),
+      finishedAt: new Date("2026-11-26T10:01:00.000Z"),
+      errorCount: 0,
+    });
+  });
+
+  it("ajoute les erreurs du monitoring et celle de la note de passage", async () => {
+    vi.mocked(monitorRun).mockResolvedValue([
+      { scope: "monitor", message: "liste" },
+    ]);
+    vi.mocked(recordJobRun).mockRejectedValue(new Error("base coupée"));
+
+    const run = await runIngest(deps());
+
+    expect(run.errors).toEqual([
+      { scope: "monitor", message: "liste" },
+      { scope: "run", message: "base coupée" },
+    ]);
+    expect(vi.mocked(recordJobRun).mock.calls[0][1].errorCount).toBe(1);
   });
 
   it("s'arrête sans rien faire si une autre exécution tient le verrou", async () => {
@@ -79,6 +125,7 @@ describe("runIngest", () => {
     expect(run).toMatchObject({ locked: true, deliveries: [], errors: [] });
     expect(receiveIncoming).not.toHaveBeenCalled();
     expect(d.embedPending).not.toHaveBeenCalled();
+    expect(recordJobRun).not.toHaveBeenCalled();
     expect(d.log).toHaveBeenCalledWith(
       "Une autre exécution du job ingest tient le verrou : arrêt.",
     );
@@ -88,6 +135,7 @@ describe("runIngest", () => {
     vi.mocked(receiveIncoming).mockResolvedValue({
       errors: [{ scope: B, message: "copie impossible" }],
       left: [B],
+      duplicates: [],
     });
     vi.mocked(processDelivery).mockResolvedValue({
       move: { name: A, from: "failed", to: "failed" },

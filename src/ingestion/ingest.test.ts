@@ -16,6 +16,7 @@ const RUN: JobRun = {
   finishedAt: NOW.toISOString(),
   locked: false,
   deliveries: [],
+  duplicates: [],
   embedded: 0,
   errors: [],
 };
@@ -38,9 +39,17 @@ beforeEach(() => {
   services = {
     db: createDatabase("postgres://test/app"),
     lock: { tryAcquire: vi.fn(), release: vi.fn() },
-    store: { list: vi.fn(), copy: vi.fn(), remove: vi.fn(), download: vi.fn() },
+    store: {
+      list: vi.fn(),
+      copy: vi.fn(),
+      remove: vi.fn(),
+      download: vi.fn(),
+      modifiedAt: vi.fn(),
+      writeJson: vi.fn(),
+    },
     images: { put: vi.fn(), remove: vi.fn() },
     embedPending: undefined,
+    alert: vi.fn(),
     close: vi.fn(async () => {}),
   };
   vi.mocked(openIngestServices).mockReturnValue(services);

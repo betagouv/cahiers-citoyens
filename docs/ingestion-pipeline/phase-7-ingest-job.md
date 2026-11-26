@@ -36,11 +36,11 @@ Le cron relève `incoming/` et mène chaque dépôt jusqu'à `applied` ou `rejec
 ## Données
 
 - Migration additive `drizzle/0006_delivery-attempts.sql` : `deliveries.attempts` (tentatives commencées, relances et reprises comprises) et `deliveries.failure` (dernier message d'échec, gardé après une relance réussie).
-- `JobRun { event: "ingest.run"; startedAt; finishedAt; locked; deliveries: { name; from; to }[]; embedded; errors: { scope; message }[] }`, seule ligne de la sortie standard. Les messages de suivi (progression de la vectorisation, suppressions d'images impossibles) vont sur la sortie d'erreur. Code de sortie 1 si `errors` n'est pas vide. `ingest withdraw` écrit `{ event: "ingest.withdraw"; id; reason; result | error }`.
+- `JobRun { event: "ingest.run"; startedAt; finishedAt; locked; deliveries: { name; from; to }[]; duplicates: string[]; embedded; errors: { scope; message }[] }` (`duplicates` depuis la phase 9), seule ligne de la sortie standard. Les messages de suivi (progression de la vectorisation, suppressions d'images impossibles) vont sur la sortie d'erreur. Code de sortie 1 si `errors` n'est pas vide. `ingest withdraw` écrit `{ event: "ingest.withdraw"; id; reason; result | error }`.
 
 ## Décisions
 
-- **Renvoi d'un nom déjà traité.** Un ZIP de `incoming/` dont le dépôt est `applied` ou `rejected` est supprimé sans traitement, avec une erreur dans le `JobRun` : le protocole veut un nouvel horodatage par dépôt.
+- **Renvoi d'un nom déjà traité.** Un ZIP de `incoming/` dont le dépôt est `applied` ou `rejected` est supprimé sans traitement : le protocole veut un nouvel horodatage par dépôt. Depuis la [phase 9](phase-9-monitoring.md), le refus a son rapport `reports/<nom>.duplicate.json` et passe dans `JobRun.duplicates`, plus dans `errors`.
 - **Dépôt interrompu en boucle.** La tentative est comptée avant le traitement : un dépôt qui fait tomber le conteneur à chaque essai passe à `failed` au-delà de 3 tentatives, au lieu de bloquer chaque job.
 - **Un seul préfixe.** `incoming/`, `deliveries/` et `notebooks/` sont sous `S3_PREFIX`, comme les clés des scans. En recette, Condorcet dépose donc sous ce préfixe.
 - **Build.** esbuild regroupait yauzl et le SDK S3 en ESM, mais leurs `require("fs")` échouaient au chargement (« Dynamic require of "fs" is not supported »). `scripts/build-jobs.mjs` ajoute une bannière `createRequire` ; tout reste dans `dist/jobs/ingest.mjs`, aucune dépendance ne change de section. `build-jobs.test.ts` lance le job compilé depuis un dossier vide.

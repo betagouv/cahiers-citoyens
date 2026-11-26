@@ -21,7 +21,8 @@ export AGENT_BROWSER_SESSION="${AGENT_BROWSER_SESSION:-notebooks-$PORT}"
 mkdir -p "$RUN_DIR" "$EVIDENCE_DIR"
 
 die() { echo "✗ $*" >&2; exit 1; }
-healthy() { curl -sf --max-time 3 "$BASE_URL/api/health" 2>/dev/null | grep -q '"status":"ok"'; }
+# `degraded` veut dire que le job d'ingestion est en retard : le site, lui, sert.
+healthy() { curl -sf --max-time 3 "$BASE_URL/api/health" 2>/dev/null | grep -qE '"status":"(ok|degraded)"'; }
 
 # Dossier d'où tourne le serveur qui écoute sur $PORT (vide si personne).
 port_owner() {

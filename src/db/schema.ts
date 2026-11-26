@@ -128,6 +128,9 @@ export const deliveries = pgTable(
     publishedCount: integer("published_count").notNull().default(0),
     replacedCount: integer("replaced_count").notNull().default(0),
     unchangedCount: integer("unchanged_count").notNull().default(0),
+    // Écriture de `reports/<nom>.json` après le statut final : vide tant que
+    // le rapport reste à écrire, et le job suivant le réessaie.
+    reportedAt: timestamp("reported_at", { withTimezone: true }),
   },
   (table) => [
     check(
@@ -251,6 +254,10 @@ export const chunks = pgTable(
     // Page citée par la recherche. Vide pour un cahier chargé avant les dépôts.
     page: integer("page"),
     content: text("content").notNull(),
+    // Pour alerter sur les chunks qui attendent leur embedding depuis trop longtemps.
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     search: tsvector("search").generatedAlwaysAs(
       sql`to_tsvector('french', "content")`,
     ),
@@ -274,3 +281,18 @@ export const chunks = pgTable(
     ),
   ],
 );
+
+// Dernier passage de chaque job, lu par `/api/health`. Une ligne par job.
+export const jobRuns = pgTable("job_runs", {
+  job: text("job").primaryKey(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }).notNull(),
+  errorCount: integer("error_count").notNull(),
+});
+
+// Dernier envoi de chaque alerte répétée (archive bloquée, chunks en attente) :
+// le job, qui tourne toutes les 10 min, ne la renvoie qu'une fois par jour.
+export const alertNotices = pgTable("alert_notices", {
+  key: text("key").primaryKey(),
+  sentAt: timestamp("sent_at", { withTimezone: true }).notNull(),
+});

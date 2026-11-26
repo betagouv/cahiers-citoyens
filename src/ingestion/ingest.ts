@@ -32,6 +32,7 @@ function failedRun(startedAt: Date, finishedAt: Date, error: unknown): JobRun {
     finishedAt: finishedAt.toISOString(),
     locked: false,
     deliveries: [],
+    duplicates: [],
     embedded: 0,
     errors: [runError("run", error)],
   };
