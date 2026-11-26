@@ -40,6 +40,8 @@ Un titre H1, un paragraphe de comportement visible, puis exactement quatre H2 : 
 
 ## État de vérification
 
+**Vérifié en `--prod` le 2026-11-26, Postgres 16 sans pgvector, 3 faux cahiers de `deliver.ts` publiés par `ingest-local.ts` :** `notebook-keyword-highlight` (clic depuis `/search?place=&q=retraite`, section ancrée à 0 px, décalage de mise en page nul à 1280 et 375 px, marques identiques à `ts_headline` sur les 30 pages trouvées pour 8 mots-clés, lien `Aller à la première occurrence`, page inchangée sans `?q=`), `notebook-keyword-lines` (calque sur les pages trouvées, aligné sur l'image à 1280 et 700 px), en clair et en sombre ; `search-pages` (liens `?q=<mot>#page-<n>`). Non exercé : lecteur d'écran réel.
+
 **Vérifié en `--prod` le 2026-11-26, Postgres 16 sans pgvector, référentiel réel, 0 puis 3 faux cahiers publiés (02, 2A et un passé en 974) :** `home-online-text` (état vide, puis `3 cahiers … dans 2 départements et les outre-mer`), `home-online-tags` (`Aisne`, `Corse-du-Sud`, `Outre-mer`, aucune liste à vide), `home-map` (seuls 02, 2A et 974 en caramel, infobulles `· 1 cahier en ligne` et `· Cahiers à venir`, clics vers `/search?place=02` et `/search?place=974`, thème sombre), `home-map-legend` (deux statuts), captures 1280 et 375 px.
 
 **Vérifié le 2026-11-25 en `--prod`, base locale (référentiel réel, 40 000 pages fictives) :** `home-search` (suggestions de lieux et de mots, clavier, souris, annonce, champ caché `place`, bouton `Voir les <n> pages` / `Voir la page`), `search-pages`, `search-pages-place` (pagination, 375 px), `search-pages-nojs` (`curl`), en-têtes `Cache-Control` des routes `/api/suggestions/*` et `/api/pages/count`. Non exercé : lecteur d'écran réel.

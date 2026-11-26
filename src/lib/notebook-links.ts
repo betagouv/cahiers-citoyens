@@ -6,15 +6,26 @@ export function pageAnchor(page: number): string {
 }
 
 // `/notebooks/<id>`, ou `/notebooks/<id>#page-3` pour citer une page.
-export function notebookHref(id: string, page?: number | null): string {
+// `?q=<mot>` fait surligner le mot-clé cherché dans le cahier.
+export function notebookHref(
+  id: string,
+  page?: number | null,
+  keyword = "",
+): string {
   const path = `/notebooks/${encodeURIComponent(id)}`;
-  return page === undefined || page === null
-    ? path
-    : `${path}#${pageAnchor(page)}`;
+  const query = keyword === "" ? "" : `?${new URLSearchParams({ q: keyword })}`;
+  const hash =
+    page === undefined || page === null ? "" : `#${pageAnchor(page)}`;
+  return `${path}${query}${hash}`;
 }
 
 // L'image d'une page de la version en ligne. La version rend l'adresse
 // propre à un contenu : la route peut la faire garder longtemps en cache.
 export function pageImageSrc(id: string, page: number, version: number) {
   return `/notebooks/${encodeURIComponent(id)}/pages/${page}?v=${version}`;
+}
+
+// Les lignes d'une version qui contiennent le mot-clé, à superposer aux images.
+export function keywordLinesSrc(id: string, version: number, keyword: string) {
+  return `/notebooks/${encodeURIComponent(id)}/lines?${new URLSearchParams({ v: String(version), q: keyword })}`;
 }
