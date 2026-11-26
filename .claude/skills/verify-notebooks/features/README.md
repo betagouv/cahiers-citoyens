@@ -40,6 +40,8 @@ Un titre H1, un paragraphe de comportement visible, puis exactement quatre H2 : 
 
 ## État de vérification
 
+**Vérifié en `--prod` le 2026-11-26, Postgres 16 sans pgvector, 3 faux cahiers de `deliver.ts` publiés par `ingest-local.ts` :** `notebook-keyword-highlight` (clic depuis `/search?place=&q=retraite`, section ancrée à 0 px, décalage de mise en page nul à 1280 et 375 px, marques identiques à `ts_headline` sur les 30 pages trouvées pour 8 mots-clés, lien `Aller à la première occurrence`, page inchangée sans `?q=`), `notebook-keyword-lines` (calque sur les pages trouvées, aligné sur l'image à 1280 et 700 px), en clair et en sombre ; `search-pages` (liens `?q=<mot>#page-<n>`). Non exercé : lecteur d'écran réel.
+
 **Vérifié le 2026-11-25 en `--prod`, base locale (référentiel réel, 40 000 pages fictives) :** `home-search` (suggestions de lieux et de mots, clavier, souris, annonce, champ caché `place`, bouton `Voir les <n> pages` / `Voir la page`), `search-pages`, `search-pages-place` (pagination, 375 px), `search-pages-nojs` (`curl`), en-têtes `Cache-Control` des routes `/api/suggestions/*` et `/api/pages/count`. Non exercé : lecteur d'écran réel.
 
 **Vérifié le 2026-11-25, en dev et en `--prod`, sans base :** `home-hero`, `home-search`, `home-online-text`, `home-online-tags`, `home-map` (départements colorés, survol, clic vers `/search?place=25`, thème sombre en direct), `home-map-legend`, `home-tiles`, captures 1280 px et 375 px ; `layout-nav` (rubrique active sur `/`, `/understanding`, `/publication`, `/faq`, aucune sur `/search`, `/notebooks` et la 404), `layout-display`, menu mobile.

@@ -8,6 +8,10 @@ const getNotebook = vi.hoisted(() =>
 );
 
 vi.mock("@/lib/notebooks", () => ({ getNotebook }));
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 const NOTEBOOK: Notebook = {
   id: "CC_1",

@@ -11,13 +11,13 @@ const hit = {
 };
 
 describe("PageHitItem", () => {
-  it("relie la page à son cahier et marque le mot trouvé", async () => {
+  it("relie la page à son cahier, mot-clé compris, et marque le mot trouvé", async () => {
     const html = await renderToHtml(
       <PageHitItem hit={hit} keyword="retraite" />,
     );
 
     expect(html).toContain(
-      '<a href="/notebooks/nb%201#page-12">Charolles (71), page 12</a>',
+      '<a href="/notebooks/nb%201?q=retraite#page-12">Charolles (71), page 12</a>',
     );
     expect(html).toContain("Cahier nb 1");
     expect(html).toMatch(/La <mark[^>]*>retraite<\/mark> à &lt;60&gt; ans/);
@@ -32,6 +32,7 @@ describe("PageHitItem", () => {
     );
 
     expect(html).not.toContain("<mark");
+    expect(html).toContain('href="/notebooks/nb%201#page-12"');
     expect(html).toContain("Début mot mot");
     expect(html).toContain("…");
   });

@@ -1,24 +1,32 @@
-import Image from "next/image";
+import { HighlightedText } from "@/app/_components/highlighted-text";
 import { pageAnchor, pageImageSrc } from "@/lib/notebook-links";
 import type { PageContent } from "@/lib/notebooks";
+import type { TextSegment } from "@/lib/page-search/highlight";
+import { PageScan } from "./page-scan";
 
 // Une page du cahier : son image et sa transcription côte à côte, l'une sous
 // l'autre sous 768 px. L'ancre `#page-<n>` sert aux citations de la recherche.
+// Le mot cherché est surligné dans le texte (`segments`) et, quand ses lignes
+// sont connues, sur l'image (`lines`).
 export function NotebookPageItem({
   notebookId,
   version,
   page,
   first,
+  segments,
+  firstOccurrenceId,
+  lines,
 }: {
   notebookId: string;
   version: number;
   page: PageContent;
-  // La première image est la plus grande du premier écran : chargée tout de
-  // suite. Les suivantes attendent le défilement.
   first: boolean;
+  segments: readonly TextSegment[];
+  // Posé sur la première marque de la page qui porte la première occurrence.
+  firstOccurrenceId?: string;
+  lines: readonly string[];
 }) {
   const anchor = pageAnchor(page.number);
-  const src = pageImageSrc(notebookId, page.number, version);
   return (
     <section
       id={anchor}
@@ -30,22 +38,12 @@ export function NotebookPageItem({
       </h2>
       <div className="fr-grid-row fr-grid-row--gutters">
         <div className="fr-col-12 fr-col-md-6">
-          <Image
-            src={src}
-            alt={`Image numérisée de la page ${page.number}, transcrite à la suite`}
-            width={page.width}
-            height={page.height}
-            sizes="(min-width: 768px) 50vw, 100vw"
-            loading={first ? "eager" : "lazy"}
-            fetchPriority={first ? "high" : "auto"}
-            unoptimized
-            className="block h-auto w-full border border-[var(--border-default-grey)]"
+          <PageScan
+            src={pageImageSrc(notebookId, page.number, version)}
+            page={page}
+            first={first}
+            lines={lines}
           />
-          <p className="fr-text--sm fr-mt-1w fr-mb-0">
-            <a href={src} className="fr-link fr-link--sm">
-              Ouvrir l&apos;image de la page {page.number} en grand
-            </a>
-          </p>
         </div>
         <div className="fr-col-12 fr-col-md-6">
           {page.text === "" ? (
@@ -53,7 +51,12 @@ export function NotebookPageItem({
               Aucun texte transcrit sur cette page.
             </p>
           ) : (
-            <p className="whitespace-pre-line">{page.text}</p>
+            <p className="whitespace-pre-line">
+              <HighlightedText
+                segments={segments}
+                firstId={firstOccurrenceId}
+              />
+            </p>
           )}
         </div>
       </div>

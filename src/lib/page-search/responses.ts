@@ -1,7 +1,8 @@
+import type { KeywordLine } from "../keyword-lines";
 import type { PlaceSuggestion } from "./place-label";
 import type { WordSuggestion } from "./word-suggestion";
 
-// Réponses JSON des routes de suggestion et de compte, relues côté navigateur :
+// Réponses JSON des routes de suggestion, de compte et de lignes, relues côté navigateur :
 // tout ce qui ne correspond pas au format attendu est écarté.
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -29,10 +30,22 @@ function isWordSuggestion(value: unknown): value is WordSuggestion {
   );
 }
 
+function isKeywordLine(value: unknown): value is KeywordLine {
+  return (
+    isRecord(value) &&
+    typeof value.page === "number" &&
+    typeof value.points === "string"
+  );
+}
+
+function arrayAt(json: unknown, key: string): unknown[] {
+  if (!isRecord(json)) return [];
+  const value = json[key];
+  return Array.isArray(value) ? value : [];
+}
+
 function suggestionsOf(json: unknown): unknown[] {
-  return isRecord(json) && Array.isArray(json.suggestions)
-    ? json.suggestions
-    : [];
+  return arrayAt(json, "suggestions");
 }
 
 export function parsePlaceSuggestions(json: unknown): PlaceSuggestion[] {
@@ -47,4 +60,15 @@ export function parsePageCount(json: unknown): number | undefined {
   return isRecord(json) && typeof json.pageCount === "number"
     ? json.pageCount
     : undefined;
+}
+
+// Les contours de `/notebooks/<id>/lines`, regroupés par numéro de page.
+export function parseKeywordLines(
+  json: unknown,
+): ReadonlyMap<number, readonly string[]> {
+  const byPage = new Map<number, string[]>();
+  for (const { page, points } of arrayAt(json, "lines").filter(isKeywordLine)) {
+    byPage.set(page, [...(byPage.get(page) ?? []), points]);
+  }
+  return byPage;
 }

@@ -4,8 +4,7 @@ import { Breadcrumb } from "@codegouvfr/react-dsfr/Breadcrumb";
 import { formatNumber } from "@/lib/format";
 import { notebookTitle } from "@/lib/notebook-place";
 import { getNotebook } from "@/lib/notebooks";
-import { NotebookPageItem } from "./_components/notebook-page-item";
-import { PageIndex } from "./_components/page-index";
+import { NotebookPages } from "./_components/notebook-pages";
 
 // La page lit la base hors de toute frontière Suspense : la navigation vers
 // elle attend la base. Le statut 404 d'un id inconnu ou retiré est posé par
@@ -56,18 +55,11 @@ export default async function NotebookPage({
       {onlineVersion === null || pages.length === 0 ? (
         <p>Les pages de ce cahier ne sont pas encore en ligne.</p>
       ) : (
-        <>
-          {pages.length > 1 && <PageIndex pages={pages} />}
-          {pages.map((page, index) => (
-            <NotebookPageItem
-              key={page.number}
-              notebookId={notebook.id}
-              version={onlineVersion}
-              page={page}
-              first={index === 0}
-            />
-          ))}
-        </>
+        <NotebookPages
+          notebookId={notebook.id}
+          version={onlineVersion}
+          pages={pages}
+        />
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  parseKeywordLines,
   parsePageCount,
   parsePlaceSuggestions,
   parseWordSuggestions,
@@ -56,4 +57,31 @@ describe("parsePageCount", () => {
     expect(parsePageCount({ pageCount: "7" })).toBeUndefined();
     expect(parsePageCount(undefined)).toBeUndefined();
   });
+});
+
+describe("parseKeywordLines", () => {
+  it("regroupe les contours par page, dans l'ordre reçu", () => {
+    expect(
+      parseKeywordLines({
+        lines: [
+          { page: 1, points: "0,0 1,1" },
+          { page: 3, points: "2,2 3,3" },
+          { page: 1, points: "4,4 5,5" },
+          { page: "1", points: "6,6" },
+        ],
+      }),
+    ).toEqual(
+      new Map([
+        [1, ["0,0 1,1", "4,4 5,5"]],
+        [3, ["2,2 3,3"]],
+      ]),
+    );
+  });
+
+  it.each([undefined, "texte", { lines: "non" }])(
+    "ne trace rien pour %j",
+    (json) => {
+      expect(parseKeywordLines(json)).toEqual(new Map());
+    },
+  );
 });

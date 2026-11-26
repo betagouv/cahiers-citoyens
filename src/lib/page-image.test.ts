@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getPageImage, parsePageImageTarget } from "./page-image";
+import { getPageImage, parsePageImageTarget, parseVersion } from "./page-image";
 
 const fake = await vi.hoisted(async () => {
   const { createFakePostgres } = await import("../test/fake-postgres");
@@ -10,6 +10,15 @@ vi.stubEnv("DATABASE_URL", "postgres://test/app");
 
 beforeEach(() => {
   fake.reset();
+});
+
+describe("parseVersion", () => {
+  it("lit une version entière positive", () => {
+    expect(parseVersion("2")).toBe(2);
+    expect(parseVersion(null)).toBeUndefined();
+    expect(parseVersion("0")).toBeUndefined();
+    expect(parseVersion("2a")).toBeUndefined();
+  });
 });
 
 describe("parsePageImageTarget", () => {

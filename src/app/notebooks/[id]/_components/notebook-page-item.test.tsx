@@ -3,14 +3,23 @@ import { describe, expect, it } from "vitest";
 import { NotebookPageItem } from "./notebook-page-item";
 
 const PAGE = { number: 3, width: 1200, height: 1700, text: "Ligne 1\nLigne 2" };
+const PLAIN = [{ text: PAGE.text, highlighted: false }];
+const NO_LINES: string[] = [];
 
-function render(page = PAGE, first = false) {
+function render({
+  page = PAGE,
+  first = false,
+  segments = PLAIN,
+  lines = NO_LINES,
+} = {}) {
   return renderToStaticMarkup(
     <NotebookPageItem
       notebookId="CC_1"
       version={2}
       page={page}
       first={first}
+      segments={segments}
+      lines={lines}
     />,
   );
 }
@@ -33,18 +42,33 @@ describe("NotebookPageItem", () => {
     expect(html).toContain(
       '<p class="whitespace-pre-line">Ligne 1\nLigne 2</p>',
     );
+    expect(html).not.toContain("<svg");
   });
 
   it("charge la première image sans attendre le défilement", () => {
-    const html = render(PAGE, true);
+    const html = render({ first: true });
 
     expect(html).not.toContain('loading="lazy"');
     expect(html).toContain('fetchPriority="high"');
   });
 
   it("signale une page sans texte", () => {
-    expect(render({ ...PAGE, text: "" })).toContain(
+    expect(render({ page: { ...PAGE, text: "" }, segments: [] })).toContain(
       "Aucun texte transcrit sur cette page.",
     );
+  });
+
+  it("surligne le mot dans le texte et ses lignes sur l'image", () => {
+    const html = render({
+      segments: [
+        { text: "Ligne ", highlighted: false },
+        { text: "1", highlighted: true },
+      ],
+      lines: ["0,0 10,0 10,5"],
+    });
+
+    expect(html).toMatch(/Ligne <mark[^>]*>1<\/mark><\/p>/);
+    expect(html).toContain('<svg aria-hidden="true"');
+    expect(html).toContain('viewBox="0 0 1200 1700"');
   });
 });

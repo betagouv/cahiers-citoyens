@@ -15,15 +15,23 @@ export interface PageImage {
 
 const POSITIVE_INTEGER = /^[1-9]\d{0,8}$/;
 
+// `?v=<version>` d'une adresse d'image ou de lignes : un entier positif.
+export function parseVersion(version: string | null): number | undefined {
+  if (version === null || !POSITIVE_INTEGER.test(version)) return undefined;
+  return Number(version);
+}
+
 // `/notebooks/<id>/pages/<page>?v=<version>` : numéro de page et version
 // viennent de l'URL, et seuls des entiers positifs désignent une image.
 export function parsePageImageTarget(
   page: string,
   version: string | null,
 ): PageImageTarget | undefined {
-  if (!POSITIVE_INTEGER.test(page) || version === null) return undefined;
-  if (!POSITIVE_INTEGER.test(version)) return undefined;
-  return { page: Number(page), version: Number(version) };
+  const parsedVersion = parseVersion(version);
+  if (!POSITIVE_INTEGER.test(page) || parsedVersion === undefined) {
+    return undefined;
+  }
+  return { page: Number(page), version: parsedVersion };
 }
 
 // Clé de l'image dans le bucket, relue à chaque requête : un cahier retiré,
