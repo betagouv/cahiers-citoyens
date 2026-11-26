@@ -40,7 +40,7 @@ function errorsOf(id: string) {
   const result = parse(id);
   return result.ok
     ? []
-    : result.errors.map(({ code, page }) => ({ code, page }));
+    : result.errors.map(({ code, position }) => ({ code, position }));
 }
 
 beforeAll(async () => {
@@ -74,13 +74,13 @@ describe("deliveryEntries, cahier conforme", () => {
 });
 
 describe("deliveryEntries, chaque défaut vu par le parseur", () => {
-  it.each<[Defect, { code: string; page?: number }[]]>([
-    ["duplicate-page", [{ code: "duplicate-page", page: 2 }]],
-    ["decreasing-pages", [{ code: "page-out-of-order", page: 2 }]],
-    ["invalid-page-id", [{ code: "invalid-page-id", page: 1 }]],
+  it.each<[Defect, { code: string; position?: number }[]]>([
+    ["duplicate-page", [{ code: "duplicate-page", position: 2 }]],
+    ["decreasing-pages", [{ code: "page-out-of-order", position: 2 }]],
+    ["invalid-page-id", [{ code: "invalid-page-id", position: 1 }]],
     ["notebook-id-mismatch", [{ code: "notebook-id-mismatch" }]],
     ["invalid-json", [{ code: "invalid-json" }]],
-    ["schema-violation", [{ code: "missing-field", page: 1 }]],
+    ["schema-violation", [{ code: "missing-field", position: 1 }]],
     ["missing-image", []],
     ["unlisted-file", []],
     ["invalid-image", []],
@@ -88,7 +88,7 @@ describe("deliveryEntries, chaque défaut vu par le parseur", () => {
     ["nested-folder", []],
   ])("%s", (defect, expected) => {
     expect(errorsOf(idOf(defect))).toEqual(
-      expected.map(({ code, page }) => ({ code, page })),
+      expected.map(({ code, position }) => ({ code, position })),
     );
   });
 

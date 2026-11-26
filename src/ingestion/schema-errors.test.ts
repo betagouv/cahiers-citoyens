@@ -14,7 +14,7 @@ describe("schemaErrorToPageError", () => {
   it("nomme un champ manquant à la racine", () => {
     const error = ajvError("required", "", { missingProperty: "pages" });
     expect(schemaErrorToPageError(error)).toEqual({
-      page: undefined,
+      position: undefined,
       code: "missing-field",
       message: "Champ obligatoire manquant : pages.",
     });
@@ -23,7 +23,7 @@ describe("schemaErrorToPageError", () => {
   it("rattache un champ manquant à la page en position i + 1", () => {
     const error = ajvError("required", "/pages/2", { missingProperty: "text" });
     expect(schemaErrorToPageError(error)).toEqual({
-      page: 3,
+      position: 3,
       code: "missing-field",
       message: "Champ obligatoire manquant : text.",
     });
@@ -34,7 +34,7 @@ describe("schemaErrorToPageError", () => {
       missingProperty: "x",
     });
     expect(schemaErrorToPageError(error)).toMatchObject({
-      page: 1,
+      position: 1,
       message: "Champ obligatoire manquant : meta.x.",
     });
   });
@@ -44,7 +44,7 @@ describe("schemaErrorToPageError", () => {
       additionalProperty: "x",
     });
     expect(schemaErrorToPageError(error)).toMatchObject({
-      page: undefined,
+      position: undefined,
       message: "Champ non prévu par le format : meta.x.",
     });
   });
@@ -61,7 +61,7 @@ describe("schemaErrorToPageError", () => {
       additionalProperty: "width",
     });
     expect(schemaErrorToPageError(error)).toEqual({
-      page: 1,
+      position: 1,
       code: "unknown-field",
       message: "Champ non prévu par le format : width.",
     });
@@ -159,9 +159,9 @@ describe("schemaErrorToPageError", () => {
       undefined,
       "Le champ text est invalide (règle maxLength).",
     ],
-  ])("traduit %s sur %j", (keyword, path, params, page, message) => {
+  ])("traduit %s sur %j", (keyword, path, params, position, message) => {
     expect(schemaErrorToPageError(ajvError(keyword, path, params))).toEqual({
-      page,
+      position,
       code: "invalid-field",
       message,
     });

@@ -54,14 +54,16 @@ function checkPageIds(
   page: PageRef,
   position: number,
 ): PageError[] {
-  if (!isPageNumber(page.number)) {
+  const number = page.number;
+  if (!isPageNumber(number)) {
     return [];
   }
-  const expected = `${id}_${page.number}`;
+  const expected = `${id}_${number}`;
   const errors: PageError[] = [];
   if (typeof page.id === "string" && page.id !== expected) {
     errors.push({
-      page: position,
+      position,
+      page: number,
       code: "invalid-page-id",
       message: `id_page vaut ${page.id}, ${expected} attendu (<id_cahier>_<numero_page>).`,
     });
@@ -69,7 +71,8 @@ function checkPageIds(
   page.lineIds.forEach((lineId, index) => {
     if (typeof lineId === "string" && !lineId.startsWith(`${expected}_`)) {
       errors.push({
-        page: position,
+        position,
+        page: number,
         code: "invalid-line-id",
         message: `La ligne en position ${index + 1} a pour id_ligne ${lineId}, qui doit commencer par ${expected}_.`,
       });
@@ -87,7 +90,8 @@ function checkPageOrder(
   if (seen.has(number)) {
     return [
       {
-        page: position,
+        position,
+        page: number,
         code: "duplicate-page",
         message: `La page ${number} apparaît plusieurs fois.`,
       },
@@ -96,7 +100,8 @@ function checkPageOrder(
   if (number < previous) {
     return [
       {
-        page: position,
+        position,
+        page: number,
         code: "page-out-of-order",
         message: `La page ${number} suit la page ${previous} : les numéros de page doivent croître.`,
       },
@@ -108,7 +113,8 @@ function checkPageOrder(
 // Contrôles hors schéma, lus sur un document pas encore validé : le rapport
 // les liste en même temps que les erreurs de schéma. Les identifiants sont
 // comparés au nom du fichier, pas à `id_cahier`, pour qu'une seule erreur
-// n'en entraîne pas d'autres. `page` désigne la position dans la liste.
+// n'en entraîne pas d'autres. `position` désigne le rang dans la liste `pages`,
+// `page` le numéro déclaré, quand il est valide.
 export function checkNotebook(id: NotebookId, document: unknown): PageError[] {
   const errors = checkNotebookId(id, document);
   const pages = isRecord(document) ? listOf(document.pages) : [];

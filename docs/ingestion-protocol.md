@@ -246,8 +246,12 @@ La plateforme vérifie, pour chaque cahier :
 - les numéros de page croissent strictement : ni doublon, ni retour en arrière. Les trous sont admis (pages 1, 5, 7) ;
 - chaque `id_page` vaut `<id_cahier>_<numero_page>`, et chaque `id_ligne` commence par `<id_page>_` ;
 - chaque page a son image, et une seule ; c'est un JPEG ou un PNG lisible ;
+- chaque image a la largeur et la hauteur annoncées par `largeur` et `hauteur` ;
+- chaque polygone tient dans l'image : `0 ≤ x ≤ largeur`, `0 ≤ y ≤ hauteur` ;
 - aucun fichier n'est en trop : chaque image appartient à une page annoncée ;
-- chaque fichier s'extrait sans erreur (le ZIP contrôle chaque fichier par CRC32).
+- chaque fichier s'extrait sans erreur (le ZIP contrôle chaque fichier par CRC32) ; un JSON pèse 20 Mo au plus.
+
+Pour le dépôt : le nom suit `delivery-AAAA-MM-JJ-HHMM.zip`, et les règles de la section 2 sur les noms (racine, ni `..`, ni barre oblique inverse, ni lien symbolique, aucun nom en double).
 
 Les fichiers sont rattachés à un cahier par leur nom : `X.json` décrit le cahier `X`, et l'image `X_3.png` est la page 3 du cahier `X`.
 
@@ -290,7 +294,7 @@ Après traitement, la plateforme écrit `reports/delivery-2026-11-24-0930.json`,
 }
 ```
 
-`status` vaut `applied` ou `rejected`. En cas de refus, chaque erreur indique le cahier, le fichier, la page si besoin, un code et un message.
+`status` vaut `applied` ou `rejected`. En cas de refus, chaque erreur indique le cahier, le fichier, un code et un message, et si besoin la page : `page` est son numéro, `position` son rang dans la liste `pages` du JSON (une erreur du JSON l'indique, car le numéro peut y être invalide).
 
 ## 8. Premier échange
 
