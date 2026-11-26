@@ -1,3 +1,4 @@
+import { Children, type ReactNode, isValidElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToHtml } from "@/test/render";
 import { PageSearchSection } from "./page-search-section";
@@ -85,4 +86,25 @@ describe("PageSearchSection", () => {
     expect(html).toMatch(/<input[^>]*name="place"[^>]*value="Nulle part"/);
     expect(html).not.toContain("Résultats");
   });
+
+  it("recrée le formulaire à chaque recherche, pour qu'il reprenne l'URL", async () => {
+    vi.mocked(resolvePlaceForRequest).mockResolvedValue({ status: "none" });
+    const withPlace = await formKey("04025", "impôt");
+
+    expect(withPlace).toBeTruthy();
+    expect(withPlace).not.toBe(await formKey("", "impôt"));
+    expect(await formKey("", "impôt")).not.toBe(await formKey("", "retraite"));
+  });
 });
+
+// Clé du formulaire rendu par la section : elle doit changer avec la recherche.
+async function formKey(place: string, keyword: string) {
+  const section: unknown = await PageSearchSection({
+    search: { place, keyword, pageIndex: 1 },
+  });
+  if (!isValidElement<{ children: ReactNode }>(section)) return undefined;
+  const [wrapper] = Children.toArray(section.props.children);
+  if (!isValidElement<{ children: ReactNode }>(wrapper)) return undefined;
+  const [form] = Children.toArray(wrapper.props.children);
+  return isValidElement(form) ? form.key : undefined;
+}
