@@ -23,7 +23,11 @@ function check(pages: unknown, idCahier: unknown = "CC_1") {
 }
 
 function codes(pages: unknown, idCahier?: unknown) {
-  return check(pages, idCahier).map(({ code, page }) => ({ code, page }));
+  return check(pages, idCahier).map(({ code, position, page }) => ({
+    code,
+    position,
+    page,
+  }));
 }
 
 describe("checkNotebook, cas valides", () => {
@@ -60,6 +64,7 @@ describe("checkNotebook, identifiants", () => {
   it("exige id_page = <id_cahier>_<numero_page>", () => {
     expect(check([page(1), page(2, 0, "CC_1_02")])).toEqual([
       {
+        position: 2,
         page: 2,
         code: "invalid-page-id",
         message:
@@ -79,6 +84,7 @@ describe("checkNotebook, identifiants", () => {
     ];
     expect(check(pages)).toEqual([
       {
+        position: 2,
         page: 2,
         code: "invalid-line-id",
         message:
@@ -89,9 +95,9 @@ describe("checkNotebook, identifiants", () => {
 
   it("compare les lignes au numéro de page, pas à id_page", () => {
     expect(codes([page(1, 2, "CC_1_x")])).toEqual([
-      { code: "invalid-page-id", page: 1 },
-      { code: "invalid-line-id", page: 1 },
-      { code: "invalid-line-id", page: 1 },
+      { code: "invalid-page-id", position: 1, page: 1 },
+      { code: "invalid-line-id", position: 1, page: 1 },
+      { code: "invalid-line-id", position: 1, page: 1 },
     ]);
   });
 });
@@ -100,7 +106,8 @@ describe("checkNotebook, numéros de page", () => {
   it("refuse une page en double", () => {
     expect(check([page(1), page(2), page(2)])).toEqual([
       {
-        page: 3,
+        position: 3,
+        page: 2,
         code: "duplicate-page",
         message: "La page 2 apparaît plusieurs fois.",
       },
@@ -110,6 +117,7 @@ describe("checkNotebook, numéros de page", () => {
   it("refuse une page qui recule", () => {
     expect(check([page(1), page(4), page(3)])).toEqual([
       {
+        position: 3,
         page: 3,
         code: "page-out-of-order",
         message:
@@ -120,18 +128,18 @@ describe("checkNotebook, numéros de page", () => {
 
   it("compare chaque page à la plus haute déjà vue", () => {
     expect(codes([page(5), page(2), page(3), page(2), page(6)])).toEqual([
-      { code: "page-out-of-order", page: 2 },
-      { code: "page-out-of-order", page: 3 },
-      { code: "duplicate-page", page: 4 },
+      { code: "page-out-of-order", position: 2, page: 2 },
+      { code: "page-out-of-order", position: 3, page: 3 },
+      { code: "duplicate-page", position: 4, page: 2 },
     ]);
   });
 
   it("liste toutes les erreurs ensemble, dans l'ordre des pages", () => {
     expect(codes([page(2, 1, "x"), page(1)], "CC_9")).toEqual([
-      { code: "notebook-id-mismatch", page: undefined },
-      { code: "invalid-page-id", page: 1 },
-      { code: "invalid-line-id", page: 1 },
-      { code: "page-out-of-order", page: 2 },
+      { code: "notebook-id-mismatch", position: undefined, page: undefined },
+      { code: "invalid-page-id", position: 1, page: 2 },
+      { code: "invalid-line-id", position: 1, page: 2 },
+      { code: "page-out-of-order", position: 2, page: 1 },
     ]);
   });
 });

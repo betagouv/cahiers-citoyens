@@ -16,11 +16,11 @@ function parse(value: unknown): ParseNotebookResult {
 
 function errorsOf(result: ParseNotebookResult) {
   if (result.ok) throw new Error("le parseur aurait dû refuser ce JSON");
-  return result.errors.map(({ code, page }) => ({ code, page }));
+  return result.errors.map(({ code, position }) => ({ code, position }));
 }
 
-function only(code: IngestErrorCode, page?: number) {
-  return [{ code, page }];
+function only(code: IngestErrorCode, position?: number) {
+  return [{ code, position }];
 }
 
 type Key = string | number;
@@ -86,7 +86,7 @@ describe("parseNotebook, erreurs localisées", () => {
         {
           notebook: EXAMPLE_ID,
           file: `${EXAMPLE_ID}.json`,
-          page: undefined,
+          position: undefined,
           code: "invalid-field",
           message: "Le champ schema_version ne doit pas être vide.",
         },
@@ -142,9 +142,9 @@ describe("parseNotebook, valeurs refusées par le schéma", () => {
     ],
     ["coordonnée négative", [...RING, 0], [-1, 282], 1],
     ["point à trois coordonnées", [...RING, 0], [1, 2, 3], 1],
-  ])("%s", (_label, path, value, page) => {
+  ])("%s", (_label, path, value, position) => {
     expect(errorsOf(parse(withValue(path, value)))).toEqual(
-      only("invalid-field", page),
+      only("invalid-field", position),
     );
   });
 
@@ -171,10 +171,10 @@ describe("parseNotebook, contrôles hors schéma", () => {
     delete first.polygone;
     second.id_ligne = "x";
     expect(errorsOf(parse(base))).toEqual([
-      { code: "missing-field", page: 1 },
-      { code: "invalid-line-id", page: 1 },
-      { code: "invalid-page-id", page: 2 },
-      { code: "duplicate-page", page: 2 },
+      { code: "missing-field", position: 1 },
+      { code: "invalid-line-id", position: 1 },
+      { code: "invalid-page-id", position: 2 },
+      { code: "duplicate-page", position: 2 },
     ]);
   });
 });

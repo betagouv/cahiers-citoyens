@@ -48,19 +48,19 @@ function invalidFieldMessage(
   }
 }
 
-// Une erreur sous `/pages/<i>` est rattachée à la page en position i + 1, et
+// Une erreur sous `/pages/<i>` est rattachée à la page en position i + 1 (`position`), et
 // le champ est nommé relativement à cette page.
 export function schemaErrorToPageError(error: ErrorObject): PageError {
   const segments = error.instancePath.split("/").slice(1);
   const inPage = segments[0] === "pages" && segments.length >= 2;
-  const page = inPage ? Number(segments[1]) + 1 : undefined;
+  const position = inPage ? Number(segments[1]) + 1 : undefined;
   const field = (inPage ? segments.slice(2) : segments).join(".");
   const params: Record<string, unknown> = error.params;
 
   if (error.keyword === "required") {
     const missing = param(params, "missingProperty");
     return {
-      page,
+      position,
       code: "missing-field",
       message: `Champ obligatoire manquant : ${field ? `${field}.${missing}` : missing}.`,
     };
@@ -68,7 +68,7 @@ export function schemaErrorToPageError(error: ErrorObject): PageError {
   if (error.keyword === "additionalProperties") {
     const extra = param(params, "additionalProperty");
     return {
-      page,
+      position,
       code: "unknown-field",
       message: `Champ non prévu par le format : ${field ? `${field}.${extra}` : extra}.`,
     };
@@ -80,7 +80,7 @@ export function schemaErrorToPageError(error: ErrorObject): PageError {
       ? "La page"
       : "Le document";
   return {
-    page,
+    position,
     code: "invalid-field",
     message: invalidFieldMessage(error.keyword, subject, params),
   };

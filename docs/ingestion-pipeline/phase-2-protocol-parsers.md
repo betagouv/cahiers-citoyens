@@ -20,7 +20,7 @@ Transformer le JSON d'un cahier, au format de Condorcet, en type du domaine, ou 
 - `NotebookId` : type string marqué (branded), validé sur le nom du fichier JSON sans `.json`.
 - `Notebook { id; schemaVersion; metadata; pages }`, avec `metadata { department; departmentCode; municipality; inseeCode; postalCode; typedTranscription; handwrittenTranscription }`, `Page { number; id; width; height; lines }` et `Line { id; kind: "handwritten" | "typed"; zone: string | null; text; polygon }`. La zone `non renseigné` devient `null`.
 - `Fingerprint` : type string marqué. SHA-256 des métadonnées, des numéros et dimensions des pages, de l'empreinte de chaque image et des lignes (texte, type, zone, polygone). `schema_version`, les identifiants de page et de ligne, les noms de fichiers et les dates en sont exclus.
-- `IngestError { notebook?; file?; page?; code; message }`. `code` est une liste fermée déclarée `as const`, reprise telle quelle dans le rapport. `page` désigne la position de la page dans la liste, pas son numéro déclaré.
+- `IngestError { notebook?; file?; page?; position?; code; message }`. `code` est une liste fermée déclarée `as const`, reprise telle quelle dans le rapport. `position` désigne le rang de la page dans la liste, `page` son numéro déclaré quand il est valide (ajouté en phase 4, où les erreurs d'image ne connaissent que le numéro).
 
 ## Vérification
 
