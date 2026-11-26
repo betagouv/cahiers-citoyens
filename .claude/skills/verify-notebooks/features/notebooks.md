@@ -8,7 +8,7 @@
 - `notebooks-pagination` : pagination DSFR dès plus de 20 cahiers ; `?page=` hors bornes ou invalide ramène à une page existante.
 - `notebook-viewer` : fil d'Ariane, titre `Cahier <id>`, date d'ouverture, nombre de passages, iframe du scan, bouton `Ouvrir le PDF`, transcription défilable.
 - `notebook-scan` : `/notebooks/<id>/scan` relaie le PDF du bucket (200 `application/pdf`, 206 sur `Range`).
-- `notebook-from-delivery` : un cahier venu d'un dépôt (phase 6) n'a ni date d'ouverture, ni scan, ni transcription d'un bloc : `Ouvert le` vaut `Non renseignée` dans le tableau, la visionneuse n'affiche que le titre et le nombre de passages, `/notebooks/<id>/scan` répond 404. Ses pages en images arrivent en phase 8.
+- `notebook-from-delivery` : un cahier venu d'un dépôt (phase 6) n'a ni date d'ouverture, ni scan, ni transcription d'un bloc : `Ouvert le` vaut `Non renseignée` dans le tableau, la visionneuse n'affiche que le titre et le nombre de passages, `/notebooks/<id>/scan` répond 404. Ses pages en images arrivent en phase 8. Pour en obtenir un en local : `bun scripts/fake-data/deliver.ts --count 2 --out data/bucket/incoming`, puis `bun scripts/ingest-local.ts run` (voir README, « Ingestion locale »).
 - `notebook-not-found` : un id inconnu ou un cahier retiré (`withdrawn`) répond 404 avec la page `Page introuvable` de l'application (`src/app/not-found.tsx`), posée par `src/proxy.ts` avant le rendu ; `/notebooks/<inconnu>/scan` répond 404.
 
 ## How to get to it (user POV)

@@ -54,13 +54,13 @@ describe("build-jobs", () => {
     expect((await readdir("dist/jobs")).sort()).toEqual(JOBS);
   });
 
-  it("tourne sous Node sans node_modules et journalise l'échec en JSON", async () => {
+  it("tourne sous Node sans node_modules, yauzl et le SDK S3 compris, et journalise l'échec en JSON", async () => {
     const result = await runNode("ingest.mjs", isolated);
     expect(result.code).toBe(1);
     expect(JSON.parse(result.stdout)).toMatchObject({
       event: "ingest.run",
-      ok: false,
-      error: "DATABASE_URL est obligatoire",
+      deliveries: [],
+      errors: [{ scope: "run", message: "DATABASE_URL est obligatoire" }],
     });
   });
 

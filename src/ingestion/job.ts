@@ -1,7 +1,10 @@
-import { createDatabase } from "../db/client";
-import { ingest } from "./ingest";
-import { exitCode } from "./run-job";
+import { runIngestCommand } from "./ingest";
+import { openS3Storage } from "./ingest-services";
 
-const report = await ingest(process.env.DATABASE_URL, createDatabase);
-console.log(JSON.stringify(report));
-process.exitCode = exitCode(report);
+process.exitCode = await runIngestCommand(process.argv.slice(2), {
+  env: process.env,
+  openStorage: openS3Storage,
+  now: () => new Date(),
+  print: console.log,
+  log: console.error,
+});

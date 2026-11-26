@@ -129,6 +129,11 @@ export const deliveries = pgTable(
     rejectedAt: timestamp("rejected_at", { withTimezone: true }),
     failedAt: timestamp("failed_at", { withTimezone: true }),
     errors: jsonb("errors").$type<IngestError[]>().notNull().default([]),
+    // Traitements commencés par le job, relances comprises : au-delà de
+    // `MAX_ATTEMPTS` (src/ingestion/delivery-rows.ts), le dépôt n'est plus relancé.
+    attempts: integer("attempts").notNull().default(0),
+    // Message de la dernière erreur de notre côté (`failed`), gardé après une relance réussie.
+    failure: text("failure"),
     publishedCount: integer("published_count").notNull().default(0),
     replacedCount: integer("replaced_count").notNull().default(0),
     unchangedCount: integer("unchanged_count").notNull().default(0),
