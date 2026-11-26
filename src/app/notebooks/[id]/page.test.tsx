@@ -34,6 +34,7 @@ describe("NotebookPage", () => {
       id: "notebook-0001",
       openedOn: "2019-01-15",
       transcription: "Texte du cahier",
+      hasScan: true,
       chunkCount: 4,
     });
 
@@ -46,6 +47,26 @@ describe("NotebookPage", () => {
     );
     expect(html).toContain('src="/notebooks/notebook-0001/scan"');
     expect(html).toContain("Texte du cahier");
+  });
+
+  it("n'affiche ni scan ni transcription pour un cahier venu d'un dépôt", async () => {
+    getNotebook.mockResolvedValue({
+      id: "CC_01500_190318_01004_MD_16116",
+      openedOn: null,
+      transcription: null,
+      hasScan: false,
+      chunkCount: 2,
+    });
+
+    const html = await renderToHtml(
+      await NotebookPage(props("CC_01500_190318_01004_MD_16116")),
+    );
+
+    expect(html).toContain(
+      '<p class="fr-text--lead">2 passages indexés pour la recherche</p>',
+    );
+    expect(html).not.toContain("/scan");
+    expect(html).not.toContain("Transcription");
   });
 
   it("renvoie la page 404 pour un cahier supprimé entre-temps", async () => {

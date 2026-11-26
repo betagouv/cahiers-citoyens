@@ -1,12 +1,14 @@
-import { asc, count, eq, max, min } from "drizzle-orm";
+import { and, asc, count, eq, max, min } from "drizzle-orm";
 import { getDatabase } from "../db/client";
 import { chunks, notebooks } from "../db/schema";
 
 export const NOTEBOOKS_PAGE_SIZE = 20;
 
+// `openedOn`, `transcription` et le scan ne viennent que de `scripts/load.ts` :
+// un cahier venu d'un dépôt ne les a pas, ses pages s'afficheront en phase 8.
 export interface NotebookSummary {
   id: string;
-  openedOn: string;
+  openedOn: string | null;
   chunkCount: number;
 }
 
@@ -19,8 +21,9 @@ export interface NotebookPage {
 
 export interface Notebook {
   id: string;
-  openedOn: string;
-  transcription: string;
+  openedOn: string | null;
+  transcription: string | null;
+  hasScan: boolean;
   chunkCount: number;
 }
 
@@ -31,6 +34,9 @@ export interface CorpusStats {
   firstOpenedOn: string | null;
   lastOpenedOn: string | null;
 }
+
+// Un cahier retiré disparaît du site.
+const published = eq(notebooks.status, "published");
 
 // `?page=` vient de l'URL : toute valeur autre qu'un entier ≥ 1 ramène à la page 1.
 export function parsePageNumber(raw: string | string[] | undefined): number {
@@ -43,7 +49,10 @@ export async function listNotebooks(
   requestedPage: number,
 ): Promise<NotebookPage> {
   const db = getDatabase();
-  const [{ total }] = await db.select({ total: count() }).from(notebooks);
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(notebooks)
+    .where(published);
   const pageCount = Math.max(1, Math.ceil(total / NOTEBOOKS_PAGE_SIZE));
   const page = Math.min(requestedPage, pageCount);
   const rows = await db
@@ -54,6 +63,7 @@ export async function listNotebooks(
     })
     .from(notebooks)
     .leftJoin(chunks, eq(chunks.notebookId, notebooks.id))
+    .where(published)
     .groupBy(notebooks.id)
     .orderBy(asc(notebooks.id))
     .limit(NOTEBOOKS_PAGE_SIZE)
@@ -67,13 +77,16 @@ export async function getNotebook(id: string): Promise<Notebook | undefined> {
       id: notebooks.id,
       openedOn: notebooks.openedOn,
       transcription: notebooks.transcription,
+      scanKey: notebooks.scanKey,
       chunkCount: count(chunks.id),
     })
     .from(notebooks)
     .leftJoin(chunks, eq(chunks.notebookId, notebooks.id))
-    .where(eq(notebooks.id, id))
+    .where(and(eq(notebooks.id, id), published))
     .groupBy(notebooks.id);
-  return row;
+  if (row === undefined) return undefined;
+  const { scanKey, ...notebook } = row;
+  return { ...notebook, hasScan: scanKey !== null };
 }
 
 // `<id>` décodé d'un chemin `/notebooks/<id>`, undefined pour tout autre chemin.
@@ -91,17 +104,18 @@ export async function notebookExists(id: string): Promise<boolean> {
   const [row] = await getDatabase()
     .select({ id: notebooks.id })
     .from(notebooks)
-    .where(eq(notebooks.id, id))
+    .where(and(eq(notebooks.id, id), published))
     .limit(1);
   return row !== undefined;
 }
 
+// `undefined` pour un cahier inconnu, retiré ou venu d'un dépôt (sans scan).
 export async function getScanKey(id: string): Promise<string | undefined> {
   const [row] = await getDatabase()
     .select({ scanKey: notebooks.scanKey })
     .from(notebooks)
-    .where(eq(notebooks.id, id));
-  return row?.scanKey;
+    .where(and(eq(notebooks.id, id), published));
+  return row?.scanKey ?? undefined;
 }
 
 export async function getCorpusStats(): Promise<CorpusStats> {
@@ -113,7 +127,8 @@ export async function getCorpusStats(): Promise<CorpusStats> {
         firstOpenedOn: min(notebooks.openedOn),
         lastOpenedOn: max(notebooks.openedOn),
       })
-      .from(notebooks),
+      .from(notebooks)
+      .where(published),
     db
       .select({
         chunkCount: count(),

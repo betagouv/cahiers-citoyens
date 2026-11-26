@@ -27,7 +27,9 @@ export async function NotebookTable({
           <Link key="id" href={`/notebooks/${notebook.id}`}>
             {notebook.id}
           </Link>,
-          formatDate(notebook.openedOn),
+          notebook.openedOn === null
+            ? "Non renseignée"
+            : formatDate(notebook.openedOn),
           formatNumber(notebook.chunkCount),
         ])}
         bordered
