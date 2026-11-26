@@ -2,15 +2,29 @@ name: CI
 
 on:
   pull_request:
+    paths-ignore: ["**.md", "docs/**"]
   push:
     branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
 
 permissions:
   contents: read
 
+# Un nouveau push sur une PR annule le run devenu inutile ; sur main, chaque
+# commit garde le sien.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  verifier:
+  # Les quatre contrôles tournent en parallèle.
+  task:
+    name: ${{ matrix.task }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [check, lint, test, build]
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
@@ -20,7 +34,23 @@ jobs:
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
-      - run: bun run check
-      - run: bun run lint
-      - run: bun run test
-      - run: bun run build
+      # Le lint typé lit les types de routes générés par Next.
+      - if: matrix.task == 'lint'
+        run: bunx next typegen
+      - if: matrix.task == 'build'
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
+          restore-keys: next-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
+      - run: bun run ${{ matrix.task }}
+
+  # Un seul statut à suivre, sous le nom historique.
+  verifier:
+    needs: task
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: needs.task.result != 'success'
+        run: exit 1
+      - run: echo "check, lint, test et build sont verts"

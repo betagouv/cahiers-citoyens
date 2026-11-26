@@ -20,7 +20,7 @@ bun run test         # vitest
 bun run format       # prettier sur tout le dépôt
 ```
 
-Le hook pre-commit (Husky) lance le typage, `lint-staged` (Prettier puis ESLint sur les fichiers indexés) et les tests. La CI GitHub (`.github/workflows/ci.yml`) lance `check`, `lint`, `test` et `build` sur chaque pull request et sur `main`. Conventions de code : `CODING_STANDARDS.md`.
+Le hook pre-commit (Husky) lance le typage et `lint-staged` (Prettier puis ESLint sur les fichiers indexés) ; le hook pre-push lance les tests. La CI GitHub (`.github/workflows/ci.yml`) lance `check`, `lint`, `test` et `build` en parallèle sur chaque pull request et sur `main`, sauf pour un changement de documentation seule ; le job `verifier` résume leur résultat. Conventions de code : `CODING_STANDARDS.md`.
 
 Pour vérifier un changement dans un vrai navigateur (serveur, captures, statuts HTTP) : voir `.claude/skills/verify-notebooks/SKILL.md`.
 
