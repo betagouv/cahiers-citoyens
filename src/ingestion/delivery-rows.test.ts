@@ -4,6 +4,7 @@ import {
   MAX_ATTEMPTS,
   beginAttempt,
   claimDelivery,
+  countPendingDeliveries,
   listPendingDeliveries,
   markApplied,
   markApplying,
@@ -91,6 +92,24 @@ describe("claimDelivery", () => {
     await expect(claimDelivery(db, ROW.name)).rejects.toThrow(
       `Dépôt introuvable : ${ROW.name}`,
     );
+  });
+});
+
+describe("countPendingDeliveries", () => {
+  it("compte les dépôts que le prochain job traitera", async () => {
+    fake.reply([[2]]);
+
+    await expect(countPendingDeliveries(db)).resolves.toBe(2);
+    expect(fake.queries[0]).toEqual({
+      sql: 'select count(*) from "deliveries" where ("deliveries"."status" in ($1, $2, $3) or ("deliveries"."status" = $4 and "deliveries"."attempts" < $5))',
+      params: ["received", "verifying", "applying", "failed", MAX_ATTEMPTS],
+    });
+  });
+
+  it("vaut 0 sans ligne", async () => {
+    fake.reply([]);
+
+    await expect(countPendingDeliveries(db)).resolves.toBe(0);
   });
 });
 

@@ -181,16 +181,18 @@ Il n'y a pas de Bun sur Scalingo. Les jobs sont donc écrits en TypeScript sous 
 
 `cron.json` déclare les tâches au planificateur de Scalingo, qui les lance chacune dans un conteneur à part, avec la même image que l'app. Les heures sont en UTC et l'intervalle minimal est de 10 minutes. Le job `ingest` tourne toutes les 10 minutes : il traite les dépôts de Condorcet (détail dans [la phase 7](docs/ingestion-pipeline/phase-7-ingest-job.md)).
 
-- `ingest` ou `ingest run` (le cron) : prend un verrou consultatif Postgres (si une autre exécution le tient, il s'arrête), déplace chaque ZIP de `incoming/` vers `deliveries/`, le vérifie puis le publie ou le refuse, relance les dépôts `failed` (3 tentatives au plus) et ceux qu'un job interrompu a laissés en cours, puis vectorise les nouveaux chunks avec Albert.
+- `ingest` ou `ingest run` (le cron) : prend un verrou consultatif Postgres (si une autre exécution le tient, il s'arrête), déplace chaque ZIP de `incoming/` vers `deliveries/`, le vérifie puis le publie ou le refuse, relance les dépôts `failed` (3 tentatives au plus) et ceux qu'un job interrompu a laissés en cours, puis vectorise les nouveaux chunks avec Albert. Il écrit enfin le rapport `reports/<nom>.json` de chaque dépôt terminé et lance les alertes (détail dans [la phase 9](docs/ingestion-pipeline/phase-9-monitoring.md)).
 - `ingest withdraw <id_cahier> --reason <not_publishable|sensitive_content|source_correction|other>` : retire un cahier du site et de la recherche, puis supprime ses images.
 
-Variables : `DATABASE_URL`, les `S3_*` (avec une clé qui peut lire, écrire et supprimer ; `incoming/`, `deliveries/` et `notebooks/` sont sous `S3_PREFIX`) et `ALBERT_API_KEY`. Le job écrit une seule ligne JSON sur la sortie standard, par exemple `{"event":"ingest.run","startedAt":…,"finishedAt":…,"locked":false,"deliveries":[{"name":"delivery-2026-11-24-0930.zip","from":"received","to":"applied"}],"embedded":24,"errors":[]}`, et ses messages de suivi en texte sur la sortie d'erreur. Le code de sortie vaut 1 si `errors` n'est pas vide.
+Variables : `DATABASE_URL`, les `S3_*` (avec une clé qui peut lire, écrire et supprimer ; `incoming/`, `deliveries/`, `notebooks/` et `reports/` sont sous `S3_PREFIX`), `ALBERT_API_KEY` et, facultative, `ALERT_WEBHOOK_URL` (webhook Mattermost, Slack ou Tchap qui reçoit les alertes ; sans elle, elles ne vont qu'à la sortie d'erreur). Le job écrit une seule ligne JSON sur la sortie standard, par exemple `{"event":"ingest.run","startedAt":…,"finishedAt":…,"locked":false,"deliveries":[{"name":"delivery-2026-11-24-0930.zip","from":"received","to":"applied"}],"duplicates":[],"embedded":24,"errors":[]}`, et ses messages de suivi en texte sur la sortie d'erreur. Le code de sortie vaut 1 si `errors` n'est pas vide.
 
 En local, après `bun run build` :
 
 ```bash
 DATABASE_URL=… S3_ENDPOINT=… … node dist/jobs/ingest.mjs
 ```
+
+`GET /api/health` donne la date du dernier passage du job et le nombre de dépôts en attente ; `status` passe à `degraded` après 15 min sans passage.
 
 Sur Scalingo, un retrait se lance en one-off : `scalingo run node dist/jobs/ingest.mjs withdraw <id_cahier> --reason sensitive_content`.
 

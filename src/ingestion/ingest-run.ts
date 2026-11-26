@@ -1,6 +1,9 @@
 import type { Database } from "../db/client";
+import type { SendAlert } from "./alert";
 import { listPendingDeliveries } from "./delivery-rows";
 import type { ImageStorage } from "./image-storage";
+import { INGEST_JOB, recordJobRun } from "./job-runs";
+import { monitorRun } from "./monitor-run";
 import type { ObjectStore } from "./object-store";
 import { type DeliveryMove, processDelivery } from "./process-delivery";
 import { receiveIncoming } from "./receive-incoming";
@@ -17,11 +20,12 @@ export interface IngestDependencies {
   images: ImageStorage;
   // Absent sans clé Albert : les chunks attendent un job configuré.
   embedPending: EmbedPending | undefined;
+  alert: SendAlert;
   now: () => Date;
   log: (message: string) => void;
 }
 
-// Une ligne JSON par exécution, lue par le monitoring (phase 9).
+// Une ligne JSON par exécution, sur la sortie standard.
 export interface JobRun {
   event: "ingest.run";
   startedAt: string;
@@ -29,13 +33,15 @@ export interface JobRun {
   // Une autre exécution tenait le verrou : rien n'a été fait.
   locked: boolean;
   deliveries: DeliveryMove[];
+  // Renvois d'un nom déjà traité, refusés par un rapport `.duplicate.json`.
+  duplicates: string[];
   embedded: number;
   errors: RunError[];
 }
 
 async function processDeliveries(
   deps: IngestDependencies,
-): Promise<Pick<JobRun, "deliveries" | "errors">> {
+): Promise<Pick<JobRun, "deliveries" | "duplicates" | "errors">> {
   const received = await receiveIncoming(deps);
   const errors = [...received.errors];
   const deliveries: DeliveryMove[] = [];
@@ -47,7 +53,7 @@ async function processDeliveries(
     deliveries.push(result.move);
     errors.push(...result.errors);
   }
-  return { deliveries, errors };
+  return { deliveries, duplicates: received.duplicates, errors };
 }
 
 // Une panne d'Albert ne touche pas les dépôts : ils restent `applied`, la
@@ -70,49 +76,72 @@ async function embed(
   }
 }
 
-async function runLocked(
-  deps: IngestDependencies,
-): Promise<Omit<JobRun, "event" | "startedAt" | "finishedAt">> {
+type RunResult = Omit<JobRun, "event" | "startedAt" | "finishedAt">;
+
+function emptyRun(locked: boolean, errors: RunError[]): RunResult {
+  return { locked, deliveries: [], duplicates: [], embedded: 0, errors };
+}
+
+async function runLocked(deps: IngestDependencies): Promise<RunResult> {
   if (!(await deps.lock.tryAcquire())) {
     deps.log("Une autre exécution du job ingest tient le verrou : arrêt.");
-    return { locked: true, deliveries: [], embedded: 0, errors: [] };
+    return emptyRun(true, []);
   }
   const processed = await processDeliveries(deps);
   const embedding = await embed(deps.embedPending);
+  const monitored = await monitorRun(deps);
   return {
     locked: false,
     deliveries: processed.deliveries,
+    duplicates: processed.duplicates,
     embedded: embedding.embedded,
-    errors: [...processed.errors, ...embedding.errors],
+    errors: [...processed.errors, ...embedding.errors, ...monitored],
   };
 }
 
 // `ingest run` : relève `incoming/`, mène chaque dépôt jusqu'à `applied` ou
 // `rejected`, reprend ceux qu'un job précédent a laissés en cours ou en échec,
-// puis vectorise les nouveaux chunks. Ne lève pas : toute erreur finit dans
-// le rapport.
+// vectorise les nouveaux chunks, écrit les rapports et lance les alertes.
+// Ne lève pas : toute erreur finit dans le `JobRun`.
 export async function runIngest(deps: IngestDependencies): Promise<JobRun> {
-  const startedAt = deps.now().toISOString();
-  let result: Omit<JobRun, "event" | "startedAt" | "finishedAt">;
+  const startedAt = deps.now();
+  let result: RunResult;
   try {
     result = await runLocked(deps);
   } catch (error) {
-    result = {
-      locked: false,
-      deliveries: [],
-      embedded: 0,
-      errors: [runError("run", error)],
-    };
+    result = emptyRun(false, [runError("run", error)]);
   }
   try {
     await deps.lock.release();
   } catch (error) {
     result.errors.push(runError("run", error));
   }
+  const finishedAt = deps.now();
+  // Lu par `/api/health`. Une exécution sortie sur le verrou ne compte pas :
+  // celle qui le tient notera son passage.
+  if (!result.locked) await record(deps.db, startedAt, finishedAt, result);
   return {
     event: "ingest.run",
-    startedAt,
-    finishedAt: deps.now().toISOString(),
+    startedAt: startedAt.toISOString(),
+    finishedAt: finishedAt.toISOString(),
     ...result,
   };
+}
+
+async function record(
+  db: Database,
+  startedAt: Date,
+  finishedAt: Date,
+  result: RunResult,
+): Promise<void> {
+  try {
+    await recordJobRun(db, {
+      job: INGEST_JOB,
+      startedAt,
+      finishedAt,
+      errorCount: result.errors.length,
+    });
+  } catch (error) {
+    result.errors.push(runError("run", error));
+  }
 }

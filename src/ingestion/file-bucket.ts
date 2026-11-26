@@ -1,5 +1,12 @@
 import { createWriteStream } from "node:fs";
-import { copyFile, mkdir, readdir, rm } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { dirname, join, sep } from "node:path";
 import { pipeline } from "node:stream/promises";
 import type { ImageStorage } from "./image-storage";
@@ -43,6 +50,13 @@ export function createFileBucket(root: string): ObjectStore & ImageStorage {
     },
     async download(key, path) {
       await copyFile(file(key), path);
+    },
+    async modifiedAt(key) {
+      return (await stat(file(key))).mtime;
+    },
+    async writeJson(key, json) {
+      await mkdir(dirname(file(key)), { recursive: true });
+      await writeFile(file(key), json);
     },
     async put({ key, body }) {
       await mkdir(dirname(file(key)), { recursive: true });

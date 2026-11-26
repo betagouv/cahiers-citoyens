@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, lt, or, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import type { Database, Transaction } from "../db/client";
 import { deliveries } from "../db/schema";
@@ -90,20 +90,28 @@ export async function claimDelivery(
 
 // Dépôts à traiter, par ordre de nom : ceux qu'un job interrompu a laissés en
 // cours, et ceux en échec qui ont encore droit à une relance.
+function pending() {
+  return or(
+    inArray(deliveries.status, ["received", "verifying", "applying"]),
+    and(eq(deliveries.status, "failed"), lt(deliveries.attempts, MAX_ATTEMPTS)),
+  );
+}
+
 export function listPendingDeliveries(db: Database): Promise<DeliveryRow[]> {
   return db
     .select(ROW)
     .from(deliveries)
-    .where(
-      or(
-        inArray(deliveries.status, ["received", "verifying", "applying"]),
-        and(
-          eq(deliveries.status, "failed"),
-          lt(deliveries.attempts, MAX_ATTEMPTS),
-        ),
-      ),
-    )
+    .where(pending())
     .orderBy(asc(deliveries.name));
+}
+
+// Nombre de dépôts que le prochain job traitera, pour `/api/health`.
+export async function countPendingDeliveries(db: Database): Promise<number> {
+  const [row] = await db
+    .select({ count: count() })
+    .from(deliveries)
+    .where(pending());
+  return row?.count ?? 0;
 }
 
 // Passe le dépôt de `from` à `to`, avec la date du nouveau statut. Ne change

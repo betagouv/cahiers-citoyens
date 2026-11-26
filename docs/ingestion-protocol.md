@@ -282,19 +282,30 @@ Un cahier retiré revient en ligne s'il figure de nouveau dans un dépôt.
 
 ## 7. Rapport
 
-Après traitement, la plateforme écrit `reports/delivery-2026-11-24-0930.json`, lisible par Condorcet :
+Après traitement, la plateforme écrit `reports/delivery-2026-11-24-0930.json`, sous le même préfixe que `incoming/`, lisible par Condorcet :
 
 ```json
 {
+  "schema_version": 1,
   "delivery": "delivery-2026-11-24-0930.zip",
-  "received_at": "2026-11-24T09:31:12Z",
+  "received_at": "2026-11-24T09:31:12.000Z",
+  "finished_at": "2026-11-24T09:33:40.000Z",
   "status": "applied",
   "notebooks": { "published": 12, "replaced": 3, "unchanged": 85 },
   "errors": []
 }
 ```
 
-`status` vaut `applied` ou `rejected`. En cas de refus, chaque erreur indique le cahier, le fichier, un code et un message, et si besoin la page : `page` est son numéro, `position` son rang dans la liste `pages` du JSON (une erreur du JSON l'indique, car le numéro peut y être invalide).
+- `schema_version` est la version du format du rapport, distincte de celle des cahiers. Elle change si un champ change de sens ou disparaît ; un champ ajouté ne la change pas.
+- `status` vaut `applied` (publié), `rejected` (refusé, rien n'est publié) ou `failed` (échec de notre côté, voir plus bas).
+- `notebooks` compte les cahiers publiés (nouveaux, ou retirés puis remis en ligne), remplacés et inchangés. Ils valent 0 pour un dépôt refusé. Un dépôt ne retire jamais de cahier (section 6) : il n'y a pas de compteur de retraits.
+- En cas de refus, chaque erreur de `errors` indique le cahier (`notebook`), le fichier (`file`), un `code` et un `message`, et si besoin la page : `page` est son numéro, `position` son rang dans la liste `pages` du JSON (une erreur du JSON l'indique, car le numéro peut y être invalide).
+
+Le rapport est écrit par le passage du job (toutes les 10 min) qui termine le dépôt. Si l'écriture échoue, le passage suivant la refait, avec le même contenu.
+
+**Échec de notre côté.** Si le traitement échoue chez nous (base ou stockage indisponible), la plateforme réessaie aux passages suivants. Après 3 tentatives, elle écrit un rapport `failed` avec l'erreur `processing-failed` et prévient son équipe. Condorcet n'a rien à renvoyer.
+
+**Renvoi d'un nom déjà traité.** Un ZIP qui porte le nom d'un dépôt déjà publié ou refusé est supprimé de `incoming/` sans être lu. Le refus est écrit dans `reports/delivery-2026-11-24-0930.duplicate.json`, avec `status: "rejected"` et l'erreur `duplicate-delivery-name` ; le rapport du dépôt d'origine reste intact. Un autre renvoi du même nom remplace ce fichier. Un nouveau dépôt prend un nouvel horodatage.
 
 ## 8. Premier échange
 

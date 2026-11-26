@@ -41,6 +41,19 @@ describe("createFileBucket", () => {
     expect(await readFile(path, "utf8")).toBe("zip");
   });
 
+  it("écrit un document JSON et lit sa date de modification", async () => {
+    const bucket = createFileBucket(join(dir.path, "json"));
+    const before = Date.now();
+
+    await bucket.writeJson("reports/a.json", "{}");
+
+    expect(await readFile(join(dir.path, "json/reports/a.json"), "utf8")).toBe(
+      "{}",
+    );
+    const modified = await bucket.modifiedAt("reports/a.json");
+    expect(modified.getTime()).toBeGreaterThanOrEqual(before - 1000);
+  });
+
   it("propage une autre erreur que l'absence du dossier", async () => {
     const file = await dir.write("not-a-dir", Buffer.from("x"));
 

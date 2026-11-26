@@ -5,7 +5,9 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
+  PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { type S3Sender, createS3ObjectStore } from "./object-store";
@@ -121,6 +123,41 @@ describe("createS3ObjectStore", () => {
         store.download("deliveries/a.zip", join(dir.path, "b.zip")),
       ).rejects.toThrow("Objet S3 sans contenu lisible : deliveries/a.zip");
     }
+  });
+
+  it("lit la date de modification d'un objet", async () => {
+    const date = new Date("2026-11-24T09:30:00Z");
+    const send = sender({ LastModified: date }, {});
+    const store = createS3ObjectStore(SETTINGS, { send });
+
+    await expect(store.modifiedAt("incoming/a.zip")).resolves.toBe(date);
+    await expect(store.modifiedAt("incoming/a.zip")).rejects.toThrow(
+      "Objet S3 sans date de modification : incoming/a.zip",
+    );
+    const [[command]] = send.mock.calls;
+    expect(command).toBeInstanceOf(HeadObjectCommand);
+    expect(command.input).toEqual({
+      Bucket: "bucket",
+      Key: "site/incoming/a.zip",
+    });
+  });
+
+  it("écrit un document JSON", async () => {
+    const send = sender();
+
+    await createS3ObjectStore(SETTINGS, { send }).writeJson(
+      "reports/a.json",
+      "{}",
+    );
+
+    const [[command]] = send.mock.calls;
+    expect(command).toBeInstanceOf(PutObjectCommand);
+    expect(command.input).toEqual({
+      Bucket: "bucket",
+      Key: "site/reports/a.json",
+      Body: "{}",
+      ContentType: "application/json",
+    });
   });
 
   it("crée par défaut un client S3 configuré comme pour les scans", () => {
