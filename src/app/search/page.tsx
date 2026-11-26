@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Breadcrumb } from "@codegouvfr/react-dsfr/Breadcrumb";
-import { SearchForm } from "@/app/_components/search-form";
+import { parsePageSearch } from "@/lib/page-search/search-params";
+import { pageSearchMetadata } from "./_components/page-search-metadata";
 import { SearchSection } from "./_components/search-section";
 
-export const metadata: Metadata = { title: "Rechercher" };
+export async function generateMetadata({
+  searchParams,
+}: PageProps<"/search">): Promise<Metadata> {
+  const pageSearch = parsePageSearch(await searchParams);
+  return pageSearch === undefined
+    ? { title: "Rechercher" }
+    : pageSearchMetadata(pageSearch);
+}
 
 export default function SearchPage({ searchParams }: PageProps<"/search">) {
   return (
@@ -15,7 +23,10 @@ export default function SearchPage({ searchParams }: PageProps<"/search">) {
         segments={[]}
       />
       <h1>Rechercher dans les cahiers</h1>
-      <Suspense fallback={<SearchForm id="search-page" big />}>
+      {/* L'enveloppe statique ne sait pas encore quelle recherche afficher :
+          elle ne montre aucun des deux formulaires, pour n'en faire clignoter
+          aucun. */}
+      <Suspense fallback={<p>Chargement de la recherche…</p>}>
         <SearchSection searchParams={searchParams} />
       </Suspense>
     </div>

@@ -49,6 +49,7 @@ describe("replaceGeography", () => {
       'insert into "municipalities"',
       'insert into "municipality_code_history"',
       "commit",
+      "select refresh_search_counts()",
     ]);
     expect(fake.queries.slice(4, 7).map(({ params }) => params)).toEqual([
       ["01", "Département fictif", "84"],

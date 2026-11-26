@@ -32,6 +32,7 @@ import { EMBEDDING_DIMENSIONS } from "../lib/albert";
 import { sqlInList } from "./sql-in-list";
 
 export * from "./geography-schema";
+export * from "./search-schema";
 
 const tsvector = customType<{ data: string }>({
   dataType() {
@@ -171,7 +172,10 @@ export const notebookVersions = pgTable(
 
 // Pages de la version en ligne. Les numéros suivent le protocole : croissants,
 // avec des trous possibles. `text` réunit les lignes dans l'ordre, pour la
-// lecture et la recherche plein texte par page.
+// lecture et la recherche plein texte par page. `search` ramène les mots à leur
+// racine française ; `words` garde chaque mot tel qu'écrit, en minuscules et
+// avec ses accents (« retraite », « retraité » et « retraites » restent
+// distincts), pour la recherche par mot-clé et ses suggestions.
 export const pages = pgTable(
   "pages",
   {
@@ -189,6 +193,9 @@ export const pages = pgTable(
     search: tsvector("search").generatedAlwaysAs(
       sql`to_tsvector('french', "text")`,
     ),
+    words: tsvector("words").generatedAlwaysAs(
+      sql`to_tsvector('simple', "text")`,
+    ),
   },
   (table) => [
     primaryKey({
@@ -200,6 +207,7 @@ export const pages = pgTable(
       sql`${table.imageContentType} in ${sqlInList(IMAGE_CONTENT_TYPES)}`,
     ),
     index("pages_search_idx").using("gin", table.search),
+    index("pages_words_idx").using("gin", table.words),
   ],
 );
 

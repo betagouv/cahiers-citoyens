@@ -75,7 +75,8 @@ describe("runLoadGeography", () => {
     expect(fake.queries.map(({ sql }) => sql.split(" ")[0])).toContain(
       "insert",
     );
-    expect(fake.queries.at(-2)?.params).toEqual(["01002", "01001"]);
+    expect(fake.queries.at(-3)?.params).toEqual(["01002", "01001"]);
+    expect(fake.queries.at(-1)?.sql).toBe("select refresh_search_counts()");
     expect(fake.ended).toBe(true);
     expect(log).toHaveBeenCalledWith(
       "0 départements, 1 communes, 1 anciens codes chargés",
