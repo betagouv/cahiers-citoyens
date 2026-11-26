@@ -4,11 +4,7 @@ import type {
   DataDrivenPropertyValueSpecification,
   StyleSpecification,
 } from "maplibre-gl";
-import {
-  ABSENT_DEPARTMENT_CODES,
-  PUBLISHED_AREAS,
-} from "./department-registry";
-import type { PublicationStatus } from "./departments";
+import type { OnlineDepartment, PublicationStatus } from "./departments";
 
 type ColorDecisions =
   typeof fr.colors.decisions | ReturnType<typeof fr.colors.getHex>["decisions"];
@@ -23,7 +19,6 @@ export interface MapPalette {
 // pour MapLibre, qui ne lit pas les variables CSS.
 export function mapPalette(decisions: ColorDecisions): MapPalette {
   const caramel = decisions.background.contrast.brownCaramel;
-  const grey = decisions.background.contrast.grey;
   return {
     status: {
       online: {
@@ -31,7 +26,6 @@ export function mapPalette(decisions: ColorDecisions): MapPalette {
         hover: decisions.border.default.brownCaramel.default,
       },
       upcoming: { fill: caramel.default, hover: caramel.hover },
-      absent: { fill: grey.hover, hover: grey.active },
     },
     border: decisions.background.default.grey.default,
     background: decisions.background.default.grey.default,
@@ -43,23 +37,16 @@ export const DEPARTMENTS_FILL_LAYER = "departments-fill";
 const DEPARTMENTS_LINE_LAYER = "departments-line";
 const BACKGROUND_LAYER = "background";
 
-export function statusFeatureStates(): {
-  code: string;
-  status: PublicationStatus;
-}[] {
-  return [
-    ...PUBLISHED_AREAS.flatMap((area) =>
-      area.codes.map((code) => ({ code, status: "online" as const })),
-    ),
-    ...ABSENT_DEPARTMENT_CODES.map((code) => ({
-      code,
-      status: "absent" as const,
-    })),
-  ];
+// Seuls les départements en ligne reçoivent un état : les autres gardent la
+// couleur « à venir » par défaut.
+export function statusFeatureStates(
+  online: readonly OnlineDepartment[],
+): { code: string; status: PublicationStatus }[] {
+  return online.map(({ code }) => ({ code, status: "online" }));
 }
 
 // Le statut arrive par l'état des entités (`statusFeatureStates`) : le style
-// reste fixe et le registre ne vit que dans `departments.ts`.
+// reste fixe, quels que soient les départements en ligne.
 function fillColor(
   palette: MapPalette,
 ): DataDrivenPropertyValueSpecification<string> {
@@ -69,8 +56,6 @@ function fillColor(
       ["feature-state", "status"],
       "online",
       palette.status.online[shade],
-      "absent",
-      palette.status.absent[shade],
       palette.status.upcoming[shade],
     ] satisfies DataDrivenPropertyValueSpecification<string>;
   }

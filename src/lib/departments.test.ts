@@ -1,53 +1,39 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  areaHref,
-  onlineMetropolitanDepartmentCount,
-  publicationStatus,
-  publishedAreaOf,
+  departmentTooltip,
+  isOverseasDepartment,
+  notebookCountLabel,
 } from "./departments";
-import { PUBLISHED_AREAS } from "./department-registry";
 
-// Aucun département n'est encore connu comme absent du fonds : on en simule un.
-vi.mock("./department-registry", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./department-registry")>()),
-  ABSENT_DEPARTMENT_CODES: ["55"],
-}));
-
-describe("publicationStatus", () => {
-  it("met en ligne les départements d'une zone publiée, outre-mer compris", () => {
-    expect(publicationStatus("25")).toBe("online");
-    expect(publicationStatus("974")).toBe("online");
-  });
-
-  it("signale les départements sans cahier dans le fonds", () => {
-    expect(publicationStatus("55")).toBe("absent");
-  });
-
-  it("annonce à venir tout autre département", () => {
-    expect(publicationStatus("75")).toBe("upcoming");
-    expect(publicationStatus("2A")).toBe("upcoming");
+describe("isOverseasDepartment", () => {
+  it("reconnaît les codes à trois chiffres de l'outre-mer", () => {
+    expect(isOverseasDepartment("974")).toBe(true);
+    expect(isOverseasDepartment("2A")).toBe(false);
+    expect(isOverseasDepartment("04")).toBe(false);
   });
 });
 
-describe("PUBLISHED_AREAS", () => {
-  it("ne range aucun département dans deux zones", () => {
-    const codes = PUBLISHED_AREAS.flatMap((area) => area.codes);
-    expect(new Set(codes).size).toBe(codes.length);
+describe("notebookCountLabel", () => {
+  it("accorde le nombre de cahiers", () => {
+    expect(notebookCountLabel(1)).toBe("1 cahier en ligne");
+    expect(notebookCountLabel(12)).toBe("12 cahiers en ligne");
   });
 });
 
-describe("areaHref", () => {
-  it("mène à la recherche filtrée sur les codes de la zone", () => {
-    const overseas = publishedAreaOf("971");
-    expect(overseas?.label).toBe("Outre-mer");
-    expect(overseas && areaHref(overseas)).toBe(
-      "/search?place=971,972,973,974,976",
+describe("departmentTooltip", () => {
+  it("donne le nombre de cahiers d'un département en ligne", () => {
+    expect(
+      departmentTooltip("Doubs", "25", {
+        code: "25",
+        name: "Doubs",
+        notebookCount: 3,
+      }),
+    ).toBe("Doubs (25) · 3 cahiers en ligne");
+  });
+
+  it("annonce à venir un département sans cahier publié", () => {
+    expect(departmentTooltip("Paris", "75", undefined)).toBe(
+      "Paris (75) · Cahiers à venir",
     );
-  });
-});
-
-describe("onlineMetropolitanDepartmentCount", () => {
-  it("compte les départements de métropole en ligne, sans l'outre-mer", () => {
-    expect(onlineMetropolitanDepartmentCount()).toBe(7);
   });
 });

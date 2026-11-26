@@ -1,22 +1,13 @@
-import Link from "next/link";
-import { fr } from "@codegouvfr/react-dsfr";
-import { Tag } from "@codegouvfr/react-dsfr/Tag";
+import { Suspense } from "react";
 import { Tile } from "@codegouvfr/react-dsfr/Tile";
 import Archive from "@codegouvfr/react-dsfr/picto/Archive";
 import Information from "@codegouvfr/react-dsfr/picto/Information";
 import LocationFrance from "@codegouvfr/react-dsfr/picto/LocationFrance";
-import { DepartmentMap } from "@/app/_components/department-map";
 import { HomeSearchForm } from "@/app/_components/home-search-form";
-import { mapPalette } from "@/lib/department-map-style";
 import {
-  PUBLICATION_STATUSES,
-  PUBLICATION_STATUS_LABELS,
-  areaHref,
-  onlineMetropolitanDepartmentCount,
-} from "@/lib/departments";
-import { PUBLISHED_AREAS } from "@/lib/department-registry";
-
-const legendPalette = mapPalette(fr.colors.decisions);
+  OnlineSection,
+  OnlineSectionFallback,
+} from "@/app/_components/online-section";
 
 const READING_TILES = [
   {
@@ -38,68 +29,6 @@ const READING_TILES = [
     pictogram: <Information />,
   },
 ];
-
-function MapLegend() {
-  return (
-    <ul className="fr-raw-list fr-mt-2w flex flex-wrap gap-x-4 gap-y-1">
-      {PUBLICATION_STATUSES.map((status) => (
-        <li
-          key={status}
-          className="fr-text--xs fr-mb-0 flex items-center gap-2"
-        >
-          <span
-            aria-hidden="true"
-            className="inline-block size-3 rounded-full"
-            style={{ background: legendPalette.status[status].fill }}
-          />
-          {PUBLICATION_STATUS_LABELS[status]}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// Sur mobile, l'ordre du DOM : présentation, carte, puis liste des
-// départements ; sur grand écran, la carte occupe seule la colonne de gauche.
-function OnlineSection() {
-  return (
-    <section
-      aria-labelledby="online-title"
-      className="fr-container fr-py-8w grid grid-cols-1 gap-x-12 gap-y-6 md:grid-cols-2"
-    >
-      <div className="md:col-start-2 md:row-start-1 md:self-end">
-        <h2 id="online-title">Ce qui est en ligne</h2>
-        <p className="fr-mb-0">
-          Environ 5 % des cahiers numérisés sont consultables aujourd&apos;hui,
-          dans {onlineMetropolitanDepartmentCount()} départements et les
-          outre-mer. Sélectionnez un département pour lire ses cahiers.
-        </p>
-      </div>
-      <div className="md:col-start-1 md:row-span-2 md:row-start-1 md:self-center">
-        <DepartmentMap />
-        <MapLegend />
-        <p className="fr-text--xs fr-mt-1w fr-mb-0 text-[var(--text-mention-grey)]">
-          Limites administratives : © DINUM (data.gouv.fr)
-        </p>
-      </div>
-      <div className="md:col-start-2 md:row-start-2 md:self-start">
-        <h3 className="fr-text--md fr-text--bold fr-mb-2w">
-          Lire les cahiers d&apos;un département
-        </h3>
-        <ul className="fr-tags-group">
-          {PUBLISHED_AREAS.map((area) => (
-            <li key={area.label}>
-              <Tag linkProps={{ href: areaHref(area) }}>{area.label}</Tag>
-            </li>
-          ))}
-        </ul>
-        <Link className={fr.cx("fr-link")} href="/publication">
-          Voir l&apos;état de publication de tous les départements
-        </Link>
-      </div>
-    </section>
-  );
-}
 
 export default function Home() {
   return (
@@ -123,7 +52,9 @@ export default function Home() {
         </div>
       </section>
 
-      <OnlineSection />
+      <Suspense fallback={<OnlineSectionFallback />}>
+        <OnlineSection />
+      </Suspense>
 
       <section
         aria-labelledby="reading-title"
