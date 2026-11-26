@@ -291,7 +291,7 @@ export const jobRuns = pgTable("job_runs", {
 });
 
 // Dernier envoi de chaque alerte répétée (archive bloquée, chunks en attente) :
-// le job, qui tourne toutes les 10 min, ne la renvoie qu'une fois par jour.
+// le job, qui tourne au moins toutes les heures, ne la renvoie qu'une fois par jour.
 export const alertNotices = pgTable("alert_notices", {
   key: text("key").primaryKey(),
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull(),

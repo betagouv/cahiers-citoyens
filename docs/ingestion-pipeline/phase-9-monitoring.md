@@ -18,7 +18,7 @@ Le tableau de bord interne `/admin/ingestion` est reporté (voir la fin).
 | `alert.ts`             | `createAlerter` : une ligne JSON sur la sortie d'erreur, puis un POST au webhook s'il est configuré. Ne lève jamais.  |
 | `delivery-alerts.ts`   | Textes des alertes `delivery.rejected` et `delivery.failed`.                                                          |
 | `alert-notices.ts`     | Une alerte répétée part au plus une fois par jour (`alert_notices`).                                                  |
-| `stale-incoming.ts`    | Alerte sur un ZIP resté plus de 30 min dans `incoming/`.                                                              |
+| `stale-incoming.ts`    | Alerte sur un ZIP resté plus de 90 min dans `incoming/`.                                                              |
 | `unembedded-chunks.ts` | Alerte sur des chunks sans embedding depuis plus de 24 h.                                                             |
 | `monitor-run.ts`       | Fin du job : rapports, puis les deux surveillances ; chaque étape court même si la précédente échoue.                 |
 | `job-runs.ts`          | Dernier passage de chaque job (`job_runs`).                                                                           |
@@ -32,7 +32,7 @@ Le tableau de bord interne `/admin/ingestion` est reporté (voir la fin).
 1. Réception : un ZIP dont le nom est déjà `applied` ou `rejected` est refusé. Le job écrit `reports/<nom>.duplicate.json` (`rejected`, erreur `duplicate-delivery-name`), puis supprime le ZIP de `incoming/` et alerte. Le rapport d'origine reste. Le nom part dans `JobRun.duplicates`, pas dans `errors` : l'erreur vient de l'envoi, pas du job.
 2. Traitement et vectorisation, inchangés.
 3. Rapports : pour chaque dépôt `applied`, `rejected`, ou `failed` à 3 tentatives, sans `reported_at`, le job écrit `reports/<nom>.json`, remplit `reported_at`, puis alerte s'il est refusé ou abandonné. Le rapport ne dépend que de la ligne en base : un échec avant `reported_at` fait réécrire le même fichier au job suivant.
-4. Surveillance : ZIP de `incoming/` plus vieux que 30 min (`HeadObject`), chunks sans embedding créés il y a plus de 24 h.
+4. Surveillance : ZIP de `incoming/` plus vieux que 90 min (`HeadObject`), chunks sans embedding créés il y a plus de 24 h.
 5. Le job note son passage dans `job_runs` (sauf s'il est sorti sur le verrou).
 
 ## Alertes
@@ -43,7 +43,7 @@ Le tableau de bord interne `/admin/ingestion` est reporté (voir la fin).
 | ------------------- | -------------------------------------------- | -------------------------------------------- |
 | `delivery.rejected` | Dépôt refusé, ou renvoi d'un nom déjà traité | Une fois, avec le rapport                    |
 | `delivery.failed`   | `failed` après 3 tentatives (`MAX_ATTEMPTS`) | Une fois, avec le rapport                    |
-| `incoming.stale`    | ZIP dans `incoming/` depuis plus de 30 min   | Une fois par jour et par ZIP                 |
+| `incoming.stale`    | ZIP dans `incoming/` depuis plus de 90 min   | Une fois par jour et par ZIP                 |
 | `chunks.unembedded` | Chunks sans embedding depuis plus de 24 h    | Une fois par jour ; réarmée quand tout passe |
 
 Le cron arrêté ne peut pas s'alerter lui-même : c'est `/api/health` qui le montre.
@@ -59,7 +59,7 @@ Le cron arrêté ne peut pas s'alerter lui-même : c'est `/api/health` qui le mo
 }
 ```
 
-- `status` passe à `degraded` si le job n'a pas fini de passage depuis 15 min, ou jamais. La réponse reste 200 : le site sert ses pages. L'outil de supervision alerte sur `"status":"degraded"`.
+- `status` passe à `degraded` si le job n'a pas fini de passage depuis 75 min, ou jamais. La réponse reste 200 : le site sert ses pages. L'outil de supervision alerte sur `"status":"degraded"`.
 - Base injoignable : 503 et `{"status":"error"}`. Le message d'erreur va aux logs du serveur, jamais dans la réponse. Aucun hôte, bucket ni identifiant n'y figure.
 - `pendingDeliveries` compte les dépôts que le prochain job traitera (en cours, ou `failed` relançables).
 

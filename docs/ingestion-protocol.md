@@ -16,6 +16,17 @@ Le nom du fichier est `delivery-AAAA-MM-JJ-HHMM.zip`, en heure UTC (ici le 24 no
 
 Un objet S3 n'apparaît qu'une fois son envoi terminé. Tout ZIP présent dans `incoming/` est donc complet.
 
+Une fois l'envoi terminé, Condorcet prévient la plateforme par un appel `POST /api/deliveries/notify`, avec le jeton que l'équipe lui a transmis (valeurs fictives) :
+
+```bash
+curl -X POST https://cahiers.example.org/api/deliveries/notify \
+  -H "Authorization: Bearer jeton-fictif-0123456789"
+```
+
+La plateforme répond `202 {"status":"accepted"}` tout de suite, puis traite le dépôt. Le corps de la requête est ignoré. Appeler deux fois ne pose aucun problème : un second appel dans les 30 s ne lance rien de plus. Un jeton absent ou faux reçoit `401`.
+
+Sans cet appel, ou s'il échoue, le dépôt est quand même traité dans l'heure : la plateforme relève `incoming/` toutes les heures.
+
 ## 2. Contenu du ZIP
 
 ```
@@ -301,7 +312,7 @@ Après traitement, la plateforme écrit `reports/delivery-2026-11-24-0930.json`,
 - `notebooks` compte les cahiers publiés (nouveaux, ou retirés puis remis en ligne), remplacés et inchangés. Ils valent 0 pour un dépôt refusé. Un dépôt ne retire jamais de cahier (section 6) : il n'y a pas de compteur de retraits.
 - En cas de refus, chaque erreur de `errors` indique le cahier (`notebook`), le fichier (`file`), un `code` et un `message`, et si besoin la page : `page` est son numéro, `position` son rang dans la liste `pages` du JSON (une erreur du JSON l'indique, car le numéro peut y être invalide).
 
-Le rapport est écrit par le passage du job (toutes les 10 min) qui termine le dépôt. Si l'écriture échoue, le passage suivant la refait, avec le même contenu.
+Le rapport est écrit par le passage du job qui termine le dépôt : quelques minutes après l'appel de la section 1, ou au passage horaire. Si l'écriture échoue, le passage suivant la refait, avec le même contenu.
 
 **Échec de notre côté.** Si le traitement échoue chez nous (base ou stockage indisponible), la plateforme réessaie aux passages suivants. Après 3 tentatives, elle écrit un rapport `failed` avec l'erreur `processing-failed` et prévient son équipe. Condorcet n'a rien à renvoyer.
 

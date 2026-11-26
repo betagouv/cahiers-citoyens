@@ -1,7 +1,7 @@
 {
   "jobs": [
     {
-      "command": "*/10 * * * * node dist/jobs/ingest.mjs",
+      "command": "0 * * * * node dist/jobs/ingest.mjs",
       "size": "M"
     }
   ]

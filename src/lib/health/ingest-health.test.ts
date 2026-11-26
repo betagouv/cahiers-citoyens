@@ -20,10 +20,10 @@ beforeEach(() => {
 });
 
 describe("healthStatus", () => {
-  it("se dégrade sans passage du job, ou après 15 min", () => {
+  it("se dégrade sans passage du job, ou après 75 min", () => {
     expect(healthStatus(undefined, NOW)).toBe("degraded");
-    expect(healthStatus(new Date("2026-11-26T09:45:00Z"), NOW)).toBe("ok");
-    expect(healthStatus(new Date("2026-11-26T09:44:59Z"), NOW)).toBe(
+    expect(healthStatus(new Date("2026-11-26T08:45:00Z"), NOW)).toBe("ok");
+    expect(healthStatus(new Date("2026-11-26T08:44:59Z"), NOW)).toBe(
       "degraded",
     );
   });
