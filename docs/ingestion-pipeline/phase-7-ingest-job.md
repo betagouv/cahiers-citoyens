@@ -4,24 +4,25 @@
 
 ## Objectif
 
-Le cron relève `incoming/` et mène chaque dépôt jusqu'à `applied` ou `rejected`, sans intervention humaine.
+Le job relève `incoming/` et mène chaque dépôt jusqu'à `applied` ou `rejected`, sans intervention humaine. Condorcet le lance après chaque dépôt par `POST /api/deliveries/notify` ; le cron horaire le relance en filet de sécurité.
 
 ## Modules (`src/ingestion/`)
 
-| Module                | Rôle                                                                                                                           |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `job.ts`              | Point d'entrée du cron : branche `runIngestCommand` sur le stockage S3, la sortie standard et la sortie d'erreur.              |
-| `ingest.ts`           | `runIngestCommand(args, contexte)` : parse la commande, ouvre les ressources, écrit une ligne JSON, renvoie le code de sortie. |
-| `ingest-command.ts`   | Parse `run` (par défaut) et `withdraw <id> --reason <motif>`.                                                                  |
-| `ingest-services.ts`  | Ouvre la base, le verrou, le stockage et la vectorisation à partir de l'environnement.                                         |
-| `ingest-run.ts`       | `runIngest` : verrou, réception, traitement des dépôts en attente, vectorisation, `JobRun`.                                    |
-| `run-lock.ts`         | Verrou consultatif Postgres (`pg_try_advisory_lock`), sur une connexion dédiée.                                                |
-| `receive-incoming.ts` | Enregistre chaque ZIP de `incoming/` (`received`) et le déplace dans `deliveries/` (copie puis suppression).                   |
-| `process-delivery.ts` | Télécharge un ZIP de `deliveries/` dans un dossier temporaire, le vérifie, l'applique ; `failed` sur erreur de notre côté.     |
-| `delivery-rows.ts`    | Lignes de `deliveries` : création, dépôts en attente, transitions gardées par la carte de `delivery-status.ts`, tentatives.    |
-| `object-store.ts`     | Interface `ObjectStore` (`list`, `copy`, `remove`, `download`) et son implémentation S3.                                       |
-| `file-bucket.ts`      | `ObjectStore` et `ImageStorage` sur un dossier local, pour le développement et les essais.                                     |
-| `run-error.ts`        | Erreur d'une exécution, rattachée à un dépôt, à `embed` ou à `run`.                                                            |
+| Module                | Rôle                                                                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `job.ts`              | Point d'entrée du cron : passe les arguments du processus à `runIngestJob` et en reprend le code de sortie.                                                               |
+| `ingest-job.ts`       | `runIngestJob` : `runIngestCommand` sur le stockage S3 (ou `LOCAL_BUCKET_DIR`), la sortie standard et la sortie d'erreur. Appelé aussi par `POST /api/deliveries/notify`. |
+| `ingest.ts`           | `runIngestCommand(args, contexte)` : parse la commande, ouvre les ressources, écrit une ligne JSON, renvoie le code de sortie.                                            |
+| `ingest-command.ts`   | Parse `run` (par défaut) et `withdraw <id> --reason <motif>`.                                                                                                             |
+| `ingest-services.ts`  | Ouvre la base, le verrou, le stockage et la vectorisation à partir de l'environnement.                                                                                    |
+| `ingest-run.ts`       | `runIngest` : verrou, réception, traitement des dépôts en attente, vectorisation, `JobRun`.                                                                               |
+| `run-lock.ts`         | Verrou consultatif Postgres (`pg_try_advisory_lock`), sur une connexion dédiée.                                                                                           |
+| `receive-incoming.ts` | Enregistre chaque ZIP de `incoming/` (`received`) et le déplace dans `deliveries/` (copie puis suppression).                                                              |
+| `process-delivery.ts` | Télécharge un ZIP de `deliveries/` dans un dossier temporaire, le vérifie, l'applique ; `failed` sur erreur de notre côté.                                                |
+| `delivery-rows.ts`    | Lignes de `deliveries` : création, dépôts en attente, transitions gardées par la carte de `delivery-status.ts`, tentatives.                                               |
+| `object-store.ts`     | Interface `ObjectStore` (`list`, `copy`, `remove`, `download`) et son implémentation S3.                                                                                  |
+| `file-bucket.ts`      | `ObjectStore` et `ImageStorage` sur un dossier local, pour le développement et les essais.                                                                                |
+| `run-error.ts`        | Erreur d'une exécution, rattachée à un dépôt, à `embed` ou à `run`.                                                                                                       |
 
 `scripts/ingest-local.ts` lance les mêmes commandes contre un dossier local (`LOCAL_BUCKET_DIR`, `data/bucket` par défaut). `embedPendingChunks` (`scripts/embed-chunks.ts`) renvoie maintenant le nombre de chunks vectorisés.
 

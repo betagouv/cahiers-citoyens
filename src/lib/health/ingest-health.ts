@@ -2,8 +2,8 @@ import type { Database } from "@/db/client";
 import { countPendingDeliveries } from "@/ingestion/delivery-rows";
 import { INGEST_JOB, readLastJobRun } from "@/ingestion/job-runs";
 
-// Le cron passe toutes les 10 min : au-delà de 15, un passage a sauté.
-export const MAX_RUN_AGE_MS = 15 * 60 * 1000;
+// Le cron passe toutes les heures : au-delà de 75 min, un passage a sauté.
+export const MAX_RUN_AGE_MS = 75 * 60 * 1000;
 
 export interface IngestHealth {
   status: "ok" | "degraded";

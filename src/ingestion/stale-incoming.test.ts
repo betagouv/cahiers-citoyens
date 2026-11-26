@@ -12,8 +12,8 @@ vi.mock("./alert-notices", () => ({ claimNotice: vi.fn() }));
 
 const db = createDatabase("postgres://test/app");
 const NOW = new Date("2026-11-26T10:00:00Z");
-const OLD = "delivery-2026-11-26-0900.zip";
-const FRESH = "delivery-2026-11-26-0945.zip";
+const OLD = "delivery-2026-11-26-0800.zip";
+const FRESH = "delivery-2026-11-26-0845.zip";
 
 let dir: TempDir;
 
@@ -31,8 +31,8 @@ async function setup() {
   const root = join(dir.path, "bucket");
   const store = createFileBucket(root);
   for (const [name, at] of [
-    [OLD, "2026-11-26T09:00:00Z"],
-    [FRESH, "2026-11-26T09:45:00Z"],
+    [OLD, "2026-11-26T08:00:00Z"],
+    [FRESH, "2026-11-26T08:45:00Z"],
   ]) {
     await store.writeJson(`incoming/${name}`, "zip");
     await utimes(join(root, "incoming", name), new Date(at), new Date(at));
@@ -42,7 +42,7 @@ async function setup() {
 }
 
 describe("alertStaleIncoming", () => {
-  it("alerte sur un ZIP resté plus de 30 min dans incoming/", async () => {
+  it("alerte sur un ZIP resté plus de 90 min dans incoming/", async () => {
     const { alert, deps } = await setup();
 
     await expect(alertStaleIncoming(deps)).resolves.toEqual([]);
@@ -52,8 +52,8 @@ describe("alertStaleIncoming", () => {
       [
         {
           event: "incoming.stale",
-          text: `${OLD} attend dans incoming/ depuis 60 min.`,
-          details: { delivery: OLD, minutes: 60 },
+          text: `${OLD} attend dans incoming/ depuis 120 min.`,
+          details: { delivery: OLD, minutes: 120 },
         },
       ],
     ]);

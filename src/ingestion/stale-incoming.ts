@@ -5,9 +5,10 @@ import type { ObjectStore } from "./object-store";
 import { INCOMING_PREFIX, incomingNames } from "./receive-incoming";
 import { type RunError, runError } from "./run-error";
 
-// Le job relève `incoming/` toutes les 10 min : une archive encore là après
-// 30 min n'a pas pu être reçue.
-export const STALE_INCOMING_MS = 30 * 60 * 1000;
+// Le cron relève `incoming/` toutes les heures, en filet de sécurité de
+// `POST /api/deliveries/notify` : une archive encore là après 90 min n'a pas
+// pu être reçue.
+export const STALE_INCOMING_MS = 90 * 60 * 1000;
 
 export interface StaleIncomingDependencies {
   db: Database;
@@ -34,7 +35,7 @@ async function check(
 }
 
 // Après la réception : alerte sur chaque ZIP resté dans `incoming/` plus de
-// 30 min, au plus une fois par jour et par ZIP.
+// 90 min, au plus une fois par jour et par ZIP.
 export async function alertStaleIncoming(
   deps: StaleIncomingDependencies,
 ): Promise<RunError[]> {

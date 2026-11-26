@@ -36,7 +36,8 @@ Exclu pour l'instant :
 
 ```
 Condorcet ──aws s3 cp──▶ incoming/delivery-AAAA-MM-JJ-HHMM.zip
-                              │  cron toutes les 10 min : job `ingest`
+          ──POST /api/deliveries/notify──▶ job `ingest` dans l'app web
+                              │  sinon cron horaire : même job
                               ▼
    1. claim      verrou Postgres, déplace le ZIP vers deliveries/
    2. verify     pour chaque <id>.json : schéma, pages croissantes, identifiants,
@@ -63,11 +64,12 @@ received → verifying → rejected            (dépôt invalide : rapport à Co
 
 ## Alternatives
 
-| Déclenchement                                 | Pour                                                                 | Contre                                                                         | Choix      |
-| --------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------- |
-| Cron Scalingo qui relève `incoming/`          | Rien à faire tourner en continu, relance gratuite, conteneur jetable | Jusqu'à 10 min de latence (intervalle minimal de Scalingo)                     | **Retenu** |
-| Processus `worker` en boucle                  | Latence faible                                                       | Un conteneur payé en permanence pour quelques dépôts par semaine               | Non        |
-| Notifications d'événements S3 vers un webhook | Temps réel                                                           | Support incertain chez le fournisseur, traitement long dans le conteneur `web` | Non        |
+| Déclenchement                                                     | Pour                                                                 | Contre                                                                         | Choix         |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------- |
+| Cron Scalingo qui relève `incoming/`                              | Rien à faire tourner en continu, relance gratuite, conteneur jetable | Latence de l'intervalle (10 min au mieux), passages à vide le reste du temps   | Filet horaire |
+| Appel de Condorcet après le dépôt (`POST /api/deliveries/notify`) | Traitement immédiat, aucun passage à vide                            | Le job tourne dans le conteneur `web`, après la réponse                        | **Retenu**    |
+| Processus `worker` en boucle                                      | Latence faible                                                       | Un conteneur payé en permanence pour quelques dépôts par semaine               | Non           |
+| Notifications d'événements S3 vers un webhook                     | Temps réel                                                           | Support incertain chez le fournisseur, traitement long dans le conteneur `web` | Non           |
 
 | Validation des JSON                              | Pour                                                                      | Contre                                                           | Choix      |
 | ------------------------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------- |

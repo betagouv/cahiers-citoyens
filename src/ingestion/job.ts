@@ -1,10 +1,3 @@
-import { runIngestCommand } from "./ingest";
-import { openS3Storage } from "./ingest-services";
+import { runIngestJob } from "./ingest-job";
 
-process.exitCode = await runIngestCommand(process.argv.slice(2), {
-  env: process.env,
-  openStorage: openS3Storage,
-  now: () => new Date(),
-  print: console.log,
-  log: console.error,
-});
+process.exitCode = await runIngestJob(process.argv.slice(2), process.env);
