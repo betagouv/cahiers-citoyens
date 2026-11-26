@@ -30,13 +30,13 @@ export function parseEmbedOptions(args: string[], env: Env): EmbedOptions {
 }
 
 // Vectorise par lots les chunks sans embedding, au plus `limit`, en affichant
-// la progression. Relancé, ne refait rien.
+// la progression. Relancé, ne refait rien. Renvoie le nombre de chunks écrits.
 export async function embedPendingChunks(
   db: Database,
   albert: Pick<AlbertClient, "embed">,
   { batchSize, limit }: Pick<EmbedOptions, "batchSize" | "limit">,
   log: Log,
-): Promise<void> {
+): Promise<number> {
   const [{ pending }] = await db
     .select({ pending: count() })
     .from(chunks)
@@ -69,6 +69,7 @@ export async function embedPendingChunks(
   }
   const seconds = ((performance.now() - startedAt) / 1000).toFixed(1);
   log(`${done} embeddings écrits en ${seconds} s`);
+  return done;
 }
 
 export async function runEmbed(

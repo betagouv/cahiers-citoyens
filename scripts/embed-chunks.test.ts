@@ -89,12 +89,14 @@ describe("embedPendingChunks", () => {
     const embed = fakeEmbed();
     const log = vi.fn<(message: string) => void>();
 
-    await embedPendingChunks(
-      createDatabase("postgres://test/app"),
-      { embed },
-      { batchSize: 2, limit: 10 },
-      log,
-    );
+    await expect(
+      embedPendingChunks(
+        createDatabase("postgres://test/app"),
+        { embed },
+        { batchSize: 2, limit: 10 },
+        log,
+      ),
+    ).resolves.toBe(3);
 
     expect(embed.mock.calls).toEqual([[["un", "deux"]], [["trois"]]]);
     expect(writes()).toEqual([
