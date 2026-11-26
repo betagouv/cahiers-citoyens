@@ -2,7 +2,7 @@ import { createWriteStream } from "node:fs";
 import { mkdir, rename } from "node:fs/promises";
 import { join } from "node:path";
 import { deliveryEntries } from "./delivery-entries";
-import { deliveryFileName } from "./delivery-name";
+import { deliveryFileName } from "../../src/ingestion/delivery-name";
 import type { DeliverySpec, NotebookSpec } from "./delivery-plan";
 import { writeArchive } from "./write-archive";
 
