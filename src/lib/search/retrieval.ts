@@ -1,25 +1,37 @@
 import {
   type SQL,
+  and,
   asc,
   cosineDistance,
   desc,
+  eq,
   isNotNull,
   sql,
 } from "drizzle-orm";
 import { getDatabase } from "../../db/client";
-import { chunks } from "../../db/schema";
+import { chunks, notebooks } from "../../db/schema";
 
 export interface Candidate {
   id: number;
   notebookId: string;
+  // Page citée, vide pour un cahier chargé avant les dépôts.
+  page: number | null;
   content: string;
 }
 
 const candidateColumns = {
   id: chunks.id,
   notebookId: chunks.notebookId,
+  page: chunks.page,
   content: chunks.content,
 };
+
+// Le retrait supprime les chunks d'un cahier ; la jointure garantit en plus
+// qu'aucun passage d'un cahier retiré ne sort, même entre les deux.
+const publishedNotebook = and(
+  eq(notebooks.id, chunks.notebookId),
+  eq(notebooks.status, "published"),
+);
 
 // Requête plein texte qui accepte un passage contenant au moins un mot de la
 // question. `plainto_tsquery` normalise la saisie libre (racines françaises,
@@ -40,6 +52,7 @@ export async function searchFullText(
   return getDatabase()
     .select(candidateColumns)
     .from(chunks)
+    .innerJoin(notebooks, publishedNotebook)
     .where(sql`${chunks.search} @@ ${tsQuery}`)
     .orderBy(desc(sql`ts_rank(${chunks.search}, ${tsQuery})`), asc(chunks.id))
     .limit(limit);
@@ -53,6 +66,7 @@ export async function searchByVector(
   return getDatabase()
     .select(candidateColumns)
     .from(chunks)
+    .innerJoin(notebooks, publishedNotebook)
     .where(isNotNull(chunks.embedding))
     .orderBy(asc(distance), asc(chunks.id))
     .limit(limit);

@@ -2,7 +2,7 @@ import { embedPendingChunks } from "../../scripts/embed-chunks";
 import { type Database, createDatabase } from "../db/client";
 import { createAlbertClient } from "../lib/albert";
 import { type SendAlert, createAlerter } from "./alert";
-import { parseS3Settings } from "../lib/scan-storage";
+import { parseS3Settings } from "../lib/s3-storage";
 import { parseDatabaseUrl } from "./database-url";
 import { type ImageStorage, createS3ImageStorage } from "./image-storage";
 import type { EmbedPending } from "./ingest-run";

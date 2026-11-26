@@ -13,7 +13,7 @@ import {
   type S3Settings,
   createS3Client,
   prefixedKey,
-} from "../lib/scan-storage";
+} from "../lib/s3-storage";
 
 // Les ZIP du bucket : `incoming/` où Condorcet dépose, `deliveries/` où le job
 // les garde, et les rapports de `reports/` que Condorcet lit. Clés relatives au préfixe du bucket, comme pour les images.

@@ -54,10 +54,6 @@ describe("writeNotebookVersion", () => {
     ]);
     expect(fake.queries[3].sql).toContain('"imported_at" = now()');
     expect(fake.queries[3].params).toEqual([
-      null,
-      null,
-      null,
-      null,
       "published",
       1,
       null,

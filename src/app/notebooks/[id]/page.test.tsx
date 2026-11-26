@@ -9,6 +9,18 @@ const getNotebook = vi.hoisted(() =>
 
 vi.mock("@/lib/notebooks", () => ({ getNotebook }));
 
+const NOTEBOOK: Notebook = {
+  id: "CC_1",
+  onlineVersion: 2,
+  municipalityName: "Exempleville",
+  departmentName: "Ain",
+  departmentCode: "01",
+  pages: [
+    { number: 1, width: 1200, height: 1700, text: "Première page" },
+    { number: 2, width: 1200, height: 1700, text: "Seconde page" },
+  ],
+};
+
 function props(id: string) {
   return {
     params: Promise.resolve({ id }),
@@ -21,58 +33,77 @@ beforeEach(() => {
 });
 
 describe("generateMetadata", () => {
-  it("titre la page avec l'identifiant du cahier", async () => {
-    expect(await generateMetadata(props("notebook-0001"))).toEqual({
-      title: "Cahier notebook-0001",
+  it("titre et décrit la page par la commune du cahier", async () => {
+    getNotebook.mockResolvedValue(NOTEBOOK);
+
+    expect(await generateMetadata(props("CC_1"))).toEqual({
+      title: "Exempleville (01) : cahier citoyen",
+      description:
+        "Exempleville (01) : cahier citoyen. 2 pages en image, chacune avec sa transcription.",
+    });
+  });
+
+  it("se rabat sur l'identifiant d'un cahier introuvable", async () => {
+    getNotebook.mockResolvedValue(undefined);
+
+    expect(await generateMetadata(props("CC_9"))).toEqual({
+      title: "Cahier CC_9",
     });
   });
 });
 
 describe("NotebookPage", () => {
-  it("affiche le scan et la transcription du cahier", async () => {
+  it("affiche chaque page avec son image et sa transcription", async () => {
+    getNotebook.mockResolvedValue(NOTEBOOK);
+
+    const html = await renderToHtml(await NotebookPage(props("CC_1")));
+
+    expect(getNotebook).toHaveBeenCalledWith("CC_1");
+    expect(html).toContain("<h1>Exempleville (01) : cahier citoyen</h1>");
+    expect(html).toContain("Ain · 2 pages");
+    expect(html).toContain("Identifiant du cahier : CC_1");
+    expect(html).toContain("Aller à une page");
+    expect(html).toContain('id="page-1"');
+    expect(html).toContain('src="/notebooks/CC_1/pages/2?v=2"');
+    expect(html).toContain("Seconde page");
+  });
+
+  it("n'affiche pas l'index pour une seule page", async () => {
     getNotebook.mockResolvedValue({
-      id: "notebook-0001",
-      openedOn: "2019-01-15",
-      transcription: "Texte du cahier",
-      hasScan: true,
-      chunkCount: 4,
+      ...NOTEBOOK,
+      departmentName: null,
+      pages: [NOTEBOOK.pages[0]],
+    });
+
+    const html = await renderToHtml(await NotebookPage(props("CC_1")));
+
+    expect(html).toContain('<p class="fr-text--lead fr-mb-1w">1 page</p>');
+    expect(html).not.toContain("Aller à une page");
+  });
+
+  it("signale un cahier chargé avant les dépôts, sans pages", async () => {
+    getNotebook.mockResolvedValue({
+      ...NOTEBOOK,
+      municipalityName: null,
+      departmentName: null,
+      departmentCode: null,
+      onlineVersion: null,
+      pages: [],
     });
 
     const html = await renderToHtml(await NotebookPage(props("notebook-0001")));
 
-    expect(getNotebook).toHaveBeenCalledWith("notebook-0001");
-    expect(html).toContain("<h1>Cahier notebook-0001</h1>");
+    expect(html).toContain("<h1>Cahier CC_1</h1>");
     expect(html).toContain(
-      "Ouvert le 15 janvier 2019 · 4 passages indexés pour la recherche",
+      "Les pages de ce cahier ne sont pas encore en ligne.",
     );
-    expect(html).toContain('src="/notebooks/notebook-0001/scan"');
-    expect(html).toContain("Texte du cahier");
+    expect(html).not.toContain("<img");
   });
 
-  it("n'affiche ni scan ni transcription pour un cahier venu d'un dépôt", async () => {
-    getNotebook.mockResolvedValue({
-      id: "CC_01500_190318_01004_MD_16116",
-      openedOn: null,
-      transcription: null,
-      hasScan: false,
-      chunkCount: 2,
-    });
-
-    const html = await renderToHtml(
-      await NotebookPage(props("CC_01500_190318_01004_MD_16116")),
-    );
-
-    expect(html).toContain(
-      '<p class="fr-text--lead">2 passages indexés pour la recherche</p>',
-    );
-    expect(html).not.toContain("/scan");
-    expect(html).not.toContain("Transcription");
-  });
-
-  it("renvoie la page 404 pour un cahier supprimé entre-temps", async () => {
+  it("renvoie la page 404 pour un cahier retiré entre-temps", async () => {
     getNotebook.mockResolvedValue(undefined);
 
-    await expect(NotebookPage(props("notebook-9999"))).rejects.toMatchObject({
+    await expect(NotebookPage(props("CC_9"))).rejects.toMatchObject({
       digest: "NEXT_HTTP_ERROR_FALLBACK;404",
     });
   });

@@ -1,5 +1,6 @@
 import { Card } from "@codegouvfr/react-dsfr/Card";
 import { excerpt } from "@/lib/format";
+import { notebookHref } from "@/lib/notebook-links";
 import type { Source } from "@/lib/search/search";
 
 export function Sources({ sources }: { sources: Source[] }) {
@@ -16,10 +17,10 @@ export function Sources({ sources }: { sources: Source[] }) {
             className="fr-col-12"
           >
             <Card
-              title={`[${source.number}] Cahier ${source.notebookId}`}
+              title={`[${source.number}] Cahier ${source.notebookId}${source.page === null ? "" : `, page ${source.page}`}`}
               titleAs="h3"
               desc={excerpt(source.content, 600)}
-              linkProps={{ href: `/notebooks/${source.notebookId}` }}
+              linkProps={{ href: notebookHref(source.notebookId, source.page) }}
               enlargeLink
               size="small"
               border

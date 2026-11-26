@@ -4,7 +4,6 @@ import {
   bigint,
   check,
   customType,
-  date,
   foreignKey,
   index,
   integer,
@@ -40,25 +39,17 @@ const tsvector = customType<{ data: string }>({
   },
 });
 
-// `opened_on`, `scan_key`, `transcription_key` et `transcription` viennent de
-// `scripts/load.ts` et servent encore au site. Un cahier venu d'un dépôt les
-// laisse vides : ses pages les remplacent. Leur suppression attend les phases 7
-// et 8.
 export const notebooks = pgTable(
   "notebooks",
   {
     id: text("id").primaryKey(),
-    openedOn: date("opened_on", { mode: "string" }),
-    scanKey: text("scan_key"),
-    transcriptionKey: text("transcription_key"),
-    transcription: text("transcription"),
     importedAt: timestamp("imported_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
     status: text("status", { enum: NOTEBOOK_STATUSES })
       .notNull()
       .default("published"),
-    // Vide pour les cahiers chargés par `scripts/load.ts`, sans version.
+    // Vide pour un cahier chargé avant les dépôts, sans version ni pages.
     onlineVersion: integer("online_version"),
     withdrawalReason: text("withdrawal_reason", { enum: WITHDRAWAL_REASONS }),
     withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
@@ -260,7 +251,7 @@ export const chunks = pgTable(
       .notNull()
       .references(() => notebooks.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
-    // Page citée par la recherche. Vide pour les cahiers de `scripts/load.ts`.
+    // Page citée par la recherche. Vide pour un cahier chargé avant les dépôts.
     page: integer("page"),
     content: text("content").notNull(),
     // Pour alerter sur les chunks qui attendent leur embedding depuis trop longtemps.

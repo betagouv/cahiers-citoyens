@@ -1,4 +1,5 @@
 import { GetObjectCommand, NoSuchKey, S3Client } from "@aws-sdk/client-s3";
+import { openLocalObject } from "./local-bucket";
 
 export interface S3Settings {
   endpoint: string;
@@ -9,10 +10,9 @@ export interface S3Settings {
   secretAccessKey: string;
 }
 
-export interface ScanObject {
+export interface StoredObject {
   body: ReadableStream;
   contentLength: number | undefined;
-  contentRange: string | undefined;
   etag: string | undefined;
 }
 
@@ -43,19 +43,11 @@ export function parseS3Settings(
   return settings;
 }
 
-// Les clés en base (`notebooks/<id>/scan.pdf`) sont relatives au préfixe du bucket.
+// Les clés en base (`notebooks/<id>/v<version>/<page>.jpg`) sont relatives au préfixe du bucket.
 export function prefixedKey(prefix: string, key: string): string {
   const trimmedPrefix = prefix.replace(/^\/+|\/+$/g, "");
   const trimmedKey = key.replace(/^\/+/, "");
   return trimmedPrefix === "" ? trimmedKey : `${trimmedPrefix}/${trimmedKey}`;
-}
-
-// Seule une plage simple (`bytes=0-1023`, `bytes=1024-`, `bytes=-500`) est
-// relayée au stockage ; toute autre forme est ignorée et le fichier part entier.
-export function parseByteRange(header: string | null): string | undefined {
-  if (header === null) return undefined;
-  const value = header.trim();
-  return /^bytes=(\d+-\d*|-\d+)$/.test(value) ? value : undefined;
 }
 
 export function createS3Client(settings: S3Settings): S3Client {
@@ -83,19 +75,21 @@ function getStorage() {
   return storage;
 }
 
-// `undefined` si l'objet n'existe pas dans le bucket.
-export async function openScan(
-  scanKey: string,
-  range: string | undefined,
+// `undefined` si l'objet n'existe pas dans le bucket. Avec `LOCAL_BUCKET_DIR`,
+// en développement, l'objet est lu dans ce dossier, là où
+// `scripts/ingest-local.ts` publie les images.
+export async function openObject(
+  key: string,
   signal: AbortSignal,
-): Promise<ScanObject | undefined> {
+): Promise<StoredObject | undefined> {
+  const localRoot = process.env.LOCAL_BUCKET_DIR;
+  if (localRoot) return openLocalObject(localRoot, key);
   const { settings, client } = getStorage();
   try {
     const object = await client.send(
       new GetObjectCommand({
         Bucket: settings.bucket,
-        Key: prefixedKey(settings.prefix, scanKey),
-        Range: range,
+        Key: prefixedKey(settings.prefix, key),
       }),
       { abortSignal: signal },
     );
@@ -103,7 +97,6 @@ export async function openScan(
     return {
       body: object.Body.transformToWebStream(),
       contentLength: object.ContentLength,
-      contentRange: object.ContentRange,
       etag: object.ETag,
     };
   } catch (error) {

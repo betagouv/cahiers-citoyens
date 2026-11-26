@@ -57,6 +57,13 @@
       "when": 1795689388460,
       "tag": "0007_delivery-reports",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795690047530,
+      "tag": "0008_drop-legacy-columns",
+      "breakpoints": true
     }
   ]
 }

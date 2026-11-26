@@ -27,8 +27,8 @@ Exclu pour l'instant :
 
 - Hébergement Scalingo : `web` et `postdeploy` dans le `Procfile`, installation par npm. Les tâches planifiées passent par `cron.json` et tournent dans un conteneur à part.
 - Les scripts TypeScript de `scripts/` tournent avec Bun en local, mais il n'y a pas de Bun sur Scalingo. Le job d'ingestion doit être compilé en JavaScript au build, puis lancé par Node 22.
-- Le stockage S3 accepte seulement les sommes de contrôle « when required » (voir `src/lib/scan-storage.ts`).
-- Les fichiers passent par le serveur (aujourd'hui `/notebooks/<id>/scan`) : le bucket reste privé et l'état en base décide de ce qui est visible.
+- Le stockage S3 accepte seulement les sommes de contrôle « when required » (voir `src/lib/s3-storage.ts`).
+- Les fichiers passent par le serveur (`/notebooks/<id>/pages/<n>`) : le bucket reste privé et l'état en base décide de ce qui est visible.
 - Le dépôt est public : aucun nom d'hôte, de bucket ni de clé dans le code, la doc ou les commits.
 - Une image par page de scan (des JPEG à 300 ppp dans l'échantillon reçu) : un cahier peut peser des centaines de Mo, un dépôt plusieurs Go. Lecture en flux, jamais d'archive entière en mémoire.
 

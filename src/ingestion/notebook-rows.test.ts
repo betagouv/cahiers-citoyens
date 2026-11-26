@@ -28,16 +28,12 @@ describe("notebookRows", () => {
     });
   });
 
-  it("met le cahier en ligne avec ses métadonnées, sans trace de retrait ni colonnes de load.ts", () => {
+  it("met le cahier en ligne avec ses métadonnées, sans trace de retrait", () => {
     expect(rows.notebook).toEqual({
       status: "published",
       onlineVersion: 1,
       withdrawalReason: null,
       withdrawnAt: null,
-      openedOn: null,
-      scanKey: null,
-      transcriptionKey: null,
-      transcription: null,
       departmentName: "Ain",
       departmentCode: "01",
       municipalityName: "Exempleville",
